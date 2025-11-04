@@ -5,12 +5,14 @@
 
 class Scheduler;
 
-class FlightController {
+class FlightController
+{
 public:
     FlightController();
     void setup();
+    Scheduler *getScheduler() const { return _scheduler; }
 
 private:
-    Scheduler* _scheduler;
+    Scheduler *_scheduler;
     QueueHandle_t _com_queue;
 };

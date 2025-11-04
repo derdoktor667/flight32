@@ -7,14 +7,16 @@
 #define COM_QUEUE_LENGTH 10
 #define COM_MESSAGE_MAX_LENGTH 256
 
-typedef enum {
+typedef enum
+{
     LOG_INFO,
     LOG_WARN,
     LOG_ERROR,
     TERMINAL_OUTPUT
 } com_message_type_t;
 
-typedef struct {
+typedef struct
+{
     com_message_type_t type;
     char content[COM_MESSAGE_MAX_LENGTH];
 } com_message_t;

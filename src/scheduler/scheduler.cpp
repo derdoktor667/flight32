@@ -1,37 +1,44 @@
 #include "scheduler.h"
 
-Scheduler::Scheduler() : taskCount(0) {
-    for (uint8_t i = 0; i < MAX_TASKS; i++) {
-        tasks[i] = nullptr;
+Scheduler::Scheduler() : _task_count(0)
+{
+    for (uint8_t i = 0; i < MAX_TASKS; i++)
+    {
+        _tasks[i] = nullptr;
     }
 }
 
-bool Scheduler::addTask(TaskBase* task) {
-    if (taskCount < MAX_TASKS) {
-        tasks[taskCount++] = task;
+bool Scheduler::addTask(TaskBase *task)
+{
+    if (_task_count < MAX_TASKS)
+    {
+        _tasks[_task_count++] = task;
         return true;
     }
     return false;
 }
 
-void Scheduler::start() {
-    for (uint8_t i = 0; i < taskCount; i++) {
+void Scheduler::start()
+{
+    for (uint8_t i = 0; i < _task_count; i++)
+    {
+        TaskHandle_t handle;
         xTaskCreatePinnedToCore(
-            taskRunner,
-            tasks[i]->getName(),
-            tasks[i]->getStackSize(),
-            tasks[i],
-            tasks[i]->getPriority(),
-            NULL,
-            tasks[i]->getCoreID()
-        );
+            _task_trampoline,
+            _tasks[i]->getName(),
+            _tasks[i]->getStackSize(),
+            _tasks[i], // Pass the task instance to the trampoline
+            _tasks[i]->getPriority(),
+            &handle, // Pointer to store the task handle
+            _tasks[i]->getCoreID());
+        // Store the handle in the task object for later reference
+        _tasks[i]->_handle = handle;
     }
 }
 
-void Scheduler::taskRunner(void* pvParameters) {
-    TaskBase* task = static_cast<TaskBase*>(pvParameters);
-    task->setup();
-    while (true) {
-        task->run();
-    }
+void Scheduler::_task_trampoline(void *pvParameters)
+{
+    TaskBase *task = static_cast<TaskBase *>(pvParameters);
+    // This now calls the method with the while(1) loop and metrics calculation
+    task->taskRunner();
 }

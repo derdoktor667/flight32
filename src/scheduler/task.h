@@ -1,23 +1,50 @@
 #pragma once
 
 #include <Arduino.h>
+#include "freertos/FreeRTOS.h" // Required for TaskHandle_t
 
-class TaskBase {
+class TaskBase
+{
 public:
     virtual void setup() = 0;
     virtual void run() = 0;
-    const char* getName() { return taskName; }
-    uint32_t getStackSize() { return stackSize; }
-    UBaseType_t getPriority() { return priority; }
-    BaseType_t getCoreID() { return coreID; }
+
+    // --- Getters ---
+    const char *getName() const { return _task_name; }
+    uint32_t getStackSize() const { return _stack_size; }
+    UBaseType_t getPriority() const { return _priority; }
+    BaseType_t getCoreID() const { return _core_id; }
+    TaskHandle_t getHandle() const { return _handle; }
+    uint32_t getLoopTime() const { return _loop_time_us; }
+    uint32_t getAvgLoopTime() const { return _avg_loop_time_us; }
+    uint32_t getMaxLoopTime() const { return _max_loop_time_us; }
+
+    // --- Public Methods ---
+    void taskRunner();
+
+    // Public so the scheduler can set it after task creation
+    TaskHandle_t _handle = NULL;
 
 protected:
-    TaskBase(const char* name, uint32_t stackSize, UBaseType_t priority, BaseType_t coreID)
-        : taskName(name), stackSize(stackSize), priority(priority), coreID(coreID) {}
+    TaskBase(const char *name, uint32_t stack_size, UBaseType_t priority, BaseType_t core_id, uint32_t task_delay_ms)
+        : _task_name(name),
+          _stack_size(stack_size),
+          _priority(priority),
+          _core_id(core_id),
+          _task_delay_ms(task_delay_ms) {}
 
 private:
-    const char* taskName;
-    uint32_t stackSize;
-    UBaseType_t priority;
-    BaseType_t coreID;
+    // Task properties
+    const char *_task_name;
+    uint32_t _stack_size;
+    UBaseType_t _priority;
+    BaseType_t _core_id;
+    uint32_t _task_delay_ms;
+
+    // Loop metrics
+    uint32_t _loop_time_us = 0;
+    uint32_t _avg_loop_time_us = 0;
+    uint32_t _max_loop_time_us = 0;
+    uint64_t _total_loop_time_us = 0; // Use 64-bit to prevent overflow
+    uint32_t _loop_count = 0;
 };

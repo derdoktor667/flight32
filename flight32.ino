@@ -1,12 +1,16 @@
 #include "src/flight_controller.h"
 
-FlightController* fc;
+//
+FlightController *fc;
 
-void setup() {
+//
+void setup()
+{
     fc = new FlightController();
     fc->setup();
 }
 
-void loop() {
-    // This remains empty. Everything is handled by FreeRTOS.
+//
+void loop()
+{
 }

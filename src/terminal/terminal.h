@@ -1,7 +1,8 @@
 #pragma once
 
-#include "../scheduler/task.h"
 #include <Arduino.h>
+#include "../scheduler/task.h"
+#include "../scheduler/scheduler.h" // Include for Scheduler class
 
 // Forward declaration of TerminalTask is needed for the function pointer type
 class TerminalTask;
@@ -11,20 +12,23 @@ class TerminalTask;
 using CommandHandler = void (TerminalTask::*)(String &args);
 
 // Struct to define the properties of a terminal command
-struct Command {
-    const char* name;       // The command string (e.g., "help")
+struct Command
+{
+    const char *name;       // The command string (e.g., "help")
     CommandHandler handler; // Pointer to the handler function
-    const char* help;       // The help text for the command
+    const char *help;       // The help text for the command
 };
 
-class TerminalTask : public TaskBase {
+class TerminalTask : public TaskBase
+{
 public:
-    TerminalTask(const char* name, uint32_t stackSize, UBaseType_t priority, BaseType_t coreID);
+    TerminalTask(const char *name, uint32_t stackSize, UBaseType_t priority, BaseType_t coreID, uint32_t task_delay_ms, Scheduler *scheduler);
     void setup() override;
     void run() override;
 
 private:
     String _input_buffer;
+    Scheduler *_scheduler; // Pointer to the scheduler instance
     void _parse_command(String &command);
 
     // Command handler functions

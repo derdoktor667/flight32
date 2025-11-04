@@ -4,14 +4,19 @@
 #include "task.h"
 #include "../config.h"
 
-class Scheduler {
+class Scheduler
+{
 public:
     Scheduler();
-    bool addTask(TaskBase* task);
+    bool addTask(TaskBase *task);
     void start();
 
+    // --- Getters for task introspection ---
+    uint8_t getTaskCount() const { return _task_count; }
+    TaskBase *getTask(uint8_t index) const { return _tasks[index]; }
+
 private:
-    static void taskRunner(void* pvParameters);
-    TaskBase* tasks[MAX_TASKS];
-    uint8_t taskCount;
+    static void _task_trampoline(void *pvParameters);
+    TaskBase *_tasks[MAX_TASKS];
+    uint8_t _task_count;
 };
