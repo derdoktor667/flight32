@@ -19,7 +19,7 @@ FlightController::FlightController() : _scheduler(), // Initialize as an instanc
                                        _mpu6050_sensor(),
                                        _mpu6050_task("MPU6050", MPU6050_TASK_STACK_SIZE, (UBaseType_t)MPU6050_TASK_PRIORITY, (BaseType_t)MPU6050_TASK_CORE_ID, (uint32_t)MPU6050_TASK_DELAY_MS, _mpu6050_sensor),
                                        _ibus_receiver_task("IBus", IBUS_TASK_STACK_SIZE, (UBaseType_t)IBUS_TASK_PRIORITY, (BaseType_t)IBUS_TASK_CORE_ID, (uint32_t)IBUS_TASK_DELAY_MS),
-                                       _terminal_task("CLI / Terminal", TERMINAL_TASK_STACK_SIZE, (UBaseType_t)TERMINAL_TASK_PRIORITY, (BaseType_t)TERMINAL_TASK_CORE_ID, (uint32_t)TERMINAL_TASK_DELAY_MS, &_scheduler, &_mpu6050_sensor, &_ibus_receiver_task),
+    _terminal_task("CLI / Terminal", TERMINAL_TASK_STACK_SIZE, (UBaseType_t)TERMINAL_TASK_PRIORITY, (BaseType_t)TERMINAL_TASK_CORE_ID, (uint32_t)TERMINAL_TASK_DELAY_MS, &_scheduler, &_mpu6050_sensor, &_ibus_receiver_task, &_motor_task),
                                        _motor_task("Motors", MOTOR_TASK_STACK_SIZE, (UBaseType_t)MOTOR_TASK_PRIORITY, (BaseType_t)MOTOR_TASK_CORE_ID, (uint32_t)MOTOR_TASK_DELAY_MS, motor_pins, DSHOT_PROTOCOL)
 {
 }

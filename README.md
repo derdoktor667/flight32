@@ -16,6 +16,7 @@ Welcome to Flight32 – the robust and extensible firmware solution specifically
 
 *   **MPU6050 IMU Integration**: Seamless integration of the MPU6050 Inertial Measurement Unit for accelerometer, gyroscope, and temperature readings. Includes calibration and configuration commands.
 *   **Flysky IBUS Receiver Support**: Connect your Flysky receiver via Serial2 using the IBUS protocol. Monitor channel data and connection status directly from the terminal.
+*   **DShotRMT Motor Control**: Integrated DShot300 motor protocol using the ESP32's RMT peripheral for precise and efficient motor control. Supports up to 4 motors.
 *   **Refactored Task Management**: Improved task base class and scheduler for better maintainability and clearer task state reporting ("Waiting" instead of "Blocked").
 
 ## 💻 Terminal Commands:
@@ -38,6 +39,8 @@ The command-line interface provides real-time interaction and debugging capabili
 *   `get ibus-data`  - Shows the latest channel data received from the IBUS receiver.
 *   `get ibus-status`- Shows the current connection status of the IBUS receiver.
 
+### Motor Commands:
+*   `set motor <id> <throttle>` - Sets the throttle value (0-2047) for a specific motor (0-3). Example: `set motor 0 1000`.
 ## 🏁 Quick Start:
 
 To get Flight32 running on your ESP32, all you need is the Arduino IDE or Arduino CLI:

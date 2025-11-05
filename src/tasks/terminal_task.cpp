@@ -17,17 +17,19 @@ const Command TerminalTask::_commands[] = {
     {"get mpu-config", &TerminalTask::_handle_get_mpu_config, "Shows the current MPU6050 settings."},
     {"calibrate_mpu", &TerminalTask::_handle_calibrate_mpu_sensor, "Calibrates the MPU6050."},
     {"get ibus-data", &TerminalTask::_handle_get_ibus_data, "Shows the latest IBUS channel data."},
-    {"get ibus-status", &TerminalTask::_handle_get_ibus_status, "Shows the IBUS connection status."}};
+    {"get ibus-status", &TerminalTask::_handle_get_ibus_status, "Shows the IBUS connection status."},
+    {"set motor", &TerminalTask::_handle_set_motor_throttle, "Sets the throttle for a specific motor (e.g., 'set motor 0 1000')."}};
 
 // Calculate the number of commands
 // Calculate the number of commands
 const int TerminalTask::_num_commands = sizeof(TerminalTask::_commands) / sizeof(Command);
 
-TerminalTask::TerminalTask(const char *name, uint32_t stackSize, UBaseType_t priority, BaseType_t coreID, uint32_t task_delay_ms, Scheduler *scheduler, ESP32_MPU6050 *mpu6050_sensor, IbusTask *ibus_receiver_task)
+TerminalTask::TerminalTask(const char *name, uint32_t stackSize, UBaseType_t priority, BaseType_t coreID, uint32_t task_delay_ms, Scheduler *scheduler, ESP32_MPU6050 *mpu6050_sensor, IbusTask *ibus_receiver_task, MotorTask *motor_task)
     : TaskBase(name, stackSize, priority, coreID, task_delay_ms),
       _scheduler(scheduler),
       _mpu6050_sensor(mpu6050_sensor),
-      _ibus_receiver_task(ibus_receiver_task)
+      _ibus_receiver_task(ibus_receiver_task),
+      _motor_task(motor_task)
 {
     // ... (rest of the constructor remains the same)
 }
@@ -138,6 +140,15 @@ void TerminalTask::_handle_help(String &args)
     {
         if (strcmp(_commands[i].name, "get ibus-data") == 0 ||
             strcmp(_commands[i].name, "get ibus-status") == 0)
+        {
+            com_send_log(TERMINAL_OUTPUT, "  %-15s - %s", _commands[i].name, _commands[i].help);
+        }
+    }
+
+    com_send_log(TERMINAL_OUTPUT, "\n--- Motor Commands ---");
+    for (int i = 0; i < _num_commands; i++)
+    {
+        if (strcmp(_commands[i].name, "set motor") == 0)
         {
             com_send_log(TERMINAL_OUTPUT, "  %-15s - %s", _commands[i].name, _commands[i].help);
         }
@@ -350,4 +361,51 @@ void TerminalTask::_handle_get_ibus_status(String &args)
     // For now, we'll just show if the task is available.
     com_send_log(TERMINAL_OUTPUT, "IBUS Status: %s", (_ibus_receiver_task != nullptr) ? "Task Available" : "Task Not Available");
     // TODO: Add actual IBUS connection status from the library if available
+}
+
+bool TerminalTask::_check_motor_task_available()
+{
+    if (!_motor_task)
+    {
+        com_send_log(LOG_ERROR, "Motor task not available.");
+        return false;
+    }
+    return true;
+}
+
+void TerminalTask::_handle_set_motor_throttle(String &args)
+{
+    if (!_check_motor_task_available())
+        return;
+
+    // Parse arguments: <motor_id> <throttle_value>
+    int space_index = args.indexOf(' ');
+    if (space_index == -1)
+    {
+        com_send_log(LOG_ERROR, "Usage: set motor <motor_id> <throttle_value>");
+        return;
+    }
+
+    String motor_id_str = args.substring(0, space_index);
+    String throttle_str = args.substring(space_index + 1);
+
+    uint8_t motor_id = motor_id_str.toInt();
+    uint16_t throttle_value = throttle_str.toInt();
+
+    if (motor_id >= NUM_MOTORS)
+    {
+        com_send_log(LOG_ERROR, "Invalid motor ID: %d. Must be between 0 and %d.", motor_id, NUM_MOTORS - 1);
+        return;
+    }
+
+    // DShot throttle values are typically 48 to 2047 (0-47 are commands, 0 is disarmed)
+    // For simplicity, let's allow 0-2047 for now, with 0 being disarmed.
+    if (throttle_value > 2047)
+    {
+        com_send_log(LOG_ERROR, "Invalid throttle value: %d. Must be between 0 and 2047.", throttle_value);
+        return;
+    }
+
+    _motor_task->setThrottle(motor_id, throttle_value);
+    com_send_log(TERMINAL_OUTPUT, "Motor %d throttle set to %d.", motor_id, throttle_value);
 }
