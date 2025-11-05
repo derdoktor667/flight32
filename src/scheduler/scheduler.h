@@ -1,7 +1,7 @@
 #pragma once
 
 #include <Arduino.h>
-#include "task.h"
+#include "task_base.h"
 #include "../config.h"
 
 class Scheduler

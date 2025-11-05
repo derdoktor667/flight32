@@ -13,18 +13,24 @@ const Command TerminalTask::_commands[] = {
     {"tasks", &TerminalTask::_handle_tasks, "Shows information about running tasks."},
     {"mem", &TerminalTask::_handle_mem, "Shows current memory usage."},
     {"reboot", &TerminalTask::_handle_reboot, "Reboots the ESP32."},
-    {"get mpu-data", &TerminalTask::_handle_show_mpu_readings, "Shows the latest MPU6050 readings."},
-    {"get mpu-config", &TerminalTask::_handle_show_mpu_settings, "Shows the current MPU6050 settings."},
-    {"calibrate_mpu", &TerminalTask::_handle_calibrate_mpu, "Calibrates the MPU6050."}};
+    {"get mpu-data", &TerminalTask::_handle_get_mpu_data, "Shows the latest MPU6050 readings."},
+    {"get mpu-config", &TerminalTask::_handle_get_mpu_config, "Shows the current MPU6050 settings."},
+    {"calibrate_mpu", &TerminalTask::_handle_calibrate_mpu_sensor, "Calibrates the MPU6050."},
+    {"get ibus-data", &TerminalTask::_handle_get_ibus_data, "Shows the latest IBUS channel data."},
+    {"get ibus-status", &TerminalTask::_handle_get_ibus_status, "Shows the IBUS connection status."}};
 
-
-
-
+// Calculate the number of commands
 // Calculate the number of commands
 const int TerminalTask::_num_commands = sizeof(TerminalTask::_commands) / sizeof(Command);
 
-TerminalTask::TerminalTask(const char *name, uint32_t stackSize, UBaseType_t priority, BaseType_t coreID, uint32_t task_delay_ms, Scheduler *scheduler, ESP32_MPU6050 *mpu)
-    : TaskBase(name, stackSize, priority, coreID, task_delay_ms), _input_buffer(""), _scheduler(scheduler), _mpu(mpu) {}
+TerminalTask::TerminalTask(const char *name, uint32_t stackSize, UBaseType_t priority, BaseType_t coreID, uint32_t task_delay_ms, Scheduler *scheduler, ESP32_MPU6050 *mpu6050_sensor, IbusTask *ibus_receiver_task)
+    : TaskBase(name, stackSize, priority, coreID, task_delay_ms),
+      _scheduler(scheduler),
+      _mpu6050_sensor(mpu6050_sensor),
+      _ibus_receiver_task(ibus_receiver_task)
+{
+    // ... (rest of the constructor remains the same)
+}
 
 //
 void TerminalTask::setup()
@@ -61,7 +67,17 @@ void TerminalTask::_parse_command(String &command)
 {
     command.trim();
 
-    // Separate command and arguments
+    // Try to find an exact match for the full command first (for multi-word commands like "get mpu-data")
+    for (int i = 0; i < _num_commands; i++)
+    {
+        if (command.equalsIgnoreCase(_commands[i].name))
+        {
+            (this->*_commands[i].handler)(command);
+            return;
+        }
+    }
+
+    // If no exact match, try to separate command and arguments
     String command_name = command;
     String args = "";
     int space_index = command.indexOf(' ');
@@ -72,7 +88,7 @@ void TerminalTask::_parse_command(String &command)
         args.trim();
     }
 
-    // Find and execute the command
+    // Find and execute the command (now with potential single-word command_name)
     for (int i = 0; i < _num_commands; i++)
     {
         if (command_name.equalsIgnoreCase(_commands[i].name))
@@ -82,7 +98,7 @@ void TerminalTask::_parse_command(String &command)
         }
     }
 
-    com_send_log(LOG_WARN, "Unknown command: '%s'", command_name.c_str());
+    com_send_log(LOG_WARN, "Unknown command: '%s'", command.c_str());
 }
 
 // --- Command Handlers ---
@@ -116,6 +132,16 @@ void TerminalTask::_handle_help(String &args)
             com_send_log(TERMINAL_OUTPUT, "  %-15s - %s", _commands[i].name, _commands[i].help);
         }
     }
+
+    com_send_log(TERMINAL_OUTPUT, "\n--- IBUS Commands ---");
+    for (int i = 0; i < _num_commands; i++)
+    {
+        if (strcmp(_commands[i].name, "get ibus-data") == 0 ||
+            strcmp(_commands[i].name, "get ibus-status") == 0)
+        {
+            com_send_log(TERMINAL_OUTPUT, "  %-15s - %s", _commands[i].name, _commands[i].help);
+        }
+    }
     com_send_log(TERMINAL_OUTPUT, "\n--------------------------");
 }
 
@@ -135,7 +161,7 @@ const char *_get_task_state_string(eTaskState state)
     case eReady:
         return "Ready";
     case eBlocked:
-        return "Blocked";
+        return "Waiting";
     case eSuspended:
         return "Suspended";
     case eDeleted:
@@ -247,45 +273,81 @@ void TerminalTask::_handle_reboot(String &args)
     ESP.restart();
 }
 
-bool TerminalTask::_check_mpu_available()
+bool TerminalTask::_check_mpu6050_sensor_available()
 {
-    if (!_mpu)
+    if (!_mpu6050_sensor)
     {
-        com_send_log(LOG_ERROR, "MPU6050 not available.");
+        com_send_log(LOG_ERROR, "MPU6050 sensor not available.");
         return false;
     }
     return true;
 }
 
-void TerminalTask::_handle_show_mpu_readings(String &args)
+void TerminalTask::_handle_get_mpu_data(String &args)
 {
-    if (!_check_mpu_available()) return;
+    if (!_check_mpu6050_sensor_available())
+        return;
 
     com_send_log(TERMINAL_OUTPUT, "Acc: x=%.2f, y=%.2f, z=%.2f | Gyro: x=%.2f, y=%.2f, z=%.2f | Temp: %.2f C",
-                 _mpu->readings.accelerometer.x,
-                 _mpu->readings.accelerometer.y,
-                 _mpu->readings.accelerometer.z,
-                 _mpu->readings.gyroscope.x,
-                 _mpu->readings.gyroscope.y,
-                 _mpu->readings.gyroscope.z,
-                 _mpu->readings.temperature_celsius);
+                 _mpu6050_sensor->readings.accelerometer.x,
+                 _mpu6050_sensor->readings.accelerometer.y,
+                 _mpu6050_sensor->readings.accelerometer.z,
+                 _mpu6050_sensor->readings.gyroscope.x,
+                 _mpu6050_sensor->readings.gyroscope.y,
+                 _mpu6050_sensor->readings.gyroscope.z,
+                 _mpu6050_sensor->readings.temperature_celsius);
 }
 
-void TerminalTask::_handle_show_mpu_settings(String &args)
+void TerminalTask::_handle_get_mpu_config(String &args)
 {
-    if (!_check_mpu_available()) return;
+    if (!_check_mpu6050_sensor_available())
+        return;
 
     com_send_log(TERMINAL_OUTPUT, "MPU6050 Settings:");
-    com_send_log(TERMINAL_OUTPUT, "  Gyro Range: %d DPS", _mpu->getGyroscopeRange());
-    com_send_log(TERMINAL_OUTPUT, "  Accel Range: %d G", _mpu->getAccelerometerRange());
-    com_send_log(TERMINAL_OUTPUT, "  LPF Bandwidth: %d Hz", _mpu->getLpfBandwidth());
+    com_send_log(TERMINAL_OUTPUT, "  Gyro Range: %d DPS", _mpu6050_sensor->getGyroscopeRange());
+    com_send_log(TERMINAL_OUTPUT, "  Accel Range: %d G", _mpu6050_sensor->getAccelerometerRange());
+    com_send_log(TERMINAL_OUTPUT, "  LPF Bandwidth: %d Hz", _mpu6050_sensor->getLpfBandwidth());
 }
 
-void TerminalTask::_handle_calibrate_mpu(String &args)
+void TerminalTask::_handle_calibrate_mpu_sensor(String &args)
 {
-    if (!_check_mpu_available()) return;
+    if (!_check_mpu6050_sensor_available())
+        return;
 
-    com_send_log(LOG_INFO, "Calibrating MPU6050...");
-    _mpu->calibrate();
-    com_send_log(LOG_INFO, "MPU6050 calibration complete.");
+    com_send_log(LOG_INFO, "Calibrating MPU6050 sensor...");
+    _mpu6050_sensor->calibrate();
+    com_send_log(LOG_INFO, "MPU6050 sensor calibration complete.");
+}
+
+bool TerminalTask::_check_ibus_receiver_available()
+{
+    if (!_ibus_receiver_task)
+    {
+        com_send_log(LOG_ERROR, "IBus receiver task not available.");
+        return false;
+    }
+    return true;
+}
+
+void TerminalTask::_handle_get_ibus_data(String &args)
+{
+    if (!_check_ibus_receiver_available())
+        return;
+
+    com_send_log(TERMINAL_OUTPUT, "IBUS Channels:");
+    for (int i = 0; i < _ibus_receiver_task->getChannelCount(); ++i)
+    {
+        com_send_log(TERMINAL_OUTPUT, "  CH%d: %d", i + 1, _ibus_receiver_task->getChannel(i));
+    }
+}
+
+void TerminalTask::_handle_get_ibus_status(String &args)
+{
+    if (!_check_ibus_receiver_available())
+        return;
+
+    // Assuming FlyskyIBUS library has a method to check connection status
+    // For now, we'll just show if the task is available.
+    com_send_log(TERMINAL_OUTPUT, "IBUS Status: %s", (_ibus_receiver_task != nullptr) ? "Task Available" : "Task Not Available");
+    // TODO: Add actual IBUS connection status from the library if available
 }

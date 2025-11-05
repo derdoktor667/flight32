@@ -7,7 +7,7 @@ void com_task(void *pvParameters)
     com_message_t msg;
 
     while (1)
-    { 
+    {
         if (xQueueReceive(com_queue, &msg, portMAX_DELAY) == pdPASS)
         {
             switch (msg.type)

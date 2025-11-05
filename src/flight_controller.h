@@ -1,21 +1,24 @@
 #pragma once
 
-#include "freertos/FreeRTOS.h"
-#include "freertos/queue.h"
-#include <ESP32_MPU6050.h>
+#include "scheduler/scheduler.h"
+#include "com_manager.h"
 #include "tasks/mpu6050_task.h"
+#include "tasks/ibus_task.h"
+#include "tasks/terminal_task.h"
+#include "tasks/motor_task.h"
 
-class Scheduler;
-
+// --- Flight Controller Class ---
 class FlightController
 {
 public:
     FlightController();
     void setup();
-    Scheduler *getScheduler() const { return _scheduler; }
 
 private:
-    Scheduler *_scheduler;
-    QueueHandle_t _com_queue;
-    ESP32_MPU6050 _mpu6050;
+    Scheduler _scheduler;
+    ESP32_MPU6050 _mpu6050_sensor;
+    Mpu6050Task _mpu6050_task;
+    IbusTask _ibus_receiver_task;
+    TerminalTask _terminal_task;
+    MotorTask _motor_task;
 };

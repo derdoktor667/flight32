@@ -10,11 +10,33 @@ Welcome to Flight32 – the robust and extensible firmware solution specifically
 *   **ESP32 Dual-Core Power**: Full utilization of the ESP32's dual-core architecture for efficient task distribution and maximum processing power.
 *   **Modular Design**: A clean, object-oriented architecture with clearly defined components (FlightController, Terminal, ComManager) makes the firmware easy to understand and simple to extend.
 *   **Real-time Insights**: Monitor your tasks live via the integrated terminal. View CPU load, current, average, and maximum loop times, as well as stack usage – all at a glance for optimal performance analysis.
-*   **Developer-Friendly**: The enhanced CLI terminal allows for quick interaction, debugging, and configuration directly through the serial interface.
+*   **Developer-Friendly**: The enhanced CLI terminal allows for quick interaction, debugging, and configuration directly through the serial interface, now with more intuitive commands and categorized help output.
 
-## 🚀 Why Flight32?
+## 🚀 Current Features:
 
-Flight32 is more than just firmware; it's a platform for innovation. Whether you're an experienced drone developer or just starting out, Flight32 provides the stability, control, and tools you need to bring your visions to life. Focus on flying, and we'll handle the foundation.
+*   **MPU6050 IMU Integration**: Seamless integration of the MPU6050 Inertial Measurement Unit for accelerometer, gyroscope, and temperature readings. Includes calibration and configuration commands.
+*   **Flysky IBUS Receiver Support**: Connect your Flysky receiver via Serial2 using the IBUS protocol. Monitor channel data and connection status directly from the terminal.
+*   **Refactored Task Management**: Improved task base class and scheduler for better maintainability and clearer task state reporting ("Waiting" instead of "Blocked").
+
+## 💻 Terminal Commands:
+
+The command-line interface provides real-time interaction and debugging capabilities. Type `help` to see a list of available commands.
+
+### System Commands:
+*   `help`           - Shows this help message.
+*   `status`         - Shows firmware information.
+*   `tasks`          - Shows information about running tasks (state, priority, CPU usage, loop times, stack HWM).
+*   `mem`            - Shows current memory usage (heap total, free, min free).
+*   `reboot`         - Reboots the ESP32.
+
+### MPU6050 Commands:
+*   `get mpu-data`   - Displays the latest accelerometer, gyroscope, and temperature readings from the MPU6050.
+*   `get mpu-config` - Shows the current configuration settings of the MPU6050 (gyro range, accel range, LPF bandwidth).
+*   `calibrate_mpu`  - Initiates a calibration routine for the MPU6050 sensor.
+
+### IBUS Commands:
+*   `get ibus-data`  - Shows the latest channel data received from the IBUS receiver.
+*   `get ibus-status`- Shows the current connection status of the IBUS receiver.
 
 ## 🏁 Quick Start:
 

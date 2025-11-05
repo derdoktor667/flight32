@@ -1,9 +1,10 @@
 #pragma once
 
 #include <Arduino.h>
-#include "../scheduler/task.h"
+#include "../scheduler/task_base.h"
 #include "../scheduler/scheduler.h" // Include for Scheduler class
 #include <ESP32_MPU6050.h>
+#include "ibus_task.h"
 
 // Forward declaration of TerminalTask is needed for the function pointer type
 class TerminalTask;
@@ -23,16 +24,18 @@ struct Command
 class TerminalTask : public TaskBase
 {
 public:
-    TerminalTask(const char *name, uint32_t stackSize, UBaseType_t priority, BaseType_t coreID, uint32_t task_delay_ms, Scheduler *scheduler, ESP32_MPU6050 *mpu);
+    TerminalTask(const char *name, uint32_t stackSize, UBaseType_t priority, BaseType_t coreID, uint32_t task_delay_ms, Scheduler *scheduler, ESP32_MPU6050 *mpu6050_sensor, IbusTask *ibus_receiver_task);
     void setup() override;
     void run() override;
 
 private:
     String _input_buffer;
-    Scheduler *_scheduler; // Pointer to the scheduler instance
-    ESP32_MPU6050 *_mpu;    // Pointer to the MPU6050 instance
+    Scheduler *_scheduler;          // Pointer to the scheduler instance
+    ESP32_MPU6050 *_mpu6050_sensor; // Pointer to the MPU6050 instance
+    IbusTask *_ibus_receiver_task;  // Pointer to the IbusTask instance
     void _parse_command(String &command);
-    bool _check_mpu_available();
+    bool _check_mpu6050_sensor_available();
+    bool _check_ibus_receiver_available();
 
     // Command handler functions
     void _handle_help(String &args);
@@ -40,12 +43,13 @@ private:
     void _handle_tasks(String &args);
     void _handle_mem(String &args);
     void _handle_reboot(String &args);
-    void _handle_show_mpu_readings(String &args);
-    void _handle_show_mpu_settings(String &args);
-    void _handle_calibrate_mpu(String &args);
+    void _handle_get_mpu_data(String &args);
+    void _handle_get_mpu_config(String &args);
+    void _handle_calibrate_mpu_sensor(String &args);
+    void _handle_get_ibus_data(String &args);
+    void _handle_get_ibus_status(String &args);
 
     // Command table definition
     static const Command _commands[];
     static const int _num_commands;
 };
-
