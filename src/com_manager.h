@@ -3,6 +3,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
 #include <cstdarg>
+#include <ESP32_MPU6050.h> // For SensorReadings
 
 #define COM_QUEUE_LENGTH 10
 #define COM_MESSAGE_MAX_LENGTH 256
@@ -12,13 +13,18 @@ typedef enum
     LOG_INFO,
     LOG_WARN,
     LOG_ERROR,
-    TERMINAL_OUTPUT
+    TERMINAL_OUTPUT,
+    MPU6050_DATA
 } com_message_type_t;
 
 typedef struct
 {
     com_message_type_t type;
-    char content[COM_MESSAGE_MAX_LENGTH];
+    union
+    {
+        char content[COM_MESSAGE_MAX_LENGTH];
+        SensorReadings mpu6050_data;
+    };
 } com_message_t;
 
 extern QueueHandle_t com_queue;
@@ -26,3 +32,4 @@ extern QueueHandle_t com_queue;
 void com_task(void *pvParameters);
 
 void com_send_log(com_message_type_t type, const char *format, ...);
+void com_send_mpu6050_data(const SensorReadings &data);

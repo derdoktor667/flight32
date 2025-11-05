@@ -1,4 +1,4 @@
-#include "terminal.h"
+#include "terminal_task.h"
 #include "../firmware.h"
 #include "../config.h"
 #include "../com_manager.h"
@@ -12,13 +12,19 @@ const Command TerminalTask::_commands[] = {
     {"status", &TerminalTask::_handle_status, "Shows firmware information."},
     {"tasks", &TerminalTask::_handle_tasks, "Shows information about running tasks."},
     {"mem", &TerminalTask::_handle_mem, "Shows current memory usage."},
-    {"reboot", &TerminalTask::_handle_reboot, "Reboots the ESP32."}};
+    {"reboot", &TerminalTask::_handle_reboot, "Reboots the ESP32."},
+    {"get mpu-data", &TerminalTask::_handle_show_mpu_readings, "Shows the latest MPU6050 readings."},
+    {"get mpu-config", &TerminalTask::_handle_show_mpu_settings, "Shows the current MPU6050 settings."},
+    {"calibrate_mpu", &TerminalTask::_handle_calibrate_mpu, "Calibrates the MPU6050."}};
+
+
+
 
 // Calculate the number of commands
 const int TerminalTask::_num_commands = sizeof(TerminalTask::_commands) / sizeof(Command);
 
-TerminalTask::TerminalTask(const char *name, uint32_t stackSize, UBaseType_t priority, BaseType_t coreID, uint32_t task_delay_ms, Scheduler *scheduler)
-    : TaskBase(name, stackSize, priority, coreID, task_delay_ms), _input_buffer(""), _scheduler(scheduler) {}
+TerminalTask::TerminalTask(const char *name, uint32_t stackSize, UBaseType_t priority, BaseType_t coreID, uint32_t task_delay_ms, Scheduler *scheduler, ESP32_MPU6050 *mpu)
+    : TaskBase(name, stackSize, priority, coreID, task_delay_ms), _input_buffer(""), _scheduler(scheduler), _mpu(mpu) {}
 
 //
 void TerminalTask::setup()
@@ -86,11 +92,31 @@ void TerminalTask::_handle_help(String &args)
 {
     com_send_log(TERMINAL_OUTPUT, "");
     com_send_log(TERMINAL_OUTPUT, "--- Available Commands ---");
+
+    com_send_log(TERMINAL_OUTPUT, "\n--- System Commands ---");
     for (int i = 0; i < _num_commands; i++)
     {
-        com_send_log(TERMINAL_OUTPUT, "  %s - %s", _commands[i].name, _commands[i].help);
+        if (strcmp(_commands[i].name, "help") == 0 ||
+            strcmp(_commands[i].name, "status") == 0 ||
+            strcmp(_commands[i].name, "tasks") == 0 ||
+            strcmp(_commands[i].name, "mem") == 0 ||
+            strcmp(_commands[i].name, "reboot") == 0)
+        {
+            com_send_log(TERMINAL_OUTPUT, "  %-15s - %s", _commands[i].name, _commands[i].help);
+        }
     }
-    com_send_log(TERMINAL_OUTPUT, "--------------------------");
+
+    com_send_log(TERMINAL_OUTPUT, "\n--- MPU6050 Commands ---");
+    for (int i = 0; i < _num_commands; i++)
+    {
+        if (strcmp(_commands[i].name, "get mpu-data") == 0 ||
+            strcmp(_commands[i].name, "get mpu-config") == 0 ||
+            strcmp(_commands[i].name, "calibrate_mpu") == 0)
+        {
+            com_send_log(TERMINAL_OUTPUT, "  %-15s - %s", _commands[i].name, _commands[i].help);
+        }
+    }
+    com_send_log(TERMINAL_OUTPUT, "\n--------------------------");
 }
 
 void TerminalTask::_handle_status(String &args)
@@ -219,4 +245,47 @@ void TerminalTask::_handle_reboot(String &args)
     com_send_log(TERMINAL_OUTPUT, "");
 
     ESP.restart();
+}
+
+bool TerminalTask::_check_mpu_available()
+{
+    if (!_mpu)
+    {
+        com_send_log(LOG_ERROR, "MPU6050 not available.");
+        return false;
+    }
+    return true;
+}
+
+void TerminalTask::_handle_show_mpu_readings(String &args)
+{
+    if (!_check_mpu_available()) return;
+
+    com_send_log(TERMINAL_OUTPUT, "Acc: x=%.2f, y=%.2f, z=%.2f | Gyro: x=%.2f, y=%.2f, z=%.2f | Temp: %.2f C",
+                 _mpu->readings.accelerometer.x,
+                 _mpu->readings.accelerometer.y,
+                 _mpu->readings.accelerometer.z,
+                 _mpu->readings.gyroscope.x,
+                 _mpu->readings.gyroscope.y,
+                 _mpu->readings.gyroscope.z,
+                 _mpu->readings.temperature_celsius);
+}
+
+void TerminalTask::_handle_show_mpu_settings(String &args)
+{
+    if (!_check_mpu_available()) return;
+
+    com_send_log(TERMINAL_OUTPUT, "MPU6050 Settings:");
+    com_send_log(TERMINAL_OUTPUT, "  Gyro Range: %d DPS", _mpu->getGyroscopeRange());
+    com_send_log(TERMINAL_OUTPUT, "  Accel Range: %d G", _mpu->getAccelerometerRange());
+    com_send_log(TERMINAL_OUTPUT, "  LPF Bandwidth: %d Hz", _mpu->getLpfBandwidth());
+}
+
+void TerminalTask::_handle_calibrate_mpu(String &args)
+{
+    if (!_check_mpu_available()) return;
+
+    com_send_log(LOG_INFO, "Calibrating MPU6050...");
+    _mpu->calibrate();
+    com_send_log(LOG_INFO, "MPU6050 calibration complete.");
 }
