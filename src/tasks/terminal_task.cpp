@@ -74,7 +74,7 @@ void TerminalTask::run()
             _input_buffer += incoming_char;
             Serial.print(incoming_char); // Echo back to the terminal
         }
-        else if (incoming_char == 127) // Backspace
+        else if (incoming_char == ASCII_BACKSPACE) // Backspace
         {
             if (_input_buffer.length() > 0)
             {
@@ -247,7 +247,7 @@ void TerminalTask::_handle_reboot(String &args)
     com_send_log(TERMINAL_OUTPUT, "Rebooting...");
 
     // ...short break before restarting
-    delayMicroseconds(1000000);
+    delayMicroseconds(ONE_SECOND_MICROSECONDS);
 
     com_send_log(TERMINAL_OUTPUT, "");
     com_send_log(TERMINAL_OUTPUT, "");
@@ -308,7 +308,7 @@ void TerminalTask::_handle_ibus_status(String &args)
     if (!TerminalTask::_check_ibus_receiver_available())
         return;
 
-    com_send_log(TERMINAL_OUTPUT, "IBUS Status: %s", (_ibus_receiver_task != nullptr) ? "Task Available" : "Task Not Available");
+    com_send_log(TERMINAL_OUTPUT, "IBUS Status: Task Available");
 }
 
 void TerminalTask::_handle_motor_throttle(String &args)
@@ -336,9 +336,9 @@ void TerminalTask::_handle_motor_throttle(String &args)
         return;
     }
 
-    if (throttle_value > 2047)
+    if (throttle_value > MAX_THROTTLE_VALUE)
     {
-        com_send_log(LOG_ERROR, "Invalid throttle value: %d. Must be between 0 and 2047.", throttle_value);
+        com_send_log(LOG_ERROR, "Invalid throttle value: %d. Must be between 0 and %d.", throttle_value, MAX_THROTTLE_VALUE);
         return;
     }
 
@@ -419,8 +419,16 @@ void TerminalTask::_handle_save_settings(String &args)
 
 void TerminalTask::_handle_factory_reset(String &args)
 {
-    _settings_manager->factoryReset();
-    com_send_log(LOG_INFO, "Settings reset to default values.");
+    if (args.equalsIgnoreCase("confirm"))
+    {
+        _settings_manager->factoryReset();
+        com_send_log(LOG_INFO, "Settings reset to default values. Rebooting...");
+        ESP.restart();
+    }
+    else
+    {
+        com_send_log(LOG_WARN, "Factory reset will erase all settings. To confirm, type 'factory_reset confirm'");
+    }
 }
 
 void TerminalTask::_handle_list_settings(String &args)
@@ -467,22 +475,23 @@ bool TerminalTask::_check_motor_task_available()
 
 void TerminalTask::_show_prompt()
 {
+    com_flush_output();
     com_send_prompt("[flight32 ~]$ ");
 }
 
 const char* TerminalTask::_format_bytes(uint32_t bytes)
 {
-    if (bytes < 1024)
+    if (bytes < BYTES_IN_KB)
     {
         snprintf(_byte_buffer, sizeof(_byte_buffer), "%lu B", bytes);
     }
-    else if (bytes < (1024 * 1024))
+    else if (bytes < BYTES_IN_MB)
     {
-        snprintf(_byte_buffer, sizeof(_byte_buffer), "%.1f KB", (float)bytes / 1024.0f);
+        snprintf(_byte_buffer, sizeof(_byte_buffer), "%.1f KB", (float)bytes / BYTES_IN_KB);
     }
     else
     {
-        snprintf(_byte_buffer, sizeof(_byte_buffer), "%.1f MB", (float)bytes / (1024.0f * 1024.0f));
+        snprintf(_byte_buffer, sizeof(_byte_buffer), "%.1f MB", (float)bytes / BYTES_IN_MB);
     }
     return _byte_buffer;
 }

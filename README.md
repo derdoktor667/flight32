@@ -46,6 +46,7 @@ The command-line interface provides real-time interaction and debugging capabili
 *   `get <display_key>`      - Gets the value of any setting using its user-friendly display key. Displays both the description and human-readable value where available (e.g., `get gyro.resolution` might show `gyro.resolution (MPU6050 Gyroscope Range): 250_DPS`).
 *   `set <display_key> <value>`- Sets the value of any setting using its user-friendly display key. Accepts human-readable values where available (e.g., `set gyro.resolution 250_DPS`). Provides informative feedback on invalid inputs.
 *   `dump`           - Dumps all settings in a parsable format for backup, using user-friendly display keys and human-readable values (e.g., `set gyro.resolution = 250_DPS`).
+*   `factory_reset confirm` - Resets all settings to their default values and reboots the ESP32. Requires `confirm` argument.
 
 ## 🏁 Quick Start:
 

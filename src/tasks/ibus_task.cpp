@@ -8,7 +8,7 @@ IbusTask::IbusTask(const char *name, uint32_t stackSize, UBaseType_t priority, B
 void IbusTask::setup()
 {
     _ibus_receiver.begin();
-    com_send_log(LOG_INFO, "IBusTask: Initialized on Serial2 at %d baud.", IBUS_SERIAL_BAUDRATE);
+    com_send_log(LOG_INFO, "IBusTask: Initialized on Serial2 at %d baud.", IBUS_BAUD_RATE);
 }
 
 void IbusTask::run()

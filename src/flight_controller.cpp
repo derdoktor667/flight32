@@ -10,8 +10,7 @@
 #include "tasks/motor_task.h"
 #include <Wire.h>
 
-// The global queue handle, declared as extern in com_manager.h
-QueueHandle_t com_queue;
+
 
 FlightController::~FlightController()
 {
@@ -25,8 +24,7 @@ void FlightController::setup()
 {
     Serial.begin(SERIAL_BAUD_RATE);
 
-    // Create the IO message queue and assign it to the global handle
-    com_queue = xQueueCreate(COM_QUEUE_LENGTH, sizeof(com_message_t));
+
 
     // Create the IO manager task
     xTaskCreate(
@@ -44,7 +42,7 @@ void FlightController::setup()
     _settings_manager.begin();
 
     // --- MPU6050 Initialization ---
-    delay(100); // Add a small delay to allow the sensor to power up
+    delay(SENSOR_POWER_UP_DELAY_MS); // Add a small delay to allow the sensor to power up
 
     if (!_mpu6050_sensor.begin((GyroRange)_settings_manager.getSettingValue(SettingsManager::KEY_MPU_GYRO_RANGE).toInt(), AccelRange::ACCEL_RANGE_2G, LpfBandwidth::LPF_188HZ_N_2MS))
     {
@@ -59,10 +57,10 @@ void FlightController::setup()
     }
 
     // --- Task Creation ---
-    _mpu6050_task = new Mpu6050Task("GYRO / MPU6050", MPU6050_TASK_STACK_SIZE, MPU6050_TASK_PRIORITY, MPU6050_TASK_CORE_ID, MPU6050_TASK_DELAY_MS, _mpu6050_sensor);
-    _ibus_receiver_task = new IbusTask("RX / IBUS", IBUS_TASK_STACK_SIZE, IBUS_TASK_PRIORITY, IBUS_TASK_CORE_ID, IBUS_TASK_DELAY_MS);
-    _motor_task = new MotorTask("MOTORS / DShot", MOTOR_TASK_STACK_SIZE, MOTOR_TASK_PRIORITY, MOTOR_TASK_CORE_ID, MOTOR_TASK_DELAY_MS, MOTOR_PINS, DSHOT_PROTOCOL);
-    _terminal_task = new TerminalTask("CLI / Terminal", TERMINAL_TASK_STACK_SIZE, TERMINAL_TASK_PRIORITY, TERMINAL_TASK_CORE_ID, TERMINAL_TASK_DELAY_MS, &_scheduler, &_mpu6050_sensor, _ibus_receiver_task, _motor_task, &_settings_manager);
+    _mpu6050_task = new Mpu6050Task("GYRO / MPU6050", MPU6050_TASK_STACK_SIZE, MPU6050_TASK_PRIORITY, MPU6050_TASK_CORE, MPU6050_TASK_DELAY_MS, _mpu6050_sensor);
+    _ibus_receiver_task = new IbusTask("RX / IBUS", IBUS_TASK_STACK_SIZE, IBUS_TASK_PRIORITY, IBUS_TASK_CORE, IBUS_TASK_DELAY_MS);
+    _motor_task = new MotorTask("MOTORS / DShot", MOTOR_TASK_STACK_SIZE, MOTOR_TASK_PRIORITY, MOTOR_TASK_CORE, MOTOR_TASK_DELAY_MS, MOTOR_PINS_ARRAY, DSHOT_PROTOCOL);
+    _terminal_task = new TerminalTask("CLI / Terminal", TERMINAL_TASK_STACK_SIZE, TERMINAL_TASK_PRIORITY, TERMINAL_TASK_CORE, TERMINAL_TASK_DELAY_MS, &_scheduler, &_mpu6050_sensor, _ibus_receiver_task, _motor_task, &_settings_manager);
 
     // Add tasks to scheduler
     _scheduler.addTask(_ibus_receiver_task);

@@ -2,9 +2,16 @@
 #include "config.h"
 #include <Arduino.h>
 
+QueueHandle_t com_queue;
+QueueHandle_t com_flush_signal_queue;
+
 void com_task(void *pvParameters)
 {
+    com_queue = xQueueCreate(COM_QUEUE_LENGTH, sizeof(com_message_t));
+    com_flush_signal_queue = xQueueCreate(1, sizeof(uint8_t)); // Queue for signaling flush completion
+
     com_message_t msg;
+    uint8_t dummy = 0;
 
     while (1)
     {
@@ -29,6 +36,10 @@ void com_task(void *pvParameters)
                 break;
             case TERMINAL_PROMPT:
                 Serial.print(msg.content);
+                break;
+            case TERMINAL_FLUSH:
+                // Signal that flush message has been processed
+                xQueueSend(com_flush_signal_queue, &dummy, 0);
                 break;
             case MPU6050_DATA:
                 Serial.printf("Acc: x=%.2f, y=%.2f, z=%.2f | Gyro: x=%.2f, y=%.2f, z=%.2f | Temp: %.2f C\n",
@@ -73,5 +84,15 @@ void com_send_prompt(const char *prompt)
     com_message_t msg;
     msg.type = TERMINAL_PROMPT;
     strncpy(msg.content, prompt, COM_MESSAGE_MAX_LENGTH);
-    xQueueSend(com_queue, &msg, 0);
+    xQueueSend(com_queue, &msg, portMAX_DELAY);
+}
+
+void com_flush_output()
+{
+    com_message_t msg;
+    msg.type = TERMINAL_FLUSH;
+    uint8_t dummy;
+    // Send flush message and wait for it to be processed
+    xQueueSend(com_queue, &msg, portMAX_DELAY);
+    xQueueReceive(com_flush_signal_queue, &dummy, portMAX_DELAY);
 }

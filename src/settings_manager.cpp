@@ -1,5 +1,6 @@
 #include "settings_manager.h"
 #include "com_manager.h"
+#include "config.h"
 
 const char* SettingsManager::GYRO_RANGE_STRINGS[] = {"250_DPS", "500_DPS", "1000_DPS", "2000_DPS"};
 const uint8_t SettingsManager::NUM_GYRO_RANGES = sizeof(SettingsManager::GYRO_RANGE_STRINGS) / sizeof(SettingsManager::GYRO_RANGE_STRINGS[0]);
@@ -67,12 +68,9 @@ void SettingsManager::saveSettings() {
 
     _preferences.putUShort(KEY_SCHEMA_VERSION, CURRENT_SCHEMA_VERSION);
     // Save all settings based on metadata
-    for (int i = 0; i < _num_settings; ++i) {
-        const char* key = _settings_metadata[i].key;
-        // The actual values are already in preferences if set via setSettingValue
-        // This loop ensures all keys are written if they were modified directly
-        // For now, we just ensure the schema version is saved.
-    }
+    // The actual values are already in preferences if set via setSettingValue
+    // This loop ensures all keys are written if they were modified directly
+    // For now, we just ensure the schema version is saved.
 }
 
 void SettingsManager::listSettings() {
@@ -126,7 +124,7 @@ String SettingsManager::getSettingValueHumanReadable(const char* key) {
 bool SettingsManager::setSettingValue(const char* key, const String& value_str) {
     for (int i = 0; i < _num_settings; ++i) {
         if (strcmp(_settings_metadata[i].key, key) == 0) {
-            int value_to_store = -1; // Default to invalid
+            int value_to_store = INVALID_SETTING_VALUE; // Default to invalid
 
             // Check if value_str matches a human-readable string in the map
             if (_settings_metadata[i].string_map != nullptr && _settings_metadata[i].string_map_size > 0) {
@@ -146,7 +144,7 @@ bool SettingsManager::setSettingValue(const char* key, const String& value_str) 
             // Validate and store the value
             switch (_settings_metadata[i].type) {
                 case UINT8: 
-                    if (value_to_store >= 0 && value_to_store <= 255) { // Assuming UINT8 range
+                    if (value_to_store >= 0 && value_to_store <= UINT8_MAX_VALUE) { // Assuming UINT8 range
                         _preferences.putUChar(key, (uint8_t)value_to_store); 
                         return true;
                     }

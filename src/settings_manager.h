@@ -3,7 +3,7 @@
 #include <Preferences.h>
 #include <Arduino.h>
 
-#define SETTINGS_NAMESPACE "flight32"
+
 
 class SettingsManager {
 public:
@@ -64,6 +64,5 @@ private:
     // --- Default Values ---
     static constexpr uint8_t DEFAULT_GYRO_RANGE = 0;
 
-    // --- Cached Settings ---
-    uint8_t _gyro_range;
+
 };
