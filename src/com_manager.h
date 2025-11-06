@@ -5,7 +5,7 @@
 #include <cstdarg>
 #include <ESP32_MPU6050.h> // For SensorReadings
 
-#define COM_QUEUE_LENGTH 10
+
 #define COM_MESSAGE_MAX_LENGTH 256
 
 typedef enum
@@ -14,6 +14,7 @@ typedef enum
     LOG_WARN,
     LOG_ERROR,
     TERMINAL_OUTPUT,
+    TERMINAL_PROMPT,
     MPU6050_DATA
 } com_message_type_t;
 
@@ -33,3 +34,4 @@ void com_task(void *pvParameters);
 
 void com_send_log(com_message_type_t type, const char *format, ...);
 void com_send_mpu6050_data(const SensorReadings &data);
+void com_send_prompt(const char *prompt);

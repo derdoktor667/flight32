@@ -1,3 +1,6 @@
+
+//
+#include <Arduino.h>
 #include "src/flight_controller.h"
 
 //
@@ -13,4 +16,5 @@ void setup()
 //
 void loop()
 {
+    // ...what kind of sorcery is this?
 }

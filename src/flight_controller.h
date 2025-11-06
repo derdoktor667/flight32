@@ -7,18 +7,22 @@
 #include "tasks/terminal_task.h"
 #include "tasks/motor_task.h"
 
+#include "settings_manager.h"
+
 // --- Flight Controller Class ---
 class FlightController
 {
 public:
-    FlightController();
+    FlightController() = default;
+    ~FlightController();
     void setup();
 
 private:
+    SettingsManager _settings_manager;
     Scheduler _scheduler;
     ESP32_MPU6050 _mpu6050_sensor;
-    Mpu6050Task _mpu6050_task;
-    IbusTask _ibus_receiver_task;
-    TerminalTask _terminal_task;
-    MotorTask _motor_task;
+    Mpu6050Task *_mpu6050_task = nullptr;
+    IbusTask *_ibus_receiver_task = nullptr;
+    TerminalTask *_terminal_task = nullptr;
+    MotorTask *_motor_task = nullptr;
 };

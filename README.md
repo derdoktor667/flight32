@@ -10,7 +10,7 @@ Welcome to Flight32 – the robust and extensible firmware solution specifically
 *   **ESP32 Dual-Core Power**: Full utilization of the ESP32's dual-core architecture for efficient task distribution and maximum processing power.
 *   **Modular Design**: A clean, object-oriented architecture with clearly defined components (FlightController, Terminal, ComManager) makes the firmware easy to understand and simple to extend.
 *   **Real-time Insights**: Monitor your tasks live via the integrated terminal. View CPU load, current, average, and maximum loop times, as well as stack usage – all at a glance for optimal performance analysis.
-*   **Developer-Friendly**: The enhanced CLI terminal allows for quick interaction, debugging, and configuration directly through the serial interface, now with more intuitive commands and categorized help output.
+*   **Professional Terminal Experience**: Enjoy a bash-like prompt, character echo, and backspace support for a more intuitive and professional interaction with the flight controller.
 
 ## 🚀 Current Features:
 
@@ -31,16 +31,22 @@ The command-line interface provides real-time interaction and debugging capabili
 *   `reboot`         - Reboots the ESP32.
 
 ### MPU6050 Commands:
-*   `get mpu-data`   - Displays the latest accelerometer, gyroscope, and temperature readings from the MPU6050.
-*   `get mpu-config` - Shows the current configuration settings of the MPU6050 (gyro range, accel range, LPF bandwidth).
-*   `calibrate_mpu`  - Initiates a calibration routine for the MPU6050 sensor.
+*   `get mpu.data`   - Displays the latest accelerometer, gyroscope, and temperature readings from the MPU6050.
+*   `get mpu.config` - Shows the current configuration settings of the MPU6050 (gyro range, accel range, LPF bandwidth).
+*   `set mpu.calibrate`  - Initiates a calibration routine for the MPU6050 sensor.
 
 ### IBUS Commands:
-*   `get ibus-data`  - Shows the latest channel data received from the IBUS receiver.
-*   `get ibus-status`- Shows the current connection status of the IBUS receiver.
+*   `get ibus.data`  - Shows the latest channel data received from the IBUS receiver.
+*   `get ibus.status`- Shows the current connection status of the IBUS receiver.
 
 ### Motor Commands:
-*   `set motor <id> <throttle>` - Sets the throttle value (0-2047) for a specific motor (0-3). Example: `set motor 0 1000`.
+*   `set motor.throttle <id> <throttle>` - Sets the throttle value (0-2047) for a specific motor (0-3). Example: `set motor.throttle 0 1000`.
+
+### Settings Commands:
+*   `get <display_key>`      - Gets the value of any setting using its user-friendly display key. Displays both the description and human-readable value where available (e.g., `get gyro.resolution` might show `gyro.resolution (MPU6050 Gyroscope Range): 250_DPS`).
+*   `set <display_key> <value>`- Sets the value of any setting using its user-friendly display key. Accepts human-readable values where available (e.g., `set gyro.resolution 250_DPS`). Provides informative feedback on invalid inputs.
+*   `dump`           - Dumps all settings in a parsable format for backup, using user-friendly display keys and human-readable values (e.g., `set gyro.resolution = 250_DPS`).
+
 ## 🏁 Quick Start:
 
 To get Flight32 running on your ESP32, all you need is the Arduino IDE or Arduino CLI:

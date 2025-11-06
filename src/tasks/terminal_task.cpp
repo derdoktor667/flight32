@@ -8,28 +8,38 @@
 
 // Define the command table
 const Command TerminalTask::_commands[] = {
-    {"help", &TerminalTask::_handle_help, "Shows this help message."},
-    {"status", &TerminalTask::_handle_status, "Shows firmware information."},
-    {"tasks", &TerminalTask::_handle_tasks, "Shows information about running tasks."},
-    {"mem", &TerminalTask::_handle_mem, "Shows current memory usage."},
-    {"reboot", &TerminalTask::_handle_reboot, "Reboots the ESP32."},
-    {"get mpu-data", &TerminalTask::_handle_get_mpu_data, "Shows the latest MPU6050 readings."},
-    {"get mpu-config", &TerminalTask::_handle_get_mpu_config, "Shows the current MPU6050 settings."},
-    {"calibrate_mpu", &TerminalTask::_handle_calibrate_mpu_sensor, "Calibrates the MPU6050."},
-    {"get ibus-data", &TerminalTask::_handle_get_ibus_data, "Shows the latest IBUS channel data."},
-    {"get ibus-status", &TerminalTask::_handle_get_ibus_status, "Shows the IBUS connection status."},
-    {"set motor", &TerminalTask::_handle_set_motor_throttle, "Sets the throttle for a specific motor (e.g., 'set motor 0 1000')."}};
+    {"help", &TerminalTask::_handle_help, "Shows this help message.", CommandCategory::SYSTEM},
+    {"status", &TerminalTask::_handle_status, "Shows firmware information.", CommandCategory::SYSTEM},
+    {"tasks", &TerminalTask::_handle_tasks, "Shows information about running tasks.", CommandCategory::SYSTEM},
+    {"mem", &TerminalTask::_handle_mem, "Shows current memory usage.", CommandCategory::SYSTEM},
+    {"reboot", &TerminalTask::_handle_reboot, "Reboots the ESP32.", CommandCategory::SYSTEM},
 
-// Calculate the number of commands
+    {"get mpu.data", &TerminalTask::_handle_mpu_data, "Displays the latest MPU6050 readings.", CommandCategory::MPU6050},
+    {"get mpu.config", &TerminalTask::_handle_mpu_config, "Shows the current MPU6050 settings.", CommandCategory::MPU6050},
+    {"set mpu.calibrate", &TerminalTask::_handle_mpu_calibrate, "Calibrates the MPU6050.", CommandCategory::MPU6050},
+
+    {"get ibus.data", &TerminalTask::_handle_ibus_data, "Shows the latest IBUS channel data.", CommandCategory::IBUS},
+    {"get ibus.status", &TerminalTask::_handle_ibus_status, "Shows the IBUS connection status.", CommandCategory::IBUS},
+
+    {"set motor.throttle", &TerminalTask::_handle_motor_throttle, "Sets the throttle for a specific motor (e.g., 'set motor.throttle 0 1000').", CommandCategory::MOTOR},
+
+    {"get", &TerminalTask::_handle_get_setting, "Gets a setting value (e.g., 'get gyro.resolution').", CommandCategory::SETTINGS},
+    {"set", &TerminalTask::_handle_set_setting, "Sets a setting value (e.g., 'set gyro.resolution 0' or 'set gyro.resolution 250_DPS').", CommandCategory::SETTINGS},
+    {"save", &TerminalTask::_handle_save_settings, "Saves all settings to persistent storage.", CommandCategory::SETTINGS},
+    {"factory_reset", &TerminalTask::_handle_factory_reset, "Resets all settings to their default values.", CommandCategory::SETTINGS},
+    {"settings", &TerminalTask::_handle_list_settings, "Lists all available settings.", CommandCategory::SETTINGS},
+    {"dump", &TerminalTask::_handle_dump_settings, "Dumps all settings for backup.", CommandCategory::SETTINGS}};
+
 // Calculate the number of commands
 const int TerminalTask::_num_commands = sizeof(TerminalTask::_commands) / sizeof(Command);
 
-TerminalTask::TerminalTask(const char *name, uint32_t stackSize, UBaseType_t priority, BaseType_t coreID, uint32_t task_delay_ms, Scheduler *scheduler, ESP32_MPU6050 *mpu6050_sensor, IbusTask *ibus_receiver_task, MotorTask *motor_task)
+TerminalTask::TerminalTask(const char *name, uint32_t stackSize, UBaseType_t priority, BaseType_t coreID, uint32_t task_delay_ms, Scheduler *scheduler, ESP32_MPU6050 *mpu6050_sensor, IbusTask *ibus_receiver_task, MotorTask *motor_task, SettingsManager *settings_manager)
     : TaskBase(name, stackSize, priority, coreID, task_delay_ms),
       _scheduler(scheduler),
       _mpu6050_sensor(mpu6050_sensor),
       _ibus_receiver_task(ibus_receiver_task),
-      _motor_task(motor_task)
+      _motor_task(motor_task),
+      _settings_manager(settings_manager)
 {
     // ... (rest of the constructor remains the same)
 }
@@ -41,6 +51,7 @@ void TerminalTask::setup()
 
     com_send_log(TERMINAL_OUTPUT, "");
     com_send_log(LOG_INFO, "Welcome, type 'help' for a list of commands.");
+    TerminalTask::_show_prompt();
 }
 
 //
@@ -53,54 +64,25 @@ void TerminalTask::run()
         {
             if (_input_buffer.length() > 0)
             {
-                _parse_command(_input_buffer);
+                TerminalTask::_parse_command(_input_buffer);
                 _input_buffer = "";
             }
+            TerminalTask::_show_prompt();
         }
-        else
+        else if (isPrintable(incoming_char))
         {
             _input_buffer += incoming_char;
+            Serial.print(incoming_char); // Echo back to the terminal
         }
-    }
-}
-
-//
-void TerminalTask::_parse_command(String &command)
-{
-    command.trim();
-
-    // Try to find an exact match for the full command first (for multi-word commands like "get mpu-data")
-    for (int i = 0; i < _num_commands; i++)
-    {
-        if (command.equalsIgnoreCase(_commands[i].name))
+        else if (incoming_char == 127) // Backspace
         {
-            (this->*_commands[i].handler)(command);
-            return;
+            if (_input_buffer.length() > 0)
+            {
+                _input_buffer.remove(_input_buffer.length() - 1);
+                Serial.print("\b \b"); // Move cursor back, print space, move back again
+            }
         }
     }
-
-    // If no exact match, try to separate command and arguments
-    String command_name = command;
-    String args = "";
-    int space_index = command.indexOf(' ');
-    if (space_index != -1)
-    {
-        command_name = command.substring(0, space_index);
-        args = command.substring(space_index + 1);
-        args.trim();
-    }
-
-    // Find and execute the command (now with potential single-word command_name)
-    for (int i = 0; i < _num_commands; i++)
-    {
-        if (command_name.equalsIgnoreCase(_commands[i].name))
-        {
-            (this->*_commands[i].handler)(args);
-            return;
-        }
-    }
-
-    com_send_log(LOG_WARN, "Unknown command: '%s'", command.c_str());
 }
 
 // --- Command Handlers ---
@@ -111,47 +93,36 @@ void TerminalTask::_handle_help(String &args)
     com_send_log(TERMINAL_OUTPUT, "");
     com_send_log(TERMINAL_OUTPUT, "--- Available Commands ---");
 
-    com_send_log(TERMINAL_OUTPUT, "\n--- System Commands ---");
-    for (int i = 0; i < _num_commands; i++)
-    {
-        if (strcmp(_commands[i].name, "help") == 0 ||
-            strcmp(_commands[i].name, "status") == 0 ||
-            strcmp(_commands[i].name, "tasks") == 0 ||
-            strcmp(_commands[i].name, "mem") == 0 ||
-            strcmp(_commands[i].name, "reboot") == 0)
-        {
-            com_send_log(TERMINAL_OUTPUT, "  %-15s - %s", _commands[i].name, _commands[i].help);
-        }
-    }
+    const char *current_category = "";
 
-    com_send_log(TERMINAL_OUTPUT, "\n--- MPU6050 Commands ---");
     for (int i = 0; i < _num_commands; i++)
     {
-        if (strcmp(_commands[i].name, "get mpu-data") == 0 ||
-            strcmp(_commands[i].name, "get mpu-config") == 0 ||
-            strcmp(_commands[i].name, "calibrate_mpu") == 0)
+        const char *category_str = "";
+        switch (_commands[i].category)
         {
-            com_send_log(TERMINAL_OUTPUT, "  %-15s - %s", _commands[i].name, _commands[i].help);
+        case CommandCategory::SYSTEM:
+            category_str = "System";
+            break;
+        case CommandCategory::MPU6050:
+            category_str = "MPU6050";
+            break;
+        case CommandCategory::IBUS:
+            category_str = "IBUS";
+            break;
+        case CommandCategory::MOTOR:
+            category_str = "Motor";
+            break;
+        case CommandCategory::SETTINGS:
+            category_str = "Settings";
+            break;
         }
-    }
 
-    com_send_log(TERMINAL_OUTPUT, "\n--- IBUS Commands ---");
-    for (int i = 0; i < _num_commands; i++)
-    {
-        if (strcmp(_commands[i].name, "get ibus-data") == 0 ||
-            strcmp(_commands[i].name, "get ibus-status") == 0)
+        if (strcmp(current_category, category_str) != 0)
         {
-            com_send_log(TERMINAL_OUTPUT, "  %-15s - %s", _commands[i].name, _commands[i].help);
+            com_send_log(TERMINAL_OUTPUT, "\n--- %s Commands ---", category_str);
+            current_category = category_str;
         }
-    }
-
-    com_send_log(TERMINAL_OUTPUT, "\n--- Motor Commands ---");
-    for (int i = 0; i < _num_commands; i++)
-    {
-        if (strcmp(_commands[i].name, "set motor") == 0)
-        {
-            com_send_log(TERMINAL_OUTPUT, "  %-15s - %s", _commands[i].name, _commands[i].help);
-        }
+        com_send_log(TERMINAL_OUTPUT, "  %-15s - %s", _commands[i].name, _commands[i].help);
     }
     com_send_log(TERMINAL_OUTPUT, "\n--------------------------");
 }
@@ -205,7 +176,7 @@ void TerminalTask::_handle_tasks(String &args)
 
     // Print header
     com_send_log(TERMINAL_OUTPUT, "");
-    com_send_log(TERMINAL_OUTPUT, "%-16s %-10s %-6s %-8s %-10s %-10s %-10s %s",
+    com_send_log(TERMINAL_OUTPUT, "% -16s %-10s %-6s %-8s %-10s %-10s %-10s %s",
                  "Task Name", "State", "Prio", "CPU %", "Loop (us)", "Avg (us)", "Max (us)", "Stack HWM (bytes)");
     com_send_log(TERMINAL_OUTPUT, "-------------------------------------------------------------------------------------------------------------------");
 
@@ -245,7 +216,7 @@ void TerminalTask::_handle_tasks(String &args)
         char cpu_str[8];
         snprintf(cpu_str, sizeof(cpu_str), "%.2f", cpu_percentage);
 
-        com_send_log(TERMINAL_OUTPUT, "%-16s %-10s %-6u %-8s %-10u %-10u %-10u %u",
+        com_send_log(TERMINAL_OUTPUT, "% -16s %-10s %-6u %-8s %-10u %-10u %-10u %u",
                      name,
                      _get_task_state_string(freertos_status.eCurrentState),
                      freertos_status.uxBasePriority,
@@ -265,9 +236,9 @@ void TerminalTask::_handle_mem(String &args)
 {
     com_send_log(TERMINAL_OUTPUT, "");
     com_send_log(TERMINAL_OUTPUT, "Memory (Heap):");
-    com_send_log(TERMINAL_OUTPUT, "  Total: %u bytes", ESP.getHeapSize());
-    com_send_log(TERMINAL_OUTPUT, "  Free:  %u bytes", ESP.getFreeHeap());
-    com_send_log(TERMINAL_OUTPUT, "  Min Free: %u bytes", ESP.getMinFreeHeap());
+    com_send_log(TERMINAL_OUTPUT, "  Total: %s", TerminalTask::_format_bytes(ESP.getHeapSize()));
+    com_send_log(TERMINAL_OUTPUT, "  Free:  %s", TerminalTask::_format_bytes(ESP.getFreeHeap()));
+    com_send_log(TERMINAL_OUTPUT, "  Min Free: %s", TerminalTask::_format_bytes(ESP.getMinFreeHeap()));
 }
 
 void TerminalTask::_handle_reboot(String &args)
@@ -284,19 +255,9 @@ void TerminalTask::_handle_reboot(String &args)
     ESP.restart();
 }
 
-bool TerminalTask::_check_mpu6050_sensor_available()
+void TerminalTask::_handle_mpu_data(String &args)
 {
-    if (!_mpu6050_sensor)
-    {
-        com_send_log(LOG_ERROR, "MPU6050 sensor not available.");
-        return false;
-    }
-    return true;
-}
-
-void TerminalTask::_handle_get_mpu_data(String &args)
-{
-    if (!_check_mpu6050_sensor_available())
+    if (!TerminalTask::_check_mpu6050_sensor_available())
         return;
 
     com_send_log(TERMINAL_OUTPUT, "Acc: x=%.2f, y=%.2f, z=%.2f | Gyro: x=%.2f, y=%.2f, z=%.2f | Temp: %.2f C",
@@ -309,9 +270,9 @@ void TerminalTask::_handle_get_mpu_data(String &args)
                  _mpu6050_sensor->readings.temperature_celsius);
 }
 
-void TerminalTask::_handle_get_mpu_config(String &args)
+void TerminalTask::_handle_mpu_config(String &args)
 {
-    if (!_check_mpu6050_sensor_available())
+    if (!TerminalTask::_check_mpu6050_sensor_available())
         return;
 
     com_send_log(TERMINAL_OUTPUT, "MPU6050 Settings:");
@@ -320,9 +281,9 @@ void TerminalTask::_handle_get_mpu_config(String &args)
     com_send_log(TERMINAL_OUTPUT, "  LPF Bandwidth: %d Hz", _mpu6050_sensor->getLpfBandwidth());
 }
 
-void TerminalTask::_handle_calibrate_mpu_sensor(String &args)
+void TerminalTask::_handle_mpu_calibrate(String &args)
 {
-    if (!_check_mpu6050_sensor_available())
+    if (!TerminalTask::_check_mpu6050_sensor_available())
         return;
 
     com_send_log(LOG_INFO, "Calibrating MPU6050 sensor...");
@@ -330,19 +291,9 @@ void TerminalTask::_handle_calibrate_mpu_sensor(String &args)
     com_send_log(LOG_INFO, "MPU6050 sensor calibration complete.");
 }
 
-bool TerminalTask::_check_ibus_receiver_available()
+void TerminalTask::_handle_ibus_data(String &args)
 {
-    if (!_ibus_receiver_task)
-    {
-        com_send_log(LOG_ERROR, "IBus receiver task not available.");
-        return false;
-    }
-    return true;
-}
-
-void TerminalTask::_handle_get_ibus_data(String &args)
-{
-    if (!_check_ibus_receiver_available())
+    if (!TerminalTask::_check_ibus_receiver_available())
         return;
 
     com_send_log(TERMINAL_OUTPUT, "IBUS Channels:");
@@ -352,37 +303,24 @@ void TerminalTask::_handle_get_ibus_data(String &args)
     }
 }
 
-void TerminalTask::_handle_get_ibus_status(String &args)
+void TerminalTask::_handle_ibus_status(String &args)
 {
-    if (!_check_ibus_receiver_available())
+    if (!TerminalTask::_check_ibus_receiver_available())
         return;
 
-    // Assuming FlyskyIBUS library has a method to check connection status
-    // For now, we'll just show if the task is available.
     com_send_log(TERMINAL_OUTPUT, "IBUS Status: %s", (_ibus_receiver_task != nullptr) ? "Task Available" : "Task Not Available");
-    // TODO: Add actual IBUS connection status from the library if available
 }
 
-bool TerminalTask::_check_motor_task_available()
+void TerminalTask::_handle_motor_throttle(String &args)
 {
-    if (!_motor_task)
-    {
-        com_send_log(LOG_ERROR, "Motor task not available.");
-        return false;
-    }
-    return true;
-}
-
-void TerminalTask::_handle_set_motor_throttle(String &args)
-{
-    if (!_check_motor_task_available())
+    if (!TerminalTask::_check_motor_task_available())
         return;
 
     // Parse arguments: <motor_id> <throttle_value>
     int space_index = args.indexOf(' ');
     if (space_index == -1)
     {
-        com_send_log(LOG_ERROR, "Usage: set motor <motor_id> <throttle_value>");
+        com_send_log(LOG_ERROR, "Usage: motor.throttle <motor_id> <throttle_value>");
         return;
     }
 
@@ -398,8 +336,6 @@ void TerminalTask::_handle_set_motor_throttle(String &args)
         return;
     }
 
-    // DShot throttle values are typically 48 to 2047 (0-47 are commands, 0 is disarmed)
-    // For simplicity, let's allow 0-2047 for now, with 0 being disarmed.
     if (throttle_value > 2047)
     {
         com_send_log(LOG_ERROR, "Invalid throttle value: %d. Must be between 0 and 2047.", throttle_value);
@@ -408,4 +344,192 @@ void TerminalTask::_handle_set_motor_throttle(String &args)
 
     _motor_task->setThrottle(motor_id, throttle_value);
     com_send_log(TERMINAL_OUTPUT, "Motor %d throttle set to %d.", motor_id, throttle_value);
+}
+
+void TerminalTask::_handle_get_setting(String &args)
+{
+    if (args.length() == 0)
+    {
+        com_send_log(LOG_ERROR, "Usage: get <key>");
+        return;
+    }
+
+    const char* internal_key = _settings_manager->getInternalKeyFromDisplayKey(args.c_str());
+
+    if (internal_key == nullptr) {
+        com_send_log(LOG_ERROR, "Unknown setting: %s", args.c_str());
+        return;
+    }
+
+    String value = _settings_manager->getSettingValueHumanReadable(internal_key);
+    const char *description = _settings_manager->getSettingDescription(internal_key); // Use internal_key for description
+    if (value.length() > 0)
+    {
+        com_send_log(TERMINAL_OUTPUT, "%s (%s): %s", args.c_str(), description, value.c_str());
+    }
+    else
+    {
+        // This case should ideally not be reached if internal_key is valid and setting exists
+        com_send_log(LOG_ERROR, "Could not retrieve value for setting: %s", args.c_str());
+    }
+}
+
+void TerminalTask::_handle_set_setting(String &args)
+{
+    int space_index = args.indexOf(' ');
+    if (space_index == -1)
+    {
+        com_send_log(LOG_ERROR, "Usage: set <key> <value>");
+        return;
+    }
+
+    String display_key = args.substring(0, space_index);
+    String value_str = args.substring(space_index + 1);
+
+    const char* internal_key = _settings_manager->getInternalKeyFromDisplayKey(display_key.c_str());
+
+    if (internal_key == nullptr) {
+        com_send_log(LOG_ERROR, "Unknown setting: %s", display_key.c_str());
+        return;
+    }
+
+    if (_settings_manager->setSettingValue(internal_key, value_str))
+    {
+        com_send_log(LOG_INFO, "Set %s to %s", display_key.c_str(), _settings_manager->getSettingValueHumanReadable(internal_key).c_str());
+    }
+    else
+    {
+        const char *description = _settings_manager->getSettingDescription(internal_key);
+        if (strcmp(description, "Unknown Setting") != 0)
+        {
+            com_send_log(LOG_ERROR, "Failed to set %s (%s) to %s. Invalid value or out of range.", display_key.c_str(), description, value_str.c_str());
+        }
+        else
+        {
+            com_send_log(LOG_ERROR, "Unknown setting: %s", display_key.c_str());
+        }
+    }
+}
+
+void TerminalTask::_handle_save_settings(String &args)
+{
+    _settings_manager->saveSettings();
+    com_send_log(LOG_INFO, "Settings saved to NVS.");
+}
+
+void TerminalTask::_handle_factory_reset(String &args)
+{
+    _settings_manager->factoryReset();
+    com_send_log(LOG_INFO, "Settings reset to default values.");
+}
+
+void TerminalTask::_handle_list_settings(String &args)
+{
+    _settings_manager->listSettings();
+}
+
+void TerminalTask::_handle_dump_settings(String &args)
+{
+    _settings_manager->dumpSettings();
+}
+
+// --- Helper Functions ---
+
+bool TerminalTask::_check_mpu6050_sensor_available()
+{
+    if (!_mpu6050_sensor)
+    {
+        com_send_log(LOG_ERROR, "MPU6050 sensor not available.");
+        return false;
+    }
+    return true;
+}
+
+bool TerminalTask::_check_ibus_receiver_available()
+{
+    if (!_ibus_receiver_task)
+    {
+        com_send_log(LOG_ERROR, "IBUS receiver not available.");
+        return false;
+    }
+    return true;
+}
+
+bool TerminalTask::_check_motor_task_available()
+{
+    if (!_motor_task)
+    {
+        com_send_log(LOG_ERROR, "Motor task not available.");
+        return false;
+    }
+    return true;
+}
+
+void TerminalTask::_show_prompt()
+{
+    com_send_prompt("[flight32 ~]$ ");
+}
+
+const char* TerminalTask::_format_bytes(uint32_t bytes)
+{
+    if (bytes < 1024)
+    {
+        snprintf(_byte_buffer, sizeof(_byte_buffer), "%lu B", bytes);
+    }
+    else if (bytes < (1024 * 1024))
+    {
+        snprintf(_byte_buffer, sizeof(_byte_buffer), "%.1f KB", (float)bytes / 1024.0f);
+    }
+    else
+    {
+        snprintf(_byte_buffer, sizeof(_byte_buffer), "%.1f MB", (float)bytes / (1024.0f * 1024.0f));
+    }
+    return _byte_buffer;
+}
+
+void TerminalTask::_parse_command(String &command_line)
+{
+    command_line.trim();
+    if (command_line.length() == 0) return;
+
+    // Iterate through commands to find the longest matching command name
+    int best_match_index = -1;
+    int longest_match_len = 0;
+
+    for (int i = 0; i < _num_commands; i++)
+    {
+        const char* cmd_name = _commands[i].name;
+        int cmd_name_len = strlen(cmd_name);
+
+        // Check if command_line starts with cmd_name
+        if (command_line.startsWith(cmd_name))
+        {
+            // Check if it's an exact match or followed by a space
+            if (command_line.length() == cmd_name_len || command_line.charAt(cmd_name_len) == ' ')
+            {
+                if (cmd_name_len > longest_match_len)
+                {
+                    longest_match_len = cmd_name_len;
+                    best_match_index = i;
+                }
+            }
+        }
+    }
+
+    if (best_match_index != -1)
+    {
+        // Found a matching command
+        const Command& matched_command = _commands[best_match_index];
+        String args = "";
+        if (command_line.length() > longest_match_len)
+        {
+            args = command_line.substring(longest_match_len + 1); // +1 to skip the space
+            args.trim();
+        }
+        (this->*matched_command.handler)(args);
+        return;
+    }
+
+    // No command found
+    com_send_log(LOG_ERROR, "Unknown command: %s", command_line.c_str());
 }

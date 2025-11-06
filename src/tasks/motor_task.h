@@ -3,8 +3,9 @@
 #include <Arduino.h>
 #include "../scheduler/task_base.h"
 #include <DShotRMT.h>
+#include "../config.h"
 
-#define NUM_MOTORS 4
+
 
 class MotorTask : public TaskBase
 {

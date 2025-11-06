@@ -27,6 +27,9 @@ void com_task(void *pvParameters)
             case TERMINAL_OUTPUT:
                 Serial.println(msg.content);
                 break;
+            case TERMINAL_PROMPT:
+                Serial.print(msg.content);
+                break;
             case MPU6050_DATA:
                 Serial.printf("Acc: x=%.2f, y=%.2f, z=%.2f | Gyro: x=%.2f, y=%.2f, z=%.2f | Temp: %.2f C\n",
                               msg.mpu6050_data.accelerometer.x,
@@ -62,5 +65,13 @@ void com_send_mpu6050_data(const SensorReadings &data)
     com_message_t msg;
     msg.type = MPU6050_DATA;
     msg.mpu6050_data = data;
+    xQueueSend(com_queue, &msg, 0);
+}
+
+void com_send_prompt(const char *prompt)
+{
+    com_message_t msg;
+    msg.type = TERMINAL_PROMPT;
+    strncpy(msg.content, prompt, COM_MESSAGE_MAX_LENGTH);
     xQueueSend(com_queue, &msg, 0);
 }

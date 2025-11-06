@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <DShotRMT.h>
 
 // --- Serial Configuration ---
 static constexpr auto SERIAL_BAUD_RATE = 115200;
@@ -26,22 +27,23 @@ static constexpr uint8_t MPU6050_TASK_PRIORITY = 2;
 static constexpr int8_t MPU6050_TASK_CORE_ID = 0;
 static constexpr uint8_t MPU6050_TASK_DELAY_MS = 10;
 
+// --- Com Manager Configuration ---
+static constexpr uint8_t COM_QUEUE_LENGTH = 20;
+
 // --- IBUS Task Configuration ---
-#define IBUS_TASK_STACK_SIZE 2048
-#define IBUS_TASK_PRIORITY 5
-#define IBUS_TASK_CORE_ID 1
-#define IBUS_TASK_DELAY_MS 10
-#define IBUS_SERIAL_BAUDRATE 115200
+static constexpr uint32_t IBUS_TASK_STACK_SIZE = 2048;
+static constexpr uint8_t IBUS_TASK_PRIORITY = 5;
+static constexpr int8_t IBUS_TASK_CORE_ID = 1;
+static constexpr uint8_t IBUS_TASK_DELAY_MS = 10;
+static constexpr uint32_t IBUS_SERIAL_BAUDRATE = 115200;
 
 // --- Motor Task Configuration ---
-#define MOTOR_TASK_STACK_SIZE 2048
-#define MOTOR_TASK_PRIORITY 5
-#define MOTOR_TASK_CORE_ID 1
-#define MOTOR_TASK_DELAY_MS 10
+static constexpr uint32_t MOTOR_TASK_STACK_SIZE = 2048;
+static constexpr uint8_t MOTOR_TASK_PRIORITY = 5;
+static constexpr int8_t MOTOR_TASK_CORE_ID = 1;
+static constexpr uint8_t MOTOR_TASK_DELAY_MS = 10;
 
 // --- DShot Configuration ---
-#define DSHOT_PROTOCOL DSHOT300 // DSHOT150, DSHOT300, DSHOT600, DSHOT1200
-#define MOTOR_PIN_1 27
-#define MOTOR_PIN_2 25
-#define MOTOR_PIN_3 26
-#define MOTOR_PIN_4 33
+static constexpr dshot_mode_t DSHOT_PROTOCOL = DSHOT300; // DSHOT150, DSHOT300, DSHOT600, DSHOT1200
+static constexpr uint8_t NUM_MOTORS = 4;
+static const int MOTOR_PINS[NUM_MOTORS] = {27, 25, 26, 33}; // Motor 1, 2, 3, 4
