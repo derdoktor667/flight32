@@ -16,21 +16,24 @@ class TerminalTask;
 // It points to a member function of TerminalTask that takes a String reference and returns void.
 using CommandHandler = void (TerminalTask::*)(String &args);
 
-enum class CommandCategory {
+enum class CommandCategory
+{
     SYSTEM,
     MPU6050,
     IBUS,
     MOTOR,
     SETTINGS
 };
-struct Command {
+struct Command
+{
     const char *name;
     CommandHandler handler;
     const char *help;
     CommandCategory category;
 };
 
-class TerminalTask : public TaskBase {
+class TerminalTask : public TaskBase
+{
 public:
     TerminalTask(const char *name, uint32_t stackSize, UBaseType_t priority, BaseType_t coreID, uint32_t task_delay_ms, Scheduler *scheduler, ESP32_MPU6050 *mpu6050_sensor, IbusTask *ibus_receiver_task, MotorTask *motor_task, SettingsManager *settings_manager);
 
@@ -80,5 +83,5 @@ private:
     static const int _num_commands;
 
     char _byte_buffer[15]; // Buffer for human-readable byte output
-    const char* _format_bytes(uint32_t bytes);
+    const char *_format_bytes(uint32_t bytes);
 };

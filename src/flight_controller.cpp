@@ -10,8 +10,6 @@
 #include "tasks/motor_task.h"
 #include <Wire.h>
 
-
-
 FlightController::~FlightController()
 {
     delete _mpu6050_task;
@@ -24,12 +22,10 @@ void FlightController::setup()
 {
     Serial.begin(SERIAL_BAUD_RATE);
 
-
-
     // Create the IO manager task
     xTaskCreate(
         com_task,            // Task function
-        "com_task",          // Task name
+        COM_TASK_NAME,       // Task name
         COM_TASK_STACK_SIZE, // Stack size
         NULL,                // Parameter
         COM_TASK_PRIORITY,   // Priority
@@ -57,10 +53,10 @@ void FlightController::setup()
     }
 
     // --- Task Creation ---
-    _mpu6050_task = new Mpu6050Task("GYRO / MPU6050", MPU6050_TASK_STACK_SIZE, MPU6050_TASK_PRIORITY, MPU6050_TASK_CORE, MPU6050_TASK_DELAY_MS, _mpu6050_sensor);
-    _ibus_receiver_task = new IbusTask("RX / IBUS", IBUS_TASK_STACK_SIZE, IBUS_TASK_PRIORITY, IBUS_TASK_CORE, IBUS_TASK_DELAY_MS);
-    _motor_task = new MotorTask("MOTORS / DShot", MOTOR_TASK_STACK_SIZE, MOTOR_TASK_PRIORITY, MOTOR_TASK_CORE, MOTOR_TASK_DELAY_MS, MOTOR_PINS_ARRAY, DSHOT_PROTOCOL);
-    _terminal_task = new TerminalTask("CLI / Terminal", TERMINAL_TASK_STACK_SIZE, TERMINAL_TASK_PRIORITY, TERMINAL_TASK_CORE, TERMINAL_TASK_DELAY_MS, &_scheduler, &_mpu6050_sensor, _ibus_receiver_task, _motor_task, &_settings_manager);
+    _mpu6050_task = new Mpu6050Task(MPU6050_TASK_NAME, MPU6050_TASK_STACK_SIZE, MPU6050_TASK_PRIORITY, MPU6050_TASK_CORE, MPU6050_TASK_DELAY_MS, _mpu6050_sensor);
+    _ibus_receiver_task = new IbusTask(IBUS_TASK_NAME, IBUS_TASK_STACK_SIZE, IBUS_TASK_PRIORITY, IBUS_TASK_CORE, IBUS_TASK_DELAY_MS);
+    _motor_task = new MotorTask(MOTOR_TASK_NAME, MOTOR_TASK_STACK_SIZE, MOTOR_TASK_PRIORITY, MOTOR_TASK_CORE, MOTOR_TASK_DELAY_MS, MOTOR_PINS_ARRAY, DSHOT_PROTOCOL);
+    _terminal_task = new TerminalTask(TERMINAL_TASK_NAME, TERMINAL_TASK_STACK_SIZE, TERMINAL_TASK_PRIORITY, TERMINAL_TASK_CORE, TERMINAL_TASK_DELAY_MS, &_scheduler, &_mpu6050_sensor, _ibus_receiver_task, _motor_task, &_settings_manager);
 
     // Add tasks to scheduler
     _scheduler.addTask(_ibus_receiver_task);

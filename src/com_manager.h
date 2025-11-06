@@ -5,7 +5,6 @@
 #include <cstdarg>
 #include <ESP32_MPU6050.h> // For SensorReadings
 
-
 static constexpr uint16_t COM_MESSAGE_MAX_LENGTH = 256;
 
 typedef enum

@@ -80,3 +80,23 @@ static constexpr uint8_t ASCII_BACKSPACE = 127;
 static constexpr int8_t INVALID_SETTING_VALUE = -1;
 static constexpr uint8_t UINT8_MAX_VALUE = 255;
 
+// --- Terminal Formatting Constants ---
+static constexpr uint8_t TASK_NAME_COLUMN_WIDTH = 16;
+static constexpr uint8_t TASK_STATE_COLUMN_WIDTH = 10;
+static constexpr uint8_t TASK_PRIO_COLUMN_WIDTH = 6;
+static constexpr uint8_t TASK_CPU_COLUMN_WIDTH = 8;
+static constexpr uint8_t TASK_LOOP_COLUMN_WIDTH = 10;
+static constexpr uint8_t TASK_AVG_LOOP_COLUMN_WIDTH = 10;
+static constexpr uint8_t TASK_MAX_LOOP_COLUMN_WIDTH = 10;
+static constexpr uint8_t TASK_STACK_HWM_COLUMN_WIDTH = 17;
+
+// --- Task Names ---
+static constexpr const char* COM_TASK_NAME = "com_task";
+static constexpr const char* MPU6050_TASK_NAME = "GYRO / MPU6050";
+static constexpr const char* IBUS_TASK_NAME = "RX / IBUS";
+static constexpr const char* MOTOR_TASK_NAME = "MOTORS / DShot";
+static constexpr const char* TERMINAL_TASK_NAME = "CLI / Terminal";
+static constexpr const char* IDLE_TASK_NAME_0 = "IDLE0";
+static constexpr const char* IDLE_TASK_NAME_1 = "IDLE1";
+static constexpr const char* TIMER_SERVICE_TASK_NAME = "Tmr Svc";
+

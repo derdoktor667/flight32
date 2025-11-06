@@ -72,14 +72,12 @@ void TerminalTask::run()
         else if (isPrintable(incoming_char))
         {
             _input_buffer += incoming_char;
-            Serial.print(incoming_char); // Echo back to the terminal
         }
         else if (incoming_char == ASCII_BACKSPACE) // Backspace
         {
             if (_input_buffer.length() > 0)
             {
                 _input_buffer.remove(_input_buffer.length() - 1);
-                Serial.print("\b \b"); // Move cursor back, print space, move back again
             }
         }
     }
@@ -189,7 +187,7 @@ void TerminalTask::_handle_tasks(String &args)
 
         const char *name = current_task->getName();
         // Filter out irrelevant tasks (IDLE and Tmr Svc are handled by FreeRTOS directly, not our TaskBase)
-        if (strcmp(name, "IDLE0") == 0 || strcmp(name, "IDLE1") == 0 || strcmp(name, "Tmr Svc") == 0)
+        if (strcmp(name, IDLE_TASK_NAME_0) == 0 || strcmp(name, IDLE_TASK_NAME_1) == 0 || strcmp(name, TIMER_SERVICE_TASK_NAME) == 0)
         {
             continue;
         }
@@ -216,15 +214,18 @@ void TerminalTask::_handle_tasks(String &args)
         char cpu_str[8];
         snprintf(cpu_str, sizeof(cpu_str), "%.2f", cpu_percentage);
 
-        com_send_log(TERMINAL_OUTPUT, "% -16s %-10s %-6u %-8s %-10u %-10u %-10u %u",
-                     name,
-                     _get_task_state_string(freertos_status.eCurrentState),
-                     freertos_status.uxBasePriority,
-                     cpu_str,
-                     current_task->getLoopTime(),
-                     current_task->getAvgLoopTime(),
-                     current_task->getMaxLoopTime(),
-                     freertos_status.usStackHighWaterMark);
+        char output_buffer[256]; // Sufficiently large buffer for the output line
+        snprintf(output_buffer, sizeof(output_buffer),
+                 "% -*s %-*s %-*u %-*s %-*u %-*u %-*u %u",
+                 TASK_NAME_COLUMN_WIDTH, name,
+                 TASK_STATE_COLUMN_WIDTH, _get_task_state_string(freertos_status.eCurrentState),
+                 TASK_PRIO_COLUMN_WIDTH, freertos_status.uxBasePriority,
+                 TASK_CPU_COLUMN_WIDTH, cpu_str,
+                 TASK_LOOP_COLUMN_WIDTH, current_task->getLoopTime(),
+                 TASK_AVG_LOOP_COLUMN_WIDTH, current_task->getAvgLoopTime(),
+                 TASK_MAX_LOOP_COLUMN_WIDTH, current_task->getMaxLoopTime(),
+                 freertos_status.usStackHighWaterMark);
+        com_send_log(TERMINAL_OUTPUT, output_buffer);
     }
     com_send_log(TERMINAL_OUTPUT, "-------------------------------------------------------------------------------------------------------------------");
 
