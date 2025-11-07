@@ -23,7 +23,10 @@ public:
     const char *getInternalKeyFromDisplayKey(const char *display_key);
 
     // --- NVS Keys (max 15 chars) ---
+    static constexpr const char *KEY_SYSTEM_NAME = "system.name";
+    static constexpr const char *DEFAULT_SYSTEM_NAME = "Flight32";
     static constexpr const char *KEY_MPU_GYRO_RANGE = "mpu.g_range";
+    static constexpr const char *KEY_MOTOR_PROTOCOL = "motor.protocol";
 
     // --- Gyroscope Range Mappings ---
     static const char *GYRO_RANGE_STRINGS[];
@@ -34,8 +37,7 @@ private:
     bool _is_begun = false;
 
     // --- Schema Version ---
-    static constexpr uint16_t CURRENT_SCHEMA_VERSION = 1;
-    static constexpr const char *KEY_SCHEMA_VERSION = "schema_ver";
+
 
     void _write_defaults();
 
@@ -56,6 +58,7 @@ private:
         const char* const* string_map; // Pointer to an array of strings for human-readable values
         uint8_t string_map_size;       // Size of the string map
         int default_value;             // Default integer value for the setting
+        const char* string_default;    // Default string value
     };
 
     static const SettingMetadata _settings_metadata[];

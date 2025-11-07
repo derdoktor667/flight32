@@ -2,8 +2,6 @@
 
 void TaskBase::taskRunner()
 {
-    setup();
-
     while (true)
     {
         uint32_t start_us = micros();

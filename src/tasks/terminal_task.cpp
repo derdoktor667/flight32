@@ -24,7 +24,7 @@ const Command TerminalTask::_commands[] = {
     {"set motor.throttle", &TerminalTask::_handle_motor_throttle, "Sets the throttle for a specific motor (e.g., 'set motor.throttle 0 1000').", CommandCategory::MOTOR},
 
     {"get", &TerminalTask::_handle_get_setting, "Gets a setting value (e.g., 'get gyro.resolution').", CommandCategory::SETTINGS},
-    {"set", &TerminalTask::_handle_set_setting, "Sets a setting value (e.g., 'set gyro.resolution 0' or 'set gyro.resolution 250_DPS').", CommandCategory::SETTINGS},
+    {"set", &TerminalTask::_handle_set_setting, "Sets a setting value (e.g., 'set gyro.resolution = 250_DPS').", CommandCategory::SETTINGS},
     {"save", &TerminalTask::_handle_save_settings, "Saves all settings to persistent storage.", CommandCategory::SETTINGS},
     {"factory_reset", &TerminalTask::_handle_factory_reset, "Resets all settings to their default values.", CommandCategory::SETTINGS},
     {"settings", &TerminalTask::_handle_list_settings, "Lists all available settings.", CommandCategory::SETTINGS},
@@ -48,10 +48,6 @@ TerminalTask::TerminalTask(const char *name, uint32_t stackSize, UBaseType_t pri
 void TerminalTask::setup()
 {
     _input_buffer.reserve(TERMINAL_INPUT_BUFFER_SIZE);
-
-    com_send_log(TERMINAL_OUTPUT, "");
-    com_send_log(LOG_INFO, "Welcome, type 'help' for a list of commands.");
-    TerminalTask::_show_prompt();
 }
 
 //
@@ -377,15 +373,17 @@ void TerminalTask::_handle_get_setting(String &args)
 
 void TerminalTask::_handle_set_setting(String &args)
 {
-    int space_index = args.indexOf(' ');
-    if (space_index == -1)
+    int equals_index = args.indexOf('=');
+    if (equals_index == -1)
     {
-        com_send_log(LOG_ERROR, "Usage: set <key> <value>");
+        com_send_log(LOG_ERROR, "Usage: set <key> = <value>");
         return;
     }
 
-    String display_key = args.substring(0, space_index);
-    String value_str = args.substring(space_index + 1);
+    String display_key = args.substring(0, equals_index);
+    display_key.trim();
+    String value_str = args.substring(equals_index + 1);
+    value_str.trim();
 
     const char* internal_key = _settings_manager->getInternalKeyFromDisplayKey(display_key.c_str());
 

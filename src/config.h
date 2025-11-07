@@ -63,9 +63,16 @@ static constexpr uint8_t MOTOR_PIN_3 = 14;
 static constexpr dshot_mode_t DSHOT_PROTOCOL = DSHOT300; // DSHOT150, DSHOT300, DSHOT600, DSHOT1200
 static const int MOTOR_PINS_ARRAY[NUM_MOTORS] = {27, 25, 26, 33}; // Renamed to avoid conflict with MOTOR_PIN_X
 
+// --- Motor Protocol Settings ---
+static constexpr const char *KEY_MOTOR_PROTOCOL = "motor.protocol";
+static constexpr uint8_t DEFAULT_MOTOR_PROTOCOL = 1; // Corresponds to DSHOT300
+static constexpr const char *DSHOT_PROTOCOL_STRINGS[] = {"DSHOT150", "DSHOT300", "DSHOT600", "DSHOT1200"};
+static constexpr uint8_t NUM_DSHOT_PROTOCOLS = sizeof(DSHOT_PROTOCOL_STRINGS) / sizeof(DSHOT_PROTOCOL_STRINGS[0]);
+
 // --- Settings Manager ---
 static constexpr const char* SETTINGS_NAMESPACE = "flight32";
-static constexpr uint16_t CURRENT_SCHEMA_VERSION = 1;
+static constexpr uint16_t CURRENT_SCHEMA_VERSION = 2;
+static constexpr const char *KEY_SCHEMA_VERSION = "schema_ver";
 static constexpr uint8_t DEFAULT_GYRO_RANGE = 0; // Corresponds to 250_DPS in GYRO_RANGE_STRINGS
 
 // --- Sensor ---

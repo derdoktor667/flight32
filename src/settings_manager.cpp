@@ -6,7 +6,9 @@ const char *SettingsManager::GYRO_RANGE_STRINGS[] = {"250_DPS", "500_DPS", "1000
 const uint8_t SettingsManager::NUM_GYRO_RANGES = sizeof(SettingsManager::GYRO_RANGE_STRINGS) / sizeof(SettingsManager::GYRO_RANGE_STRINGS[0]);
 
 const SettingsManager::SettingMetadata SettingsManager::_settings_metadata[] = {
-    {SettingsManager::KEY_MPU_GYRO_RANGE, "gyro.resolution", "MPU6050 Gyroscope Range", SettingsManager::UINT8, SettingsManager::GYRO_RANGE_STRINGS, SettingsManager::NUM_GYRO_RANGES, DEFAULT_GYRO_RANGE}};
+    {SettingsManager::KEY_SYSTEM_NAME, "system.name", "Configurable model name", SettingsManager::STRING, nullptr, 0, 0, SettingsManager::DEFAULT_SYSTEM_NAME},
+    {SettingsManager::KEY_MPU_GYRO_RANGE, "gyro.resolution", "MPU6050 Gyroscope Range", SettingsManager::UINT8, SettingsManager::GYRO_RANGE_STRINGS, SettingsManager::NUM_GYRO_RANGES, DEFAULT_GYRO_RANGE, nullptr},
+    {SettingsManager::KEY_MOTOR_PROTOCOL, "motor.protocol", "DShot Motor Protocol", SettingsManager::UINT8, DSHOT_PROTOCOL_STRINGS, NUM_DSHOT_PROTOCOLS, DEFAULT_MOTOR_PROTOCOL, nullptr}};
 const int SettingsManager::_num_settings = sizeof(SettingsManager::_settings_metadata) / sizeof(SettingsManager::SettingMetadata);
 
 SettingsManager::SettingsManager()
@@ -16,6 +18,7 @@ SettingsManager::SettingsManager()
 
 void SettingsManager::begin()
 {
+    com_send_log(LOG_INFO, "SettingsManager: begin()");
     _preferences.begin(SETTINGS_NAMESPACE, false);
     _is_begun = true;
     loadOrInitSettings();
@@ -27,6 +30,7 @@ void SettingsManager::loadOrInitSettings()
         return;
 
     uint16_t saved_version = _preferences.getUShort(KEY_SCHEMA_VERSION, 0);
+    com_send_log(LOG_INFO, "Settings: Saved version: %d, Current version: %d", saved_version, CURRENT_SCHEMA_VERSION);
 
     if (saved_version != CURRENT_SCHEMA_VERSION)
     {
@@ -41,6 +45,7 @@ void SettingsManager::loadOrInitSettings()
 
 void SettingsManager::factoryReset()
 {
+    com_send_log(LOG_INFO, "SettingsManager: factoryReset()");
     if (!_is_begun)
         return;
     _preferences.clear();
@@ -50,6 +55,7 @@ void SettingsManager::factoryReset()
 
 void SettingsManager::_write_defaults()
 {
+    com_send_log(LOG_INFO, "SettingsManager: _write_defaults()");
     // Set default values for all settings based on metadata
     for (int i = 0; i < _num_settings; ++i)
     {
@@ -67,7 +73,16 @@ void SettingsManager::_write_defaults()
             _preferences.putFloat(key, 0.0f); // Placeholder, consider adding float_default to metadata
             break;
         case STRING:
-            _preferences.putString(key, ""); // Placeholder, consider adding string_default to metadata
+            if (_settings_metadata[i].string_default != nullptr)
+            {
+                com_send_log(LOG_INFO, "Writing default for %s: %s", key, _settings_metadata[i].string_default);
+                _preferences.putString(key, _settings_metadata[i].string_default);
+            }
+            else
+            {
+                com_send_log(LOG_INFO, "Writing empty default for %s", key);
+                _preferences.putString(key, "");
+            }
             break;
         }
     }

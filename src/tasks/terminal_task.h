@@ -40,6 +40,8 @@ public:
     void setup() override;
     void run() override;
 
+    void _show_prompt();
+
 private:
     Scheduler *_scheduler;
     ESP32_MPU6050 *_mpu6050_sensor;
@@ -55,7 +57,7 @@ private:
     bool _check_motor_task_available();
 
     void _parse_command(String &command);
-    void _show_prompt();
+
 
     // New handler declarations for categorized commands
     void _handle_mpu_data(String &args);

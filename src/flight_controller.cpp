@@ -32,6 +32,8 @@ void FlightController::setup()
         NULL                 // Task handle
     );
 
+    vTaskDelay(pdMS_TO_TICKS(10));
+
     com_send_log(TERMINAL_OUTPUT, "");
     com_send_log(LOG_INFO, "Flight32 Firmware v%s starting...", get_firmware_version());
 
@@ -55,14 +57,34 @@ void FlightController::setup()
     // --- Task Creation ---
     _mpu6050_task = new Mpu6050Task(MPU6050_TASK_NAME, MPU6050_TASK_STACK_SIZE, MPU6050_TASK_PRIORITY, MPU6050_TASK_CORE, MPU6050_TASK_DELAY_MS, _mpu6050_sensor);
     _ibus_receiver_task = new IbusTask(IBUS_TASK_NAME, IBUS_TASK_STACK_SIZE, IBUS_TASK_PRIORITY, IBUS_TASK_CORE, IBUS_TASK_DELAY_MS);
-    _motor_task = new MotorTask(MOTOR_TASK_NAME, MOTOR_TASK_STACK_SIZE, MOTOR_TASK_PRIORITY, MOTOR_TASK_CORE, MOTOR_TASK_DELAY_MS, MOTOR_PINS_ARRAY, DSHOT_PROTOCOL);
+    _motor_task = new MotorTask(MOTOR_TASK_NAME, MOTOR_TASK_STACK_SIZE, MOTOR_TASK_PRIORITY, MOTOR_TASK_CORE, MOTOR_TASK_DELAY_MS, MOTOR_PINS_ARRAY, &_settings_manager);
     _terminal_task = new TerminalTask(TERMINAL_TASK_NAME, TERMINAL_TASK_STACK_SIZE, TERMINAL_TASK_PRIORITY, TERMINAL_TASK_CORE, TERMINAL_TASK_DELAY_MS, &_scheduler, &_mpu6050_sensor, _ibus_receiver_task, _motor_task, &_settings_manager);
 
     // Add tasks to scheduler
     _scheduler.addTask(_ibus_receiver_task);
     _scheduler.addTask(_mpu6050_task);
-    _scheduler.addTask(_terminal_task);
     _scheduler.addTask(_motor_task);
+    _scheduler.addTask(_terminal_task);
 
-    _scheduler.start();
+        // Manually call setup for each task
+
+        for (uint8_t i = 0; i < _scheduler.getTaskCount(); i++)
+
+        {
+
+            _scheduler.getTask(i)->setup();
+
+        }
+
+    
+
+        com_send_log(LOG_INFO, "Welcome, type 'help' for a list of commands.");
+
+        com_flush_output();
+
+        _terminal_task->_show_prompt();
+
+    
+
+        _scheduler.start();
 }
