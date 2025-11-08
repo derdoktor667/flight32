@@ -1,10 +1,12 @@
 # Flight32: The Open-Source Firmware for Your ESP32 Flight Controller
 
-![Flight32 Logo Placeholder](https://via.placeholder.com/400x150?text=Flight32+Logo)
+<div align="center">
+  <img src="img/flight32_logo_400.jpg" alt="Flight32 Logo Placeholder" width="400">
+</div>
 
 Welcome to Flight32 – the robust and extensible firmware solution specifically designed for ESP32-based flight controllers. Dive into the world of precise flight control and experience the power of the ESP32 in your next drone project.
 
-## ✨ Highlights that Inspire:
+## ✨ Highlights:
 
 *   **Stable Flight Performance**: A FreeRTOS-based task scheduler ensures reliable and predictable loop times, forming the core of any stable flight control system.
 *   **ESP32 Dual-Core Power**: Full utilization of the ESP32's dual-core architecture for efficient task distribution and maximum processing power.
@@ -12,7 +14,7 @@ Welcome to Flight32 – the robust and extensible firmware solution specifically
 *   **Real-time Insights**: Monitor your tasks live via the integrated terminal. View CPU load, current, average, and maximum loop times, as well as stack usage – all at a glance for optimal performance analysis.
 *   **Professional Terminal Experience**: Enjoy a dynamic, bash-like prompt that reflects the configured system name, character echo, and backspace support for a more intuitive and professional interaction with the flight controller.
 
-## 🚀 Current Features:
+## 🚀 Features:
 
 *   **MPU6050 IMU Integration**: Seamless integration of the MPU6050 Inertial Measurement Unit for accelerometer, gyroscope, and temperature readings. Includes calibration and configuration commands.
 *   **Flysky IBUS Receiver Support**: Connect your Flysky receiver via Serial2 using the IBUS protocol. Monitor channel data and connection status directly from the terminal.
@@ -77,4 +79,4 @@ We welcome all contributions! Whether it's bug reports, feature suggestions, or 
 
 ---
 
-**Flight32 – Take Control.**
+**Flight32**
