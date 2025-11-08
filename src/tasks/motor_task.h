@@ -17,11 +17,20 @@ public:
     void setup() override;
     void run() override;
 
+    void update(float throttle, float pitch, float roll, float yaw);
     void setThrottle(uint8_t motor_id, uint16_t throttle);
 
+    ~MotorTask();
+
 private:
-    DShotRMT *_dshot_driver;
+    DShotRMT *_dshot_drivers[NUM_MOTORS];
     uint16_t _motor_throttles[NUM_MOTORS];
     const int *_motor_pins;
     SettingsManager *_settings_manager;
+
+    // Flight commands from PID controller (-1.0 to 1.0)
+    float _throttle_command;
+    float _pitch_command;
+    float _roll_command;
+    float _yaw_command;
 };
