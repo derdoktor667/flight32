@@ -6,6 +6,7 @@
 #include "tasks/ibus_task.h"
 #include "tasks/terminal_task.h"
 #include "tasks/motor_task.h"
+#include "tasks/pid_task.h"
 
 #include "settings_manager.h"
 
@@ -25,4 +26,5 @@ private:
     IbusTask *_ibus_receiver_task = nullptr;
     TerminalTask *_terminal_task = nullptr;
     MotorTask *_motor_task = nullptr;
+    PidTask *_pid_task = nullptr;
 };

@@ -18,6 +18,7 @@ public:
     uint32_t getLoopTime() const { return _loop_time_us; }
     uint32_t getAvgLoopTime() const { return _avg_loop_time_us; }
     uint32_t getMaxLoopTime() const { return _max_loop_time_us; }
+    uint32_t getTaskDelayMs() const { return _task_delay_ms; }
 
     // --- Public Methods ---
     void taskRunner();

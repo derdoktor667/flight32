@@ -10,6 +10,8 @@ public:
     void setup() override;
     void run() override;
 
+    ESP32_MPU6050 &getMpu6050Sensor() { return _mpu6050_sensor; }
+
 private:
     ESP32_MPU6050 &_mpu6050_sensor;
 };

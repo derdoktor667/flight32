@@ -2,6 +2,7 @@
 #include "../firmware.h"
 #include "../config.h"
 #include "../com_manager.h"
+#include "pid_task.h"
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -23,6 +24,9 @@ const Command TerminalTask::_commands[] = {
 
     {"set motor.throttle", &TerminalTask::_handle_motor_throttle, "Sets the throttle for a specific motor (e.g., 'set motor.throttle 0 1000').", CommandCategory::MOTOR},
 
+    {"get pid", &TerminalTask::_handle_pid_get, "Gets the current PID gains.", CommandCategory::PID},
+    {"set pid", &TerminalTask::_handle_pid_set, "Sets a PID gain (e.g., 'set pid roll p 0.1').", CommandCategory::PID},
+
     {"get", &TerminalTask::_handle_get_setting, "Gets a setting value (e.g., 'get gyro.resolution').", CommandCategory::SETTINGS},
     {"set", &TerminalTask::_handle_set_setting, "Sets a setting value (e.g., 'set gyro.resolution = 250_DPS').", CommandCategory::SETTINGS},
     {"save", &TerminalTask::_handle_save_settings, "Saves all settings to persistent storage.", CommandCategory::SETTINGS},
@@ -33,12 +37,13 @@ const Command TerminalTask::_commands[] = {
 // Calculate the number of commands
 const int TerminalTask::_num_commands = sizeof(TerminalTask::_commands) / sizeof(Command);
 
-TerminalTask::TerminalTask(const char *name, uint32_t stackSize, UBaseType_t priority, BaseType_t coreID, uint32_t task_delay_ms, Scheduler *scheduler, ESP32_MPU6050 *mpu6050_sensor, IbusTask *ibus_receiver_task, MotorTask *motor_task, SettingsManager *settings_manager)
+TerminalTask::TerminalTask(const char *name, uint32_t stackSize, UBaseType_t priority, BaseType_t coreID, uint32_t task_delay_ms, Scheduler *scheduler, ESP32_MPU6050 *mpu6050_sensor, IbusTask *ibus_receiver_task, MotorTask *motor_task, PidTask *pid_task, SettingsManager *settings_manager)
     : TaskBase(name, stackSize, priority, coreID, task_delay_ms),
       _scheduler(scheduler),
       _mpu6050_sensor(mpu6050_sensor),
       _ibus_receiver_task(ibus_receiver_task),
       _motor_task(motor_task),
+      _pid_task(pid_task),
       _settings_manager(settings_manager)
 {
     // ... (rest of the constructor remains the same)
@@ -85,40 +90,112 @@ void TerminalTask::run()
 void TerminalTask::_handle_help(String &args)
 {
     com_send_log(TERMINAL_OUTPUT, "");
-    com_send_log(TERMINAL_OUTPUT, "--- Available Commands ---");
 
-    const char *current_category = "";
-
-    for (int i = 0; i < _num_commands; i++)
+    if (args.length() == 0)
     {
-        const char *category_str = "";
-        switch (_commands[i].category)
+        // General help message
+        com_send_log(TERMINAL_OUTPUT, "--- Flight32 Terminal Help ---");
+        com_send_log(TERMINAL_OUTPUT, "This terminal allows you to monitor and configure the Flight32 firmware.");
+        com_send_log(TERMINAL_OUTPUT, "");
+        com_send_log(TERMINAL_OUTPUT, "Usage: help <category>");
+        com_send_log(TERMINAL_OUTPUT, "");
+        com_send_log(TERMINAL_OUTPUT, "Core Commands:");
+        com_send_log(TERMINAL_OUTPUT, "  %-19s %s", "status", "Shows firmware information.");
+        com_send_log(TERMINAL_OUTPUT, "  %-19s %s", "tasks", "Shows information about running tasks.");
+        com_send_log(TERMINAL_OUTPUT, "  %-19s %s", "reboot", "Reboots the ESP32.");
+        com_send_log(TERMINAL_OUTPUT, "");
+        com_send_log(TERMINAL_OUTPUT, "Available Command Categories:");
+
+        // List unique categories in a formatted way
+        CommandCategory displayed_categories[static_cast<int>(CommandCategory::SETTINGS) + 1];
+        int num_displayed_categories = 0;
+
+        for (int i = 0; i < _num_commands; ++i)
         {
-        case CommandCategory::SYSTEM:
-            category_str = "System";
-            break;
-        case CommandCategory::MPU6050:
-            category_str = "MPU6050";
-            break;
-        case CommandCategory::IBUS:
-            category_str = "IBUS";
-            break;
-        case CommandCategory::MOTOR:
-            category_str = "Motor";
-            break;
-        case CommandCategory::SETTINGS:
-            category_str = "Settings";
-            break;
+            bool already_displayed = false;
+            for (int j = 0; j < num_displayed_categories; ++j)
+            {
+                if (displayed_categories[j] == _commands[i].category)
+                {
+                    already_displayed = true;
+                    break;
+                }
+            }
+
+            if (!already_displayed)
+            {
+                displayed_categories[num_displayed_categories++] = _commands[i].category;
+                const char *category_str = _get_category_string(_commands[i].category);
+                com_send_log(TERMINAL_OUTPUT, "  - %s", category_str);
+            }
+        }
+        com_send_log(TERMINAL_OUTPUT, "\n------------------------------");
+    }
+    else
+    {
+        // Category-specific help
+        CommandCategory requested_category = _get_category_from_string(args);
+
+        if (requested_category == CommandCategory::UNKNOWN)
+        {
+            com_send_log(LOG_ERROR, "Unknown help category: '%s'. Type 'help' for a list of categories.", args.c_str());
+            return;
         }
 
-        if (strcmp(current_category, category_str) != 0)
+        com_send_log(TERMINAL_OUTPUT, "--- %s Commands ---", _get_category_string(requested_category));
+        com_send_log(TERMINAL_OUTPUT, "");
+        com_send_log(TERMINAL_OUTPUT, "  Command             Description");
+        com_send_log(TERMINAL_OUTPUT, "  --------------------------------------------------");
+        for (int i = 0; i < _num_commands; ++i)
         {
-            com_send_log(TERMINAL_OUTPUT, "\n--- %s Commands ---", category_str);
-            current_category = category_str;
+            if (_commands[i].category == requested_category)
+            {
+                com_send_log(TERMINAL_OUTPUT, "  %-19s %s", _commands[i].name, _commands[i].help);
+            }
         }
-        com_send_log(TERMINAL_OUTPUT, "  %-15s - %s", _commands[i].name, _commands[i].help);
+        com_send_log(TERMINAL_OUTPUT, "  --------------------------------------------------");
+        com_send_log(TERMINAL_OUTPUT, "\n--------------------------");
     }
-    com_send_log(TERMINAL_OUTPUT, "\n--------------------------");
+}
+
+// Helper to convert CommandCategory enum to string
+const char *TerminalTask::_get_category_string(CommandCategory category)
+{
+    switch (category)
+    {
+    case CommandCategory::SYSTEM:
+        return "System";
+    case CommandCategory::MPU6050:
+        return "MPU6050 Sensor";
+    case CommandCategory::IBUS:
+        return "IBUS Receiver";
+    case CommandCategory::MOTOR:
+        return "Motor Control";
+    case CommandCategory::PID:
+        return "PID Controller";
+    case CommandCategory::SETTINGS:
+        return "Settings Management";
+    default:
+        return "Unknown";
+    }
+}
+
+// Helper to convert string to CommandCategory enum
+CommandCategory TerminalTask::_get_category_from_string(String &category_str)
+{
+    if (category_str.equalsIgnoreCase("system"))
+        return CommandCategory::SYSTEM;
+    if (category_str.equalsIgnoreCase("mpu6050") || category_str.equalsIgnoreCase("sensor"))
+        return CommandCategory::MPU6050;
+    if (category_str.equalsIgnoreCase("ibus") || category_str.equalsIgnoreCase("receiver"))
+        return CommandCategory::IBUS;
+    if (category_str.equalsIgnoreCase("motor") || category_str.equalsIgnoreCase("motors"))
+        return CommandCategory::MOTOR;
+    if (category_str.equalsIgnoreCase("pid") || category_str.equalsIgnoreCase("controller"))
+        return CommandCategory::PID;
+    if (category_str.equalsIgnoreCase("settings") || category_str.equalsIgnoreCase("config"))
+        return CommandCategory::SETTINGS;
+    return CommandCategory::UNKNOWN;
 }
 
 void TerminalTask::_handle_status(String &args)
@@ -472,10 +549,20 @@ bool TerminalTask::_check_motor_task_available()
     return true;
 }
 
+bool TerminalTask::_check_pid_task_available()
+{
+    if (!_pid_task)
+    {
+        com_send_log(LOG_ERROR, "PID task not available.");
+        return false;
+    }
+    return true;
+}
+
 void TerminalTask::_show_prompt()
 {
     com_flush_output();
-    com_send_prompt("[flight32 ~]$ ");
+    com_send_prompt("[flight32 ~]$");
 }
 
 const char* TerminalTask::_format_bytes(uint32_t bytes)
@@ -540,4 +627,91 @@ void TerminalTask::_parse_command(String &command_line)
 
     // No command found
     com_send_log(LOG_ERROR, "Unknown command: %s", command_line.c_str());
+}
+
+void TerminalTask::_handle_pid_get(String &args)
+{
+    if (!TerminalTask::_check_pid_task_available())
+        return;
+
+    com_send_log(TERMINAL_OUTPUT, "PID Gains:");
+    com_send_log(TERMINAL_OUTPUT, "  Roll:  P=%.2f, I=%.2f, D=%.2f",
+                 _pid_task->getGains(PidAxis::ROLL).p,
+                 _pid_task->getGains(PidAxis::ROLL).i,
+                 _pid_task->getGains(PidAxis::ROLL).d);
+    com_send_log(TERMINAL_OUTPUT, "  Pitch: P=%.2f, I=%.2f, D=%.2f",
+                 _pid_task->getGains(PidAxis::PITCH).p,
+                 _pid_task->getGains(PidAxis::PITCH).i,
+                 _pid_task->getGains(PidAxis::PITCH).d);
+    com_send_log(TERMINAL_OUTPUT, "  Yaw:   P=%.2f, I=%.2f, D=%.2f",
+                 _pid_task->getGains(PidAxis::YAW).p,
+                 _pid_task->getGains(PidAxis::YAW).i,
+                 _pid_task->getGains(PidAxis::YAW).d);
+}
+
+void TerminalTask::_handle_pid_set(String &args)
+{
+    if (!TerminalTask::_check_pid_task_available())
+        return;
+
+    // Parse arguments: <axis> <p|i|d> <value>
+    int first_space = args.indexOf(' ');
+    if (first_space == -1)
+    {
+        com_send_log(LOG_ERROR, "Usage: set pid <axis> <p|i|d> <value>");
+        return;
+    }
+    int second_space = args.indexOf(' ', first_space + 1);
+    if (second_space == -1)
+    {
+        com_send_log(LOG_ERROR, "Usage: set pid <axis> <p|i|d> <value>");
+        return;
+    }
+
+    String axis_str = args.substring(0, first_space);
+    String gain_str = args.substring(first_space + 1, second_space);
+    String value_str = args.substring(second_space + 1);
+
+    PidAxis axis;
+    if (axis_str.equalsIgnoreCase("roll"))
+    {
+        axis = PidAxis::ROLL;
+    }
+    else if (axis_str.equalsIgnoreCase("pitch"))
+    {
+        axis = PidAxis::PITCH;
+    }
+    else if (axis_str.equalsIgnoreCase("yaw"))
+    {
+        axis = PidAxis::YAW;
+    }
+    else
+    {
+        com_send_log(LOG_ERROR, "Invalid axis: %s. Must be 'roll', 'pitch', or 'yaw'.", axis_str.c_str());
+        return;
+    }
+
+    PidGains gains = _pid_task->getGains(axis);
+    float value = value_str.toFloat();
+
+    if (gain_str.equalsIgnoreCase("p"))
+    {
+        gains.p = value;
+    }
+    else if (gain_str.equalsIgnoreCase("i"))
+    {
+        gains.i = value;
+    }
+    else if (gain_str.equalsIgnoreCase("d"))
+    {
+        gains.d = value;
+    }
+    else
+    {
+        com_send_log(LOG_ERROR, "Invalid gain: %s. Must be 'p', 'i', or 'd'.", gain_str.c_str());
+        return;
+    }
+
+    _pid_task->setGains(axis, gains);
+    com_send_log(TERMINAL_OUTPUT, "Set %s %s to %.2f.", axis_str.c_str(), gain_str.c_str(), value);
 }

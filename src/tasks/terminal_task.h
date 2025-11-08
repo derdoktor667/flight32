@@ -6,28 +6,30 @@
 #include <ESP32_MPU6050.h>
 #include "ibus_task.h"
 #include "motor_task.h"
+#include "pid_task.h"
 
 #include "../settings_manager.h"
 
 // Forward declaration of TerminalTask is needed for the function pointer type
 class TerminalTask;
 
-// Define a function pointer type for command handlers.
-// It points to a member function of TerminalTask that takes a String reference and returns void.
-using CommandHandler = void (TerminalTask::*)(String &args);
-
+// Enum for command categories
 enum class CommandCategory
 {
     SYSTEM,
     MPU6050,
     IBUS,
     MOTOR,
-    SETTINGS
+    PID,
+    SETTINGS,
+    UNKNOWN // Added for handling invalid categories
 };
+
+// Struct to hold command information
 struct Command
 {
     const char *name;
-    CommandHandler handler;
+    void (TerminalTask::*handler)(String &);
     const char *help;
     CommandCategory category;
 };
@@ -35,7 +37,7 @@ struct Command
 class TerminalTask : public TaskBase
 {
 public:
-    TerminalTask(const char *name, uint32_t stackSize, UBaseType_t priority, BaseType_t coreID, uint32_t task_delay_ms, Scheduler *scheduler, ESP32_MPU6050 *mpu6050_sensor, IbusTask *ibus_receiver_task, MotorTask *motor_task, SettingsManager *settings_manager);
+    TerminalTask(const char *name, uint32_t stackSize, UBaseType_t priority, BaseType_t coreID, uint32_t task_delay_ms, Scheduler *scheduler, ESP32_MPU6050 *mpu6050_sensor, IbusTask *ibus_receiver_task, MotorTask *motor_task, PidTask *pid_task, SettingsManager *settings_manager);
 
     void setup() override;
     void run() override;
@@ -47,6 +49,7 @@ private:
     ESP32_MPU6050 *_mpu6050_sensor;
     IbusTask *_ibus_receiver_task;
     MotorTask *_motor_task;
+    PidTask *_pid_task;
     SettingsManager *_settings_manager;
 
     String _input_buffer;
@@ -55,9 +58,13 @@ private:
     bool _check_mpu6050_sensor_available();
     bool _check_ibus_receiver_available();
     bool _check_motor_task_available();
+    bool _check_pid_task_available();
 
     void _parse_command(String &command);
 
+    // New helper declarations for help command
+    const char *_get_category_string(CommandCategory category);
+    CommandCategory _get_category_from_string(String &category_str);
 
     // New handler declarations for categorized commands
     void _handle_mpu_data(String &args);
@@ -66,6 +73,8 @@ private:
     void _handle_ibus_data(String &args);
     void _handle_ibus_status(String &args);
     void _handle_motor_throttle(String &args);
+    void _handle_pid_get(String &args);
+    void _handle_pid_set(String &args);
 
     // Existing handler declarations
     void _handle_help(String &args);

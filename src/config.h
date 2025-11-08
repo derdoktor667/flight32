@@ -63,6 +63,33 @@ static constexpr uint8_t MOTOR_PIN_3 = 14;
 static constexpr dshot_mode_t DSHOT_PROTOCOL = DSHOT300; // DSHOT150, DSHOT300, DSHOT600, DSHOT1200
 static const int MOTOR_PINS_ARRAY[NUM_MOTORS] = {27, 25, 26, 33}; // Renamed to avoid conflict with MOTOR_PIN_X
 
+// --- PID Task Configuration ---
+static constexpr uint32_t PID_TASK_STACK_SIZE = 4096;
+static constexpr uint8_t PID_TASK_PRIORITY = 4;
+static constexpr int8_t PID_TASK_CORE = 1;
+static constexpr uint8_t PID_TASK_DELAY_MS = 10;
+
+// --- PID Gain Settings ---
+static constexpr const char *KEY_PID_ROLL_P = "pid.roll.p";
+static constexpr const char *KEY_PID_ROLL_I = "pid.roll.i";
+static constexpr const char *KEY_PID_ROLL_D = "pid.roll.d";
+static constexpr const char *KEY_PID_PITCH_P = "pid.pitch.p";
+static constexpr const char *KEY_PID_PITCH_I = "pid.pitch.i";
+static constexpr const char *KEY_PID_PITCH_D = "pid.pitch.d";
+static constexpr const char *KEY_PID_YAW_P = "pid.yaw.p";
+static constexpr const char *KEY_PID_YAW_I = "pid.yaw.i";
+static constexpr const char *KEY_PID_YAW_D = "pid.yaw.d";
+
+static constexpr float DEFAULT_PID_ROLL_P = 0.0f;
+static constexpr float DEFAULT_PID_ROLL_I = 0.0f;
+static constexpr float DEFAULT_PID_ROLL_D = 0.0f;
+static constexpr float DEFAULT_PID_PITCH_P = 0.0f;
+static constexpr float DEFAULT_PID_PITCH_I = 0.0f;
+static constexpr float DEFAULT_PID_PITCH_D = 0.0f;
+static constexpr float DEFAULT_PID_YAW_P = 0.0f;
+static constexpr float DEFAULT_PID_YAW_I = 0.0f;
+static constexpr float DEFAULT_PID_YAW_D = 0.0f;
+
 // --- Motor Protocol Settings ---
 static constexpr const char *KEY_MOTOR_PROTOCOL = "motor.protocol";
 static constexpr uint8_t DEFAULT_MOTOR_PROTOCOL = 1; // Corresponds to DSHOT300
@@ -102,6 +129,7 @@ static constexpr const char* COM_TASK_NAME = "com_task";
 static constexpr const char* MPU6050_TASK_NAME = "GYRO / MPU6050";
 static constexpr const char* IBUS_TASK_NAME = "RX / IBUS";
 static constexpr const char* MOTOR_TASK_NAME = "MOTORS / DShot";
+static constexpr const char* PID_TASK_NAME = "PID Controller";
 static constexpr const char* TERMINAL_TASK_NAME = "CLI / Terminal";
 static constexpr const char* IDLE_TASK_NAME_0 = "IDLE0";
 static constexpr const char* IDLE_TASK_NAME_1 = "IDLE1";
