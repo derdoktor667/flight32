@@ -6,9 +6,19 @@ const char *SettingsManager::GYRO_RANGE_STRINGS[] = {"250_DPS", "500_DPS", "1000
 const uint8_t SettingsManager::NUM_GYRO_RANGES = sizeof(SettingsManager::GYRO_RANGE_STRINGS) / sizeof(SettingsManager::GYRO_RANGE_STRINGS[0]);
 
 const SettingsManager::SettingMetadata SettingsManager::_settings_metadata[] = {
-    {SettingsManager::KEY_SYSTEM_NAME, "system.name", "Configurable model name", SettingsManager::STRING, nullptr, 0, 0, SettingsManager::DEFAULT_SYSTEM_NAME},
-    {SettingsManager::KEY_MPU_GYRO_RANGE, "gyro.resolution", "MPU6050 Gyroscope Range", SettingsManager::UINT8, SettingsManager::GYRO_RANGE_STRINGS, SettingsManager::NUM_GYRO_RANGES, DEFAULT_GYRO_RANGE, nullptr},
-    {SettingsManager::KEY_MOTOR_PROTOCOL, "motor.protocol", "DShot Motor Protocol", SettingsManager::UINT8, DSHOT_PROTOCOL_STRINGS, NUM_DSHOT_PROTOCOLS, DEFAULT_MOTOR_PROTOCOL, nullptr}};
+    {SettingsManager::KEY_SYSTEM_NAME, "system.name", "Configurable model name", SettingsManager::STRING, nullptr, 0, 0, 0.0f, SettingsManager::DEFAULT_SYSTEM_NAME},
+    {SettingsManager::KEY_MPU_GYRO_RANGE, "gyro.resolution", "MPU6050 Gyroscope Range", SettingsManager::UINT8, SettingsManager::GYRO_RANGE_STRINGS, SettingsManager::NUM_GYRO_RANGES, DEFAULT_GYRO_RANGE, 0.0f, nullptr},
+    {SettingsManager::KEY_MOTOR_PROTOCOL, "motor.protocol", "DShot Motor Protocol", SettingsManager::UINT8, DSHOT_PROTOCOL_STRINGS, NUM_DSHOT_PROTOCOLS, DEFAULT_MOTOR_PROTOCOL, 0.0f, nullptr},
+
+    {KEY_PID_ROLL_P, "pid.roll.p", "PID Roll Proportional Gain", SettingsManager::FLOAT, nullptr, 0, 0, DEFAULT_PID_ROLL_P, nullptr},
+    {KEY_PID_ROLL_I, "pid.roll.i", "PID Roll Integral Gain", SettingsManager::FLOAT, nullptr, 0, 0, DEFAULT_PID_ROLL_I, nullptr},
+    {KEY_PID_ROLL_D, "pid.roll.d", "PID Roll Derivative Gain", SettingsManager::FLOAT, nullptr, 0, 0, DEFAULT_PID_ROLL_D, nullptr},
+    {KEY_PID_PITCH_P, "pid.pitch.p", "PID Pitch Proportional Gain", SettingsManager::FLOAT, nullptr, 0, 0, DEFAULT_PID_PITCH_P, nullptr},
+    {KEY_PID_PITCH_I, "pid.pitch.i", "PID Pitch Integral Gain", SettingsManager::FLOAT, nullptr, 0, 0, DEFAULT_PID_PITCH_I, nullptr},
+    {KEY_PID_PITCH_D, "pid.pitch.d", "PID Pitch Derivative Gain", SettingsManager::FLOAT, nullptr, 0, 0, DEFAULT_PID_PITCH_D, nullptr},
+    {KEY_PID_YAW_P, "pid.yaw.p", "PID Yaw Proportional Gain", SettingsManager::FLOAT, nullptr, 0, 0, DEFAULT_PID_YAW_P, nullptr},
+    {KEY_PID_YAW_I, "pid.yaw.i", "PID Yaw Integral Gain", SettingsManager::FLOAT, nullptr, 0, 0, DEFAULT_PID_YAW_I, nullptr},
+    {KEY_PID_YAW_D, "pid.yaw.d", "PID Yaw Derivative Gain", SettingsManager::FLOAT, nullptr, 0, 0, DEFAULT_PID_YAW_D, nullptr}};
 const int SettingsManager::_num_settings = sizeof(SettingsManager::_settings_metadata) / sizeof(SettingsManager::SettingMetadata);
 
 SettingsManager::SettingsManager()
@@ -69,8 +79,7 @@ void SettingsManager::_write_defaults()
             _preferences.putInt(key, _settings_metadata[i].default_value);
             break;
         case FLOAT:
-            // Floats don't have a default_value in metadata, so handle separately or add float default to metadata
-            _preferences.putFloat(key, 0.0f); // Placeholder, consider adding float_default to metadata
+            _preferences.putFloat(key, _settings_metadata[i].default_float_value);
             break;
         case STRING:
             if (_settings_metadata[i].string_default != nullptr)

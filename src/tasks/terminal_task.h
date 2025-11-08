@@ -75,6 +75,7 @@ private:
     void _handle_motor_throttle(String &args);
     void _handle_pid_get(String &args);
     void _handle_pid_set(String &args);
+    void _handle_pid_reset_defaults(String &args);
 
     // Existing handler declarations
     void _handle_help(String &args);

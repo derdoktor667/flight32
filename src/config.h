@@ -56,12 +56,12 @@ static constexpr uint8_t MOTOR_PWM_CHANNEL_0 = 0;
 static constexpr uint8_t MOTOR_PWM_CHANNEL_1 = 1;
 static constexpr uint8_t MOTOR_PWM_CHANNEL_2 = 2;
 static constexpr uint8_t MOTOR_PWM_CHANNEL_3 = 3;
-static constexpr uint8_t MOTOR_PIN_0 = 25;
-static constexpr uint8_t MOTOR_PIN_1 = 26;
-static constexpr uint8_t MOTOR_PIN_2 = 27;
-static constexpr uint8_t MOTOR_PIN_3 = 14;
+static constexpr uint8_t MOTOR_PIN_FR = 25; // Front Right
+static constexpr uint8_t MOTOR_PIN_RL = 26; // Rear Left
+static constexpr uint8_t MOTOR_PIN_FL = 33; // Front Left
+static constexpr uint8_t MOTOR_PIN_RR = 27; // Rear Right
 static constexpr dshot_mode_t DSHOT_PROTOCOL = DSHOT300; // DSHOT150, DSHOT300, DSHOT600, DSHOT1200
-static const int MOTOR_PINS_ARRAY[NUM_MOTORS] = {27, 25, 26, 33}; // Renamed to avoid conflict with MOTOR_PIN_X
+static const int MOTOR_PINS_ARRAY[NUM_MOTORS] = {MOTOR_PIN_RR, MOTOR_PIN_FR, MOTOR_PIN_RL, MOTOR_PIN_FL};
 
 // --- PID Task Configuration ---
 static constexpr uint32_t PID_TASK_STACK_SIZE = 4096;
@@ -80,15 +80,15 @@ static constexpr const char *KEY_PID_YAW_P = "pid.yaw.p";
 static constexpr const char *KEY_PID_YAW_I = "pid.yaw.i";
 static constexpr const char *KEY_PID_YAW_D = "pid.yaw.d";
 
-static constexpr float DEFAULT_PID_ROLL_P = 0.0f;
-static constexpr float DEFAULT_PID_ROLL_I = 0.0f;
-static constexpr float DEFAULT_PID_ROLL_D = 0.0f;
-static constexpr float DEFAULT_PID_PITCH_P = 0.0f;
-static constexpr float DEFAULT_PID_PITCH_I = 0.0f;
-static constexpr float DEFAULT_PID_PITCH_D = 0.0f;
-static constexpr float DEFAULT_PID_YAW_P = 0.0f;
-static constexpr float DEFAULT_PID_YAW_I = 0.0f;
-static constexpr float DEFAULT_PID_YAW_D = 0.0f;
+static constexpr float DEFAULT_PID_ROLL_P = 0.2f;
+static constexpr float DEFAULT_PID_ROLL_I = 0.02f;
+static constexpr float DEFAULT_PID_ROLL_D = 0.005f;
+static constexpr float DEFAULT_PID_PITCH_P = 0.2f;
+static constexpr float DEFAULT_PID_PITCH_I = 0.02f;
+static constexpr float DEFAULT_PID_PITCH_D = 0.005f;
+static constexpr float DEFAULT_PID_YAW_P = 0.4f;
+static constexpr float DEFAULT_PID_YAW_I = 0.04f;
+static constexpr float DEFAULT_PID_YAW_D = 0.01f;
 
 // --- Motor Protocol Settings ---
 static constexpr const char *KEY_MOTOR_PROTOCOL = "motor.protocol";

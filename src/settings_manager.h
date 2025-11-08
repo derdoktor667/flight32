@@ -58,6 +58,7 @@ private:
         const char* const* string_map; // Pointer to an array of strings for human-readable values
         uint8_t string_map_size;       // Size of the string map
         int default_value;             // Default integer value for the setting
+        float default_float_value;     // Default float value for the setting (new)
         const char* string_default;    // Default string value
     };
 

@@ -26,6 +26,7 @@ const Command TerminalTask::_commands[] = {
 
     {"get pid", &TerminalTask::_handle_pid_get, "Gets the current PID gains.", CommandCategory::PID},
     {"set pid", &TerminalTask::_handle_pid_set, "Sets a PID gain (e.g., 'set pid roll p 0.1').", CommandCategory::PID},
+    {"reset pid", &TerminalTask::_handle_pid_reset_defaults, "Resets PID gains to default values.", CommandCategory::PID},
 
     {"get", &TerminalTask::_handle_get_setting, "Gets a setting value (e.g., 'get gyro.resolution').", CommandCategory::SETTINGS},
     {"set", &TerminalTask::_handle_set_setting, "Sets a setting value (e.g., 'set gyro.resolution = 250_DPS').", CommandCategory::SETTINGS},
@@ -46,7 +47,6 @@ TerminalTask::TerminalTask(const char *name, uint32_t stackSize, UBaseType_t pri
       _pid_task(pid_task),
       _settings_manager(settings_manager)
 {
-    // ... (rest of the constructor remains the same)
 }
 
 //
@@ -84,8 +84,6 @@ void TerminalTask::run()
     }
 }
 
-// --- Command Handlers ---
-
 //
 void TerminalTask::_handle_help(String &args)
 {
@@ -95,14 +93,15 @@ void TerminalTask::_handle_help(String &args)
     {
         // General help message
         com_send_log(TERMINAL_OUTPUT, "--- Flight32 Terminal Help ---");
-        com_send_log(TERMINAL_OUTPUT, "This terminal allows you to monitor and configure the Flight32 firmware.");
         com_send_log(TERMINAL_OUTPUT, "");
         com_send_log(TERMINAL_OUTPUT, "Usage: help <category>");
         com_send_log(TERMINAL_OUTPUT, "");
         com_send_log(TERMINAL_OUTPUT, "Core Commands:");
         com_send_log(TERMINAL_OUTPUT, "  %-19s %s", "status", "Shows firmware information.");
         com_send_log(TERMINAL_OUTPUT, "  %-19s %s", "tasks", "Shows information about running tasks.");
+        com_send_log(TERMINAL_OUTPUT, "  %-19s %s", "mem", "Shows current memory usage.");
         com_send_log(TERMINAL_OUTPUT, "  %-19s %s", "reboot", "Reboots the ESP32.");
+        com_send_log(TERMINAL_OUTPUT, "  %-19s %s", "factory_reset", "Resets all settings to their default values.");
         com_send_log(TERMINAL_OUTPUT, "");
         com_send_log(TERMINAL_OUTPUT, "Available Command Categories:");
 
@@ -428,9 +427,10 @@ void TerminalTask::_handle_get_setting(String &args)
         return;
     }
 
-    const char* internal_key = _settings_manager->getInternalKeyFromDisplayKey(args.c_str());
+    const char *internal_key = _settings_manager->getInternalKeyFromDisplayKey(args.c_str());
 
-    if (internal_key == nullptr) {
+    if (internal_key == nullptr)
+    {
         com_send_log(LOG_ERROR, "Unknown setting: %s", args.c_str());
         return;
     }
@@ -462,9 +462,10 @@ void TerminalTask::_handle_set_setting(String &args)
     String value_str = args.substring(equals_index + 1);
     value_str.trim();
 
-    const char* internal_key = _settings_manager->getInternalKeyFromDisplayKey(display_key.c_str());
+    const char *internal_key = _settings_manager->getInternalKeyFromDisplayKey(display_key.c_str());
 
-    if (internal_key == nullptr) {
+    if (internal_key == nullptr)
+    {
         com_send_log(LOG_ERROR, "Unknown setting: %s", display_key.c_str());
         return;
     }
@@ -562,10 +563,12 @@ bool TerminalTask::_check_pid_task_available()
 void TerminalTask::_show_prompt()
 {
     com_flush_output();
-    com_send_prompt("[flight32 ~]$");
+    String system_name = _settings_manager->getSettingValue(SettingsManager::KEY_SYSTEM_NAME);
+    String prompt = "[" + system_name + " ~]$ ";
+    com_send_prompt(prompt.c_str());
 }
 
-const char* TerminalTask::_format_bytes(uint32_t bytes)
+const char *TerminalTask::_format_bytes(uint32_t bytes)
 {
     if (bytes < BYTES_IN_KB)
     {
@@ -585,7 +588,8 @@ const char* TerminalTask::_format_bytes(uint32_t bytes)
 void TerminalTask::_parse_command(String &command_line)
 {
     command_line.trim();
-    if (command_line.length() == 0) return;
+    if (command_line.length() == 0)
+        return;
 
     // Iterate through commands to find the longest matching command name
     int best_match_index = -1;
@@ -593,7 +597,7 @@ void TerminalTask::_parse_command(String &command_line)
 
     for (int i = 0; i < _num_commands; i++)
     {
-        const char* cmd_name = _commands[i].name;
+        const char *cmd_name = _commands[i].name;
         int cmd_name_len = strlen(cmd_name);
 
         // Check if command_line starts with cmd_name
@@ -614,7 +618,7 @@ void TerminalTask::_parse_command(String &command_line)
     if (best_match_index != -1)
     {
         // Found a matching command
-        const Command& matched_command = _commands[best_match_index];
+        const Command &matched_command = _commands[best_match_index];
         String args = "";
         if (command_line.length() > longest_match_len)
         {
@@ -634,19 +638,19 @@ void TerminalTask::_handle_pid_get(String &args)
     if (!TerminalTask::_check_pid_task_available())
         return;
 
-    com_send_log(TERMINAL_OUTPUT, "PID Gains:");
-    com_send_log(TERMINAL_OUTPUT, "  Roll:  P=%.2f, I=%.2f, D=%.2f",
-                 _pid_task->getGains(PidAxis::ROLL).p,
-                 _pid_task->getGains(PidAxis::ROLL).i,
-                 _pid_task->getGains(PidAxis::ROLL).d);
-    com_send_log(TERMINAL_OUTPUT, "  Pitch: P=%.2f, I=%.2f, D=%.2f",
-                 _pid_task->getGains(PidAxis::PITCH).p,
-                 _pid_task->getGains(PidAxis::PITCH).i,
-                 _pid_task->getGains(PidAxis::PITCH).d);
-    com_send_log(TERMINAL_OUTPUT, "  Yaw:   P=%.2f, I=%.2f, D=%.2f",
-                 _pid_task->getGains(PidAxis::YAW).p,
-                 _pid_task->getGains(PidAxis::YAW).i,
-                 _pid_task->getGains(PidAxis::YAW).d);
+    com_send_log(TERMINAL_OUTPUT, "PID Gains (scaled by 100):");
+    com_send_log(TERMINAL_OUTPUT, "  Roll:  P=%d, I=%d, D=%d",
+                 (int)(_pid_task->getGains(PidAxis::ROLL).p * 100.0f),
+                 (int)(_pid_task->getGains(PidAxis::ROLL).i * 100.0f),
+                 (int)(_pid_task->getGains(PidAxis::ROLL).d * 100.0f));
+    com_send_log(TERMINAL_OUTPUT, "  Pitch: P=%d, I=%d, D=%d",
+                 (int)(_pid_task->getGains(PidAxis::PITCH).p * 100.0f),
+                 (int)(_pid_task->getGains(PidAxis::PITCH).i * 100.0f),
+                 (int)(_pid_task->getGains(PidAxis::PITCH).d * 100.0f));
+    com_send_log(TERMINAL_OUTPUT, "  Yaw:   P=%d, I=%d, D=%d",
+                 (int)(_pid_task->getGains(PidAxis::YAW).p * 100.0f),
+                 (int)(_pid_task->getGains(PidAxis::YAW).i * 100.0f),
+                 (int)(_pid_task->getGains(PidAxis::YAW).d * 100.0f));
 }
 
 void TerminalTask::_handle_pid_set(String &args)
@@ -658,13 +662,13 @@ void TerminalTask::_handle_pid_set(String &args)
     int first_space = args.indexOf(' ');
     if (first_space == -1)
     {
-        com_send_log(LOG_ERROR, "Usage: set pid <axis> <p|i|d> <value>");
+        com_send_log(LOG_ERROR, "Usage: set pid <axis> <p|i|d> <value> (value is scaled by 100)");
         return;
     }
     int second_space = args.indexOf(' ', first_space + 1);
     if (second_space == -1)
     {
-        com_send_log(LOG_ERROR, "Usage: set pid <axis> <p|i|d> <value>");
+        com_send_log(LOG_ERROR, "Usage: set pid <axis> <p|i|d> <value> (value is scaled by 100)");
         return;
     }
 
@@ -692,7 +696,9 @@ void TerminalTask::_handle_pid_set(String &args)
     }
 
     PidGains gains = _pid_task->getGains(axis);
-    float value = value_str.toFloat();
+    // Parse as integer and scale down to float
+    int int_value = value_str.toInt();
+    float value = (float)int_value / 100.0f;
 
     if (gain_str.equalsIgnoreCase("p"))
     {
@@ -713,5 +719,21 @@ void TerminalTask::_handle_pid_set(String &args)
     }
 
     _pid_task->setGains(axis, gains);
-    com_send_log(TERMINAL_OUTPUT, "Set %s %s to %.2f.", axis_str.c_str(), gain_str.c_str(), value);
+    com_send_log(TERMINAL_OUTPUT, "Set %s %s to %d (%.2f actual).", axis_str.c_str(), gain_str.c_str(), int_value, value);
+}
+
+void TerminalTask::_handle_pid_reset_defaults(String &args)
+{
+    if (!TerminalTask::_check_pid_task_available())
+        return;
+
+    if (args.equalsIgnoreCase("confirm"))
+    {
+        _pid_task->resetToDefaults();
+        com_send_log(LOG_INFO, "PID gains reset to default values.");
+    }
+    else
+    {
+        com_send_log(LOG_WARN, "Reset PID gains to default values. To confirm, type 'reset pid confirm'");
+    }
 }

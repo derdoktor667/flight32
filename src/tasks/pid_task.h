@@ -22,6 +22,7 @@ public:
 
     PidGains getGains(PidAxis axis);
     void setGains(PidAxis axis, PidGains gains);
+    void resetToDefaults();
 
 private:
     Mpu6050Task *_mpu6050_task;

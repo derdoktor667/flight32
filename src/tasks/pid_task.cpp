@@ -107,3 +107,24 @@ void PidTask::_load_gains()
 
     com_send_log(LOG_INFO, "PidTask: Loaded PID gains from settings.");
 }
+
+void PidTask::resetToDefaults()
+{
+    _pid_roll.setGains(DEFAULT_PID_ROLL_P, DEFAULT_PID_ROLL_I, DEFAULT_PID_ROLL_D);
+    _settings_manager->setSettingValue(KEY_PID_ROLL_P, String(DEFAULT_PID_ROLL_P));
+    _settings_manager->setSettingValue(KEY_PID_ROLL_I, String(DEFAULT_PID_ROLL_I));
+    _settings_manager->setSettingValue(KEY_PID_ROLL_D, String(DEFAULT_PID_ROLL_D));
+
+    _pid_pitch.setGains(DEFAULT_PID_PITCH_P, DEFAULT_PID_PITCH_I, DEFAULT_PID_PITCH_D);
+    _settings_manager->setSettingValue(KEY_PID_PITCH_P, String(DEFAULT_PID_PITCH_P));
+    _settings_manager->setSettingValue(KEY_PID_PITCH_I, String(DEFAULT_PID_PITCH_I));
+    _settings_manager->setSettingValue(KEY_PID_PITCH_D, String(DEFAULT_PID_PITCH_D));
+
+    _pid_yaw.setGains(DEFAULT_PID_YAW_P, DEFAULT_PID_YAW_I, DEFAULT_PID_YAW_D);
+    _settings_manager->setSettingValue(KEY_PID_YAW_P, String(DEFAULT_PID_YAW_P));
+    _settings_manager->setSettingValue(KEY_PID_YAW_I, String(DEFAULT_PID_YAW_I));
+    _settings_manager->setSettingValue(KEY_PID_YAW_D, String(DEFAULT_PID_YAW_D));
+
+    _settings_manager->saveSettings();
+    com_send_log(LOG_INFO, "PidTask: Reset PID gains to defaults and saved.");
+}

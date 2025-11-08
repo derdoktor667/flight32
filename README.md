@@ -10,14 +10,16 @@ Welcome to Flight32 – the robust and extensible firmware solution specifically
 *   **ESP32 Dual-Core Power**: Full utilization of the ESP32's dual-core architecture for efficient task distribution and maximum processing power.
 *   **Modular Design**: A clean, object-oriented architecture with clearly defined components (FlightController, Terminal, ComManager) makes the firmware easy to understand and simple to extend.
 *   **Real-time Insights**: Monitor your tasks live via the integrated terminal. View CPU load, current, average, and maximum loop times, as well as stack usage – all at a glance for optimal performance analysis.
-*   **Professional Terminal Experience**: Enjoy a bash-like prompt, character echo, and backspace support for a more intuitive and professional interaction with the flight controller.
+*   **Professional Terminal Experience**: Enjoy a dynamic, bash-like prompt that reflects the configured system name, character echo, and backspace support for a more intuitive and professional interaction with the flight controller.
 
 ## 🚀 Current Features:
 
 *   **MPU6050 IMU Integration**: Seamless integration of the MPU6050 Inertial Measurement Unit for accelerometer, gyroscope, and temperature readings. Includes calibration and configuration commands.
 *   **Flysky IBUS Receiver Support**: Connect your Flysky receiver via Serial2 using the IBUS protocol. Monitor channel data and connection status directly from the terminal.
 *   **DShotRMT Motor Control**: Integrated DShot300 motor protocol using the ESP32's RMT peripheral for precise and efficient motor control. Supports up to 4 motors.
+*   **PID Controller**: A full PID controller for flight stabilization with adjustable gains via the terminal.
 *   **Refactored Task Management**: Improved task base class and scheduler for better maintainability and clearer task state reporting ("Waiting" instead of "Blocked").
+*   **Persistent Settings**: A `SettingsManager` that saves all configurations to non-volatile storage (NVS), so your settings are retained across reboots.
 
 ## 💻 Terminal Commands:
 
@@ -29,6 +31,7 @@ The command-line interface provides real-time interaction and debugging capabili
 *   `tasks`          - Shows information about running tasks (state, priority, CPU usage, loop times, stack HWM).
 *   `mem`            - Shows current memory usage (heap total, free, min free).
 *   `reboot`         - Reboots the ESP32.
+*   `factory_reset confirm` - Resets all settings to their default values and reboots the ESP32. Requires `confirm` argument.
 
 ### MPU6050 Commands:
 *   `get mpu.data`   - Displays the latest accelerometer, gyroscope, and temperature readings from the MPU6050.
@@ -42,11 +45,16 @@ The command-line interface provides real-time interaction and debugging capabili
 ### Motor Commands:
 *   `set motor.throttle <id> <throttle>` - Sets the throttle value (0-2047) for a specific motor (0-3). Example: `set motor.throttle 0 1000`.
 
+### PID Commands:
+*   `get pid`        - Gets the current PID gains.
+*   `set pid <axis> <p|i|d> <value>` - Sets a PID gain (e.g., 'set pid roll p 20').
+*   `reset pid confirm` - Resets PID gains to default values.
+
 ### Settings Commands:
 *   `get <display_key>`      - Gets the value of any setting using its user-friendly display key. Displays both the description and human-readable value where available (e.g., `get gyro.resolution` might show `gyro.resolution (MPU6050 Gyroscope Range): 250_DPS`).
 *   `set <display_key> <value>`- Sets the value of any setting using its user-friendly display key. Accepts human-readable values where available (e.g., `set gyro.resolution 250_DPS`). Provides informative feedback on invalid inputs.
 *   `dump`           - Dumps all settings in a parsable format for backup, using user-friendly display keys and human-readable values (e.g., `set gyro.resolution = 250_DPS`).
-*   `factory_reset confirm` - Resets all settings to their default values and reboots the ESP32. Requires `confirm` argument.
+*   `save`           - Saves all settings to persistent storage.
 
 ## 🏁 Quick Start:
 
