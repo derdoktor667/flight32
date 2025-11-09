@@ -82,6 +82,8 @@ static constexpr uint8_t MOTOR_PIN_FL = 33;              // Front Left
 static constexpr uint8_t MOTOR_PIN_RR = 27;              // Rear Right
 static constexpr dshot_mode_t DSHOT_PROTOCOL = DSHOT300; // DSHOT150, DSHOT300, DSHOT600, DSHOT1200
 static const int MOTOR_PINS_ARRAY[NUM_MOTORS] = {MOTOR_PIN_RR, MOTOR_PIN_FR, MOTOR_PIN_RL, MOTOR_PIN_FL};
+static constexpr uint16_t MOTOR_MIN_THROTTLE_RAW = 48;
+static constexpr uint16_t MOTOR_MAX_THROTTLE_RAW = 2047;
 
 // --- PID Task Configuration ---
 static constexpr uint32_t PID_TASK_STACK_SIZE = 4096;

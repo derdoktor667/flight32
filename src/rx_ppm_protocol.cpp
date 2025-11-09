@@ -35,11 +35,10 @@ bool RxPpmProtocol::readChannels()
     if (_new_data_available)
     {
         _new_data_available = false;
-        // Optionally, add some validation or processing here
         _is_connected = true; // Assume connected if new data is available
         return true;
     }
-    _is_connected = (micros() - _last_pulse_time < (PPM_FRAME_LENGTH_MIN * 2)); // Check for recent pulses
+    _is_connected = (micros() - _last_pulse_time < (PPM_FRAME_LENGTH_MIN * PPM_CONNECTION_TIMEOUT_FACTOR)); // Check for recent pulses
     return false;
 }
 

@@ -89,7 +89,7 @@ void RxTask::run()
 {
     if (_rx_protocol && _rx_protocol->readChannels())
     {
-        // Channels read successfully
+        // No action needed here, channels are read internally by the protocol
     }
 }
 

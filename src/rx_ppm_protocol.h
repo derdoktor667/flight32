@@ -16,6 +16,7 @@ static constexpr uint8_t PPM_MAX_CHANNELS = 8; // Max channels to read
 static constexpr uint16_t PPM_MIN_PULSE_WIDTH = 700; // us
 static constexpr uint16_t PPM_MAX_PULSE_WIDTH = 2300; // us
 static constexpr uint16_t PPM_FRAME_LENGTH_MIN = 3000; // us (min time between frames)
+static constexpr uint8_t PPM_CONNECTION_TIMEOUT_FACTOR = 2; // Multiplier for PPM_FRAME_LENGTH_MIN to determine connection timeout
 
 class RxPpmProtocol : public RxProtocol
 {

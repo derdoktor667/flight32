@@ -838,15 +838,9 @@ void TerminalTask::_handle_set_setting(String &args)
     }
     else
     {
-        const char *description = _settings_manager->getSettingDescription(internal_key);
-        if (strcmp(description, "Unknown Setting") != 0)
-        {
-            com_send_log(LOG_ERROR, "Failed to set %s (%s) to %s. Invalid value or out of range.", display_key.c_str(), description, value_str.c_str());
-        }
-        else
-        {
-            com_send_log(LOG_ERROR, "Unknown setting: %s", display_key.c_str());
-        }
+        // If internal_key is valid but setting failed, it's due to invalid value or out of range.
+        // The description is always available if internal_key is not nullptr.
+        com_send_log(LOG_ERROR, "Failed to set %s (%s) to %s. Invalid value or out of range.", display_key.c_str(), _settings_manager->getSettingDescription(internal_key), value_str.c_str());
     }
 }
 

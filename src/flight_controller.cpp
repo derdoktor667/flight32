@@ -55,7 +55,6 @@ void FlightController::setup()
     if (!_mpu6050_sensor.begin((GyroRange)DEFAULT_GYRO_RANGE, AccelRange::ACCEL_RANGE_2G, LpfBandwidth::LPF_188HZ_N_2MS))
     {
         com_send_log(LOG_ERROR, "Failed to find MPU6050 chip");
-        // Handle error, maybe halt or blink an LED
     }
     else
     {
@@ -66,13 +65,13 @@ void FlightController::setup()
 
     // --- Task Creation ---
     _mpu6050_task = new Mpu6050Task(MPU6050_TASK_NAME, MPU6050_TASK_STACK_SIZE, MPU6050_TASK_PRIORITY, MPU6050_TASK_CORE, MPU6050_TASK_DELAY_MS, _mpu6050_sensor);
-    _rx_task = new RxTask(RX_TASK_NAME, RX_TASK_STACK_SIZE, RX_TASK_PRIORITY, RX_TASK_CORE, RX_TASK_DELAY_MS, &_settings_manager); // Pass SettingsManager
+    _rx_task = new RxTask(RX_TASK_NAME, RX_TASK_STACK_SIZE, RX_TASK_PRIORITY, RX_TASK_CORE, RX_TASK_DELAY_MS, &_settings_manager);
     _motor_task = new MotorTask(MOTOR_TASK_NAME, MOTOR_TASK_STACK_SIZE, MOTOR_TASK_PRIORITY, MOTOR_TASK_CORE, MOTOR_TASK_DELAY_MS, MOTOR_PINS_ARRAY, &_settings_manager);
-    _pid_task = new PidTask(PID_TASK_NAME, PID_TASK_STACK_SIZE, PID_TASK_PRIORITY, PID_TASK_CORE, PID_TASK_DELAY_MS, _mpu6050_task, _rx_task, _motor_task, &_settings_manager); // Pass _rx_task
-    _terminal_task = new TerminalTask(TERMINAL_TASK_NAME, TERMINAL_TASK_STACK_SIZE, TERMINAL_TASK_PRIORITY, TERMINAL_TASK_CORE, TERMINAL_TASK_DELAY_MS, &_scheduler, &_mpu6050_sensor, _rx_task, _motor_task, _pid_task, &_settings_manager); // Pass _rx_task
+    _pid_task = new PidTask(PID_TASK_NAME, PID_TASK_STACK_SIZE, PID_TASK_PRIORITY, PID_TASK_CORE, PID_TASK_DELAY_MS, _mpu6050_task, _rx_task, _motor_task, &_settings_manager);
+    _terminal_task = new TerminalTask(TERMINAL_TASK_NAME, TERMINAL_TASK_STACK_SIZE, TERMINAL_TASK_PRIORITY, TERMINAL_TASK_CORE, TERMINAL_TASK_DELAY_MS, &_scheduler, &_mpu6050_sensor, _rx_task, _motor_task, _pid_task, &_settings_manager);
 
     // Add tasks to scheduler
-    _scheduler.addTask(_rx_task); // Add _rx_task
+    _scheduler.addTask(_rx_task);
     _scheduler.addTask(_mpu6050_task);
     _scheduler.addTask(_motor_task);
     _scheduler.addTask(_pid_task);

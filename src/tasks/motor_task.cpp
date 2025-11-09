@@ -88,8 +88,8 @@ void MotorTask::run()
         float m_rl = _throttle_command + _pitch_command + _roll_command + _yaw_command; // Motor 3 (Rear Left)
         float m_fl = _throttle_command + _pitch_command - _roll_command - _yaw_command; // Motor 4 (Front Left)
 
-        const float min_throttle = 48.0f;
-        const float max_throttle = 2047.0f;
+        const float min_throttle = MOTOR_MIN_THROTTLE_RAW;
+        const float max_throttle = MOTOR_MAX_THROTTLE_RAW;
 
         _motor_throttles[0] = constrain(m_rr * (max_throttle - min_throttle) + min_throttle, min_throttle, max_throttle);
         _motor_throttles[1] = constrain(m_fr * (max_throttle - min_throttle) + min_throttle, min_throttle, max_throttle);

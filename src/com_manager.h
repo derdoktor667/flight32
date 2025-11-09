@@ -10,7 +10,6 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
 #include <cstdarg>
-#include <ESP32_MPU6050.h> // For SensorReadings
 #include "config.h"
 
 

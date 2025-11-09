@@ -17,6 +17,7 @@
 *   🚀 **Peak Performance & Stability**: Experience ultra-stable flight thanks to a real-time FreeRTOS-based scheduler that guarantees reliable and predictable performance.
 *   🧠 **Dual-Core Powerhouse**: We harness the full power of the ESP32's dual-core architecture, dedicating one core to flight-critical tasks and the other to communications and user interaction.
 *   🧩 **Clean & Modular Architecture**: Our object-oriented design makes the firmware easy to understand, modify, and extend. Add new sensors or features without getting lost in a maze of code.
+*   ✅ **High Code Quality**: Adherence to strict coding standards, elimination of magic numbers, removal of redundant code, and clear, concise commenting ensure a maintainable and robust codebase.
 *   📊 **Real-time Insights**: Tune and debug on the fly with a powerful, built-in terminal. Monitor CPU load, loop times, and memory usage to squeeze every drop of performance out of your hardware.
 *   👩‍💻 **Professional Terminal Experience**: Enjoy a dynamic, bash-like prompt, character echo, and backspace support for a more intuitive and professional interaction with your flight controller.
 
@@ -26,7 +27,7 @@
 
 ### ✈️ Flight & Control
 *   **MPU6050 IMU Integration**: Get reliable attitude and heading data with our seamless MPU6050 integration. Includes on-the-fly calibration.
-*   **Receiver Support**: Generic receiver task (`RxTask`) with initial support for **Flysky IBUS**. Channel mappings (Roll, Pitch, Throttle, Yaw, Arming, Flight Mode, and Auxiliary channels) are fully configurable via the terminal and saved persistently. The system is designed to easily integrate other receiver protocols in the future.
+*   **Receiver Support**: Generic receiver task (`RxTask`) with support for **Flysky IBUS** and **PPM**. The RX input pin is configurable via the terminal. Channel mappings (Roll, Pitch, Throttle, Yaw, Arming, Flight Mode, and Auxiliary channels) are fully configurable via the terminal and saved persistently. The system is designed to easily integrate other receiver protocols in the future.
 *   **DShot Motor Control**: Precise and efficient motor control using the ESP32's RMT peripheral. The DShot protocol (DShot150, DShot300, DShot600, DShot1200) is configurable via settings.
 *   **PID Controller**: A full PID controller for flight stabilization with easily adjustable gains via the terminal.
 
@@ -65,7 +66,9 @@ Our interactive terminal gives you complete control over your flight controller.
   
   *   `get rx.data`        - Shows the latest RX channel data.
   *   `get rx.status`      - Shows the RX connection status.
-  *   `set rx.protocol <protocol>` - Sets the RX protocol (e.g., 'set rx.protocol IBUS').
+  *   `get rx.pin`         - Gets the generic RX input pin.
+  *   `set rx.pin <pin_number>` - Sets the generic RX input pin (GPIO number).
+  *   `set rx.protocol <protocol>` - Sets the RX protocol (e.g., 'set rx.protocol IBUS'). Available: IBUS, PPM.
   *   `get rx.value.all`   - Shows all mapped RX channel values.
   *   `get rx.value.<channel>` - Shows a specific RX channel value (e.g., 'get rx.value.roll').
   *   `set rx.channel.<channel> <index>` - Sets the RX channel mapping (e.g., 'set rx.channel.roll 1').
