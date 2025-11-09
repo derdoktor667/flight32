@@ -1,3 +1,11 @@
+/**
+ * @file config.h
+ * @brief Central configuration file for the Flight32 firmware.
+ * @author Wastl Kraus
+ * @date 2025-11-09
+ * @license MIT
+ */
+
 #pragma once
 
 #include <cstdint>
@@ -56,10 +64,10 @@ static constexpr uint8_t MOTOR_PWM_CHANNEL_0 = 0;
 static constexpr uint8_t MOTOR_PWM_CHANNEL_1 = 1;
 static constexpr uint8_t MOTOR_PWM_CHANNEL_2 = 2;
 static constexpr uint8_t MOTOR_PWM_CHANNEL_3 = 3;
-static constexpr uint8_t MOTOR_PIN_FR = 25; // Front Right
-static constexpr uint8_t MOTOR_PIN_RL = 26; // Rear Left
-static constexpr uint8_t MOTOR_PIN_FL = 33; // Front Left
-static constexpr uint8_t MOTOR_PIN_RR = 27; // Rear Right
+static constexpr uint8_t MOTOR_PIN_FR = 25;              // Front Right
+static constexpr uint8_t MOTOR_PIN_RL = 26;              // Rear Left
+static constexpr uint8_t MOTOR_PIN_FL = 33;              // Front Left
+static constexpr uint8_t MOTOR_PIN_RR = 27;              // Rear Right
 static constexpr dshot_mode_t DSHOT_PROTOCOL = DSHOT300; // DSHOT150, DSHOT300, DSHOT600, DSHOT1200
 static const int MOTOR_PINS_ARRAY[NUM_MOTORS] = {MOTOR_PIN_RR, MOTOR_PIN_FR, MOTOR_PIN_RL, MOTOR_PIN_FL};
 
@@ -97,7 +105,7 @@ static constexpr const char *DSHOT_PROTOCOL_STRINGS[] = {"DSHOT150", "DSHOT300",
 static constexpr uint8_t NUM_DSHOT_PROTOCOLS = sizeof(DSHOT_PROTOCOL_STRINGS) / sizeof(DSHOT_PROTOCOL_STRINGS[0]);
 
 // --- Settings Manager ---
-static constexpr const char* SETTINGS_NAMESPACE = "flight32";
+static constexpr const char *SETTINGS_NAMESPACE = "flight32";
 static constexpr uint16_t CURRENT_SCHEMA_VERSION = 2;
 static constexpr const char *KEY_SCHEMA_VERSION = "schema_ver";
 static constexpr uint8_t DEFAULT_GYRO_RANGE = 0; // Corresponds to 250_DPS in GYRO_RANGE_STRINGS
@@ -125,13 +133,12 @@ static constexpr uint8_t TASK_MAX_LOOP_COLUMN_WIDTH = 10;
 static constexpr uint8_t TASK_STACK_HWM_COLUMN_WIDTH = 17;
 
 // --- Task Names ---
-static constexpr const char* COM_TASK_NAME = "com_task";
-static constexpr const char* MPU6050_TASK_NAME = "GYRO / MPU6050";
-static constexpr const char* IBUS_TASK_NAME = "RX / IBUS";
-static constexpr const char* MOTOR_TASK_NAME = "MOTORS / DShot";
-static constexpr const char* PID_TASK_NAME = "PID Controller";
-static constexpr const char* TERMINAL_TASK_NAME = "CLI / Terminal";
-static constexpr const char* IDLE_TASK_NAME_0 = "IDLE0";
-static constexpr const char* IDLE_TASK_NAME_1 = "IDLE1";
-static constexpr const char* TIMER_SERVICE_TASK_NAME = "Tmr Svc";
-
+static constexpr const char *COM_TASK_NAME = "com_task";
+static constexpr const char *MPU6050_TASK_NAME = "GYRO / MPU6050";
+static constexpr const char *IBUS_TASK_NAME = "RX / IBUS";
+static constexpr const char *MOTOR_TASK_NAME = "MOTORS / DShot";
+static constexpr const char *PID_TASK_NAME = "PID Controller";
+static constexpr const char *TERMINAL_TASK_NAME = "CLI / Terminal";
+static constexpr const char *IDLE_TASK_NAME_0 = "IDLE0";
+static constexpr const char *IDLE_TASK_NAME_1 = "IDLE1";
+static constexpr const char *TIMER_SERVICE_TASK_NAME = "Tmr Svc";

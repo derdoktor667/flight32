@@ -1,81 +1,127 @@
-# Flight32: The Open-Source Firmware for Your ESP32 Flight Controller
+# Flight32: Open-Source ESP32 Flight Controller Firmware
 
 <div align="center">
-  <img src="img/flight32_logo_400.jpg" alt="Flight32 Logo Placeholder" width="400">
+  <img src="img/flight32_logo_400.jpg" alt="Flight32 Logo" width="400">
 </div>
 
-Welcome to Flight32 – the robust and extensible firmware solution specifically designed for ESP32-based flight controllers. Dive into the world of precise flight control and experience the power of the ESP32 in your next drone project.
+<p align="center">
+  <strong>Welcome to Flight32 – a robust, extensible, and user-friendly firmware for your ESP32-based flight controller.</strong>
+  <br>
+  Dive into the world of precise flight control and unlock the full potential of the ESP32 in your next drone project.
+</p>
 
-## ✨ Highlights:
+---
 
-*   **Stable Flight Performance**: A FreeRTOS-based task scheduler ensures reliable and predictable loop times, forming the core of any stable flight control system.
-*   **ESP32 Dual-Core Power**: Full utilization of the ESP32's dual-core architecture for efficient task distribution and maximum processing power.
-*   **Modular Design**: A clean, object-oriented architecture with clearly defined components (FlightController, Terminal, ComManager) makes the firmware easy to understand and simple to extend.
-*   **Real-time Insights**: Monitor your tasks live via the integrated terminal. View CPU load, current, average, and maximum loop times, as well as stack usage – all at a glance for optimal performance analysis.
-*   **Professional Terminal Experience**: Enjoy a dynamic, bash-like prompt that reflects the configured system name, character echo, and backspace support for a more intuitive and professional interaction with the flight controller.
+## ✨ Why Choose Flight32?
 
-## 🚀 Features:
+*   🚀 **Peak Performance & Stability**: Experience ultra-stable flight thanks to a real-time FreeRTOS-based scheduler that guarantees reliable and predictable performance.
+*   🧠 **Dual-Core Powerhouse**: We harness the full power of the ESP32's dual-core architecture, dedicating one core to flight-critical tasks and the other to communications and user interaction.
+*   🧩 **Clean & Modular Architecture**: Our object-oriented design makes the firmware easy to understand, modify, and extend. Add new sensors or features without getting lost in a maze of code.
+*   📊 **Real-time Insights**: Tune and debug on the fly with a powerful, built-in terminal. Monitor CPU load, loop times, and memory usage to squeeze every drop of performance out of your hardware.
+*   👩‍💻 **Professional Terminal Experience**: Enjoy a dynamic, bash-like prompt, character echo, and backspace support for a more intuitive and professional interaction with your flight controller.
 
-*   **MPU6050 IMU Integration**: Seamless integration of the MPU6050 Inertial Measurement Unit for accelerometer, gyroscope, and temperature readings. Includes calibration and configuration commands.
-*   **Flysky IBUS Receiver Support**: Connect your Flysky receiver via Serial2 using the IBUS protocol. Monitor channel data and connection status directly from the terminal.
-*   **DShotRMT Motor Control**: Integrated DShot300 motor protocol using the ESP32's RMT peripheral for precise and efficient motor control. Supports up to 4 motors.
-*   **PID Controller**: A full PID controller for flight stabilization with adjustable gains via the terminal.
-*   **Refactored Task Management**: Improved task base class and scheduler for better maintainability and clearer task state reporting ("Waiting" instead of "Blocked").
-*   **Persistent Settings**: A `SettingsManager` that saves all configurations to non-volatile storage (NVS), so your settings are retained across reboots.
+---
 
-## 💻 Terminal Commands:
+## 🚀 Core Features
 
-The command-line interface provides real-time interaction and debugging capabilities. Type `help` to see a list of available commands.
+### ✈️ Flight & Control
+*   **MPU6050 IMU Integration**: Get reliable attitude and heading data with our seamless MPU6050 integration. Includes on-the-fly calibration.
+*   **Flysky IBUS Receiver Support**: Rock-solid connection to your Flysky receiver using the IBUS protocol.
+*   **DShot Motor Control**: Precise and efficient motor control using the ESP32's RMT peripheral and DShot300 protocol.
+*   **PID Controller**: A full PID controller for flight stabilization with easily adjustable gains via the terminal.
 
-### System Commands:
-*   `help`           - Shows this help message.
-*   `status`         - Shows firmware information.
-*   `tasks`          - Shows information about running tasks (state, priority, CPU usage, loop times, stack HWM).
-*   `mem`            - Shows current memory usage (heap total, free, min free).
-*   `reboot`         - Reboots the ESP32.
-*   `factory_reset confirm` - Resets all settings to their default values and reboots the ESP32. Requires `confirm` argument.
+### ⚙️ System & Configuration
+*   **Persistent Settings**: Your settings are automatically saved to non-volatile storage (NVS), so they're retained even after a reboot.
+*   **Advanced Task Management**: Our custom scheduler provides detailed insights into task performance, helping you identify bottlenecks and optimize your system.
+*   **Centralized Configuration**: All major hardware and task parameters are centralized in `src/config.h` for easy customization.
 
-### MPU6050 Commands:
-*   `get mpu.data`   - Displays the latest accelerometer, gyroscope, and temperature readings from the MPU6050.
-*   `get mpu.config` - Shows the current configuration settings of the MPU6050 (gyro range, accel range, LPF bandwidth).
-*   `set mpu.calibrate`  - Initiates a calibration routine for the MPU6050 sensor.
+---
 
-### IBUS Commands:
-*   `get ibus.data`  - Shows the latest channel data received from the IBUS receiver.
-*   `get ibus.status`- Shows the current connection status of the IBUS receiver.
+## 💻 Terminal Commands
 
-### Motor Commands:
-*   `set motor.throttle <id> <throttle>` - Sets the throttle value (0-2047) for a specific motor (0-3). Example: `set motor.throttle 0 1000`.
+Our interactive terminal gives you complete control over your flight controller. Here are some of the available commands (type `help` in the terminal for a full list):
 
-### PID Commands:
-*   `get pid`        - Gets the current PID gains.
-*   `set pid <axis> <p|i|d> <value>` - Sets a PID gain (e.g., 'set pid roll p 20').
-*   `reset pid confirm` - Resets PID gains to default values.
+<details>
+  <summary><strong>System Commands</strong></summary>
+  
+  *   `help`           - Shows the main help message or help for a specific category.
+  *   `status`         - Displays firmware version and system status.
+  *   `tasks`          - Provides a detailed list of all running tasks, including CPU usage, loop times, and stack memory.
+  *   `mem`            - Shows current memory usage.
+  *   `reboot`         - Reboots the flight controller.
+  *   `factory_reset confirm` - Resets all settings to their default values.
+</details>
 
-### Settings Commands:
-*   `get <display_key>`      - Gets the value of any setting using its user-friendly display key. Displays both the description and human-readable value where available (e.g., `get gyro.resolution` might show `gyro.resolution (MPU6050 Gyroscope Range): 250_DPS`).
-*   `set <display_key> <value>`- Sets the value of any setting using its user-friendly display key. Accepts human-readable values where available (e.g., `set gyro.resolution 250_DPS`). Provides informative feedback on invalid inputs.
-*   `dump`           - Dumps all settings in a parsable format for backup, using user-friendly display keys and human-readable values (e.g., `set gyro.resolution = 250_DPS`).
-*   `save`           - Saves all settings to persistent storage.
+<details>
+  <summary><strong>Sensor & IMU Commands (MPU6050)</strong></summary>
+  
+  *   `get mpu.data`   - Displays the latest accelerometer, gyroscope, and temperature readings.
+  *   `get mpu.config` - Shows the current sensor configuration.
+  *   `set mpu.calibrate`  - Starts the gyro calibration routine.
+</details>
 
-## 🏁 Quick Start:
+<details>
+  <summary><strong>Receiver Commands (IBUS)</strong></summary>
+  
+  *   `get ibus.data`  - Shows the latest channel data from your receiver.
+  *   `get ibus.status`- Shows the connection status.
+</details>
 
-To get Flight32 running on your ESP32, all you need is the Arduino IDE or Arduino CLI:
+<details>
+  <summary><strong>Motor Commands</strong></summary>
+  
+  *   `set motor.throttle <id> <throttle>` - Sets the throttle for a specific motor (e.g., `set motor.throttle 0 1000`).
+</details>
 
-1.  **Install Board Support**: Ensure the ESP32 board package is installed in your Arduino environment.
-2.  **Compile & Upload**: Open `flight32.ino`, select your board and port, then upload the firmware. Alternatively, use the Arduino CLI:
+<details>
+  <summary><strong>PID Tuning Commands</strong></summary>
+  
+  *   `get pid`        - Gets the current PID gains for all axes.
+  *   `set pid <axis> <p|i|d> <value>` - Sets a specific PID gain (e.g., `set pid roll p 20`).
+  *   `reset pid confirm` - Resets all PID gains to their default values.
+</details>
+
+<details>
+  <summary><strong>Settings & Configuration Commands</strong></summary>
+  
+  *   `get <key>`      - Gets the value of a specific setting.
+  *   `set <key> <value>`- Sets a new value for a setting.
+  *   `dump`           - Dumps all settings in a parsable format for backup.
+  *   `save`           - Saves all current settings to persistent storage.
+</details>
+
+---
+
+## 🏁 Quick Start
+
+Get your drone in the air in just a few minutes:
+
+1.  **Install Board Support**: Make sure you have the ESP32 board package installed in your Arduino environment.
+2.  **Compile & Upload**: Open `flight32.ino` in the Arduino IDE, select your board and port, and hit upload.
+    
+    *Or, use the Arduino CLI for a faster workflow:*
     ```bash
+    # Compile the firmware
     arduino-cli compile --fqbn esp32:esp32:esp32 flight32.ino
+
+    # Upload to your flight controller
     arduino-cli upload -p <Your_Port> --fqbn esp32:esp32:esp32 flight32.ino
     ```
 
-## 💡 Outlook:
+---
 
-Flight32 is constantly evolving. Future developments include the integration of more sensors, advanced flight algorithms, and even more intuitive configuration. Be a part of the journey!
+## 💡 What's Next?
 
-## 🤝 Contribute:
+Flight32 is an actively developed project. Here's a glimpse of what's on the horizon:
+*   Integration of more advanced sensors (e.g., barometer, magnetometer).
+*   Implementation of different flight modes (e.g., Acro, Angle, Horizon).
+*   Support for more receiver and ESC protocols.
 
-We welcome all contributions! Whether it's bug reports, feature suggestions, or code contributions – your ideas help Flight32 become even better.
+---
+
+## 🤝 Contribute
+
+Have an idea or a bug fix? We welcome all contributions! Your input helps make Flight32 the best open-source flight controller firmware available.
 
 ---
 

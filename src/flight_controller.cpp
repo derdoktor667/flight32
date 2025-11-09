@@ -1,3 +1,11 @@
+/**
+ * @file flight_controller.cpp
+ * @brief Initializes and manages all flight controller components and FreeRTOS tasks.
+ * @author Wastl Kraus
+ * @date 2025-11-09
+ * @license MIT
+ */
+
 #include "flight_controller.h"
 #include "scheduler/scheduler.h"
 #include "tasks/terminal_task.h"
@@ -69,25 +77,20 @@ void FlightController::setup()
     _scheduler.addTask(_pid_task);
     _scheduler.addTask(_terminal_task);
 
-        // Manually call setup for each task
+    // Manually call setup for each task
 
-        for (uint8_t i = 0; i < _scheduler.getTaskCount(); i++)
+    for (uint8_t i = 0; i < _scheduler.getTaskCount(); i++)
 
-        {
+    {
 
-            _scheduler.getTask(i)->setup();
+        _scheduler.getTask(i)->setup();
+    }
 
-        }
+    com_send_log(LOG_INFO, "Welcome, type 'help' for a list of commands.");
 
-    
+    com_flush_output();
 
-        com_send_log(LOG_INFO, "Welcome, type 'help' for a list of commands.");
+    _terminal_task->_show_prompt();
 
-        com_flush_output();
-
-        _terminal_task->_show_prompt();
-
-    
-
-        _scheduler.start();
+    _scheduler.start();
 }

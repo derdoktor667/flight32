@@ -1,3 +1,11 @@
+/**
+ * @file motor_task.cpp
+ * @brief Implements motor control using DShotRMT for ESP32.
+ * @author Wastl Kraus
+ * @date 2025-11-09
+ * @license MIT
+ */
+
 #include "motor_task.h"
 #include "../com_manager.h"
 #include "../settings_manager.h"
@@ -32,7 +40,7 @@ MotorTask::MotorTask(const char *name, uint32_t stack_size, UBaseType_t priority
 {
     for (int i = 0; i < NUM_MOTORS; ++i)
     {
-        _motor_throttles[i] = 0; // Initialize all throttles to 0
+        _motor_throttles[i] = 0;     // Initialize all throttles to 0
         _dshot_drivers[i] = nullptr; // Initialize all driver pointers to nullptr
     }
 }

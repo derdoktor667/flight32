@@ -1,3 +1,11 @@
+/**
+ * @file scheduler.h
+ * @brief Defines the Scheduler class for managing FreeRTOS tasks.
+ * @author Wastl Kraus
+ * @date 2025-11-09
+ * @license MIT
+ */
+
 #pragma once
 
 #include <Arduino.h>

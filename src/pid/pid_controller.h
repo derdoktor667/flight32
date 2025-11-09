@@ -1,3 +1,10 @@
+/**
+ * @file pid_controller.h
+ * @brief Defines the PIDController class for flight stabilization.
+ * @author Wastl Kraus
+ * @date 2025-11-09
+ * @license MIT
+ */
 #pragma once
 
 #include <cstdint>
@@ -45,6 +52,6 @@ private:
     float _ki; // Integral gain
     float _kd; // Derivative gain
 
-    float _integral;      // Integral accumulator
+    float _integral;       // Integral accumulator
     float _previous_error; // For derivative calculation
 };

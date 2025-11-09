@@ -1,3 +1,11 @@
+/**
+ * @file pid_controller.cpp
+ * @brief Implements a PID controller for flight stabilization.
+ * @author Wastl Kraus
+ * @date 2025-11-09
+ * @license MIT
+ */
+
 #include "pid_controller.h"
 
 PIDController::PIDController(float kp, float ki, float kd)

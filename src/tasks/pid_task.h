@@ -1,3 +1,11 @@
+/**
+ * @file pid_task.h
+ * @brief Defines the PID calculation task.
+ * @author Wastl Kraus
+ * @date 2025-11-09
+ * @license MIT
+ */
+
 #pragma once
 
 #include "../scheduler/task_base.h"
@@ -36,4 +44,5 @@ private:
 
     // Helper to load gains from settings
     void _load_gains();
+    void _set_and_save_gains(PidAxis axis, PidGains gains);
 };

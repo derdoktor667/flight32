@@ -1,3 +1,11 @@
+/**
+ * @file ibus_task.h
+ * @brief Defines the IbusTask class for handling Flysky IBUS receiver input.
+ * @author Wastl Kraus
+ * @date 2025-11-09
+ * @license MIT
+ */
+
 #pragma once
 
 #include <Arduino.h>

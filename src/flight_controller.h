@@ -1,3 +1,11 @@
+/**
+ * @file flight_controller.h
+ * @brief Defines the FlightController class, managing all core components and tasks.
+ * @author Wastl Kraus
+ * @date 2025-11-09
+ * @license MIT
+ */
+
 #pragma once
 
 #include "scheduler/scheduler.h"

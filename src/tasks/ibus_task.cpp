@@ -1,3 +1,11 @@
+/**
+ * @file ibus_task.cpp
+ * @brief Implements the IBUS receiver task for Flysky IBUS protocol.
+ * @author Wastl Kraus
+ * @date 2025-11-09
+ * @license MIT
+ */
+
 #include "ibus_task.h"
 #include "../config.h"
 #include "../com_manager.h"

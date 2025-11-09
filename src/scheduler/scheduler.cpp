@@ -1,3 +1,11 @@
+/**
+ * @file scheduler.cpp
+ * @brief Implements the FreeRTOS task scheduler for Flight32.
+ * @author Wastl Kraus
+ * @date 2025-11-09
+ * @license MIT
+ */
+
 #include "scheduler.h"
 
 Scheduler::Scheduler() : _task_count(0)

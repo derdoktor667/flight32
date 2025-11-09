@@ -1,3 +1,11 @@
+/**
+ * @file task_base.cpp
+ * @brief Implements the taskRunner method for the TaskBase class.
+ * @author Wastl Kraus
+ * @date 2025-11-09
+ * @license MIT
+ */
+
 #include "task_base.h"
 
 void TaskBase::taskRunner()

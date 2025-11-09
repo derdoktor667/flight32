@@ -1,3 +1,11 @@
+/**
+ * @file firmware.h
+ * @brief Defines firmware-wide constants like name and version.
+ * @author Wastl Kraus
+ * @date 2025-11-09
+ * @license MIT
+ */
+
 #pragma once
 
 #include <string>

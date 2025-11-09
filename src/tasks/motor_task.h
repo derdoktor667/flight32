@@ -1,3 +1,11 @@
+/**
+ * @file motor_task.h
+ * @brief Defines the MotorTask class for DShot motor control.
+ * @author Wastl Kraus
+ * @date 2025-11-09
+ * @license MIT
+ */
+
 #pragma once
 
 #include <Arduino.h>
@@ -5,8 +13,6 @@
 #include <DShotRMT.h>
 #include "../config.h"
 #include "../settings_manager.h"
-
-
 
 class MotorTask : public TaskBase
 {

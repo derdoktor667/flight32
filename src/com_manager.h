@@ -1,3 +1,10 @@
+/**
+ * @file com_manager.h
+ * @brief Defines the communication manager interface for serial logging and terminal output.
+ * @author Wastl Kraus
+ * @date 2025-11-09
+ * @license MIT
+ */
 #pragma once
 
 #include "freertos/FreeRTOS.h"

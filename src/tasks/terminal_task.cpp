@@ -1,3 +1,11 @@
+/**
+ * @file terminal_task.cpp
+ * @brief Implements the interactive command-line terminal for Flight32.
+ * @author Wastl Kraus
+ * @date 2025-11-09
+ * @license MIT
+ */
+
 #include "terminal_task.h"
 #include "../firmware.h"
 #include "../config.h"
@@ -564,7 +572,7 @@ void TerminalTask::_show_prompt()
 {
     com_flush_output();
     String system_name = _settings_manager->getSettingValue(SettingsManager::KEY_SYSTEM_NAME);
-    String prompt = "[" + system_name + " ~]$ ";
+    String prompt = "[" + system_name + " ~]$";
     com_send_prompt(prompt.c_str());
 }
 

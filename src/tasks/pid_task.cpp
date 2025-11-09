@@ -1,5 +1,14 @@
+/**
+ * @file pid_task.cpp
+ * @brief Implements the PID calculation task.
+ * @author Wastl Kraus
+ * @date 2025-11-09
+ * @license MIT
+ */
+
 #include "pid_task.h"
 #include "../com_manager.h"
+#include "../rc_config.h"
 
 PidTask::PidTask(const char *name, uint32_t stack_size, UBaseType_t priority, BaseType_t core_id, uint32_t task_delay_ms,
                  Mpu6050Task *mpu6050_task,
@@ -28,10 +37,10 @@ void PidTask::run()
     // Get the desired setpoints from the receiver
     // The IBUS values are typically in the range 1000-2000. We need to map them to a more usable range, e.g., -1.0 to 1.0 for roll/pitch/yaw rates.
     // For now, let's assume a simple mapping. This will need refinement.
-    float desired_roll_rate = (_ibus_task->getChannel(1) - 1500.0f) / 500.0f;  // Channel 1 for Roll
-    float desired_pitch_rate = (_ibus_task->getChannel(0) - 1500.0f) / 500.0f; // Channel 0 for Pitch
-    float desired_yaw_rate = (_ibus_task->getChannel(3) - 1500.0f) / 500.0f;   // Channel 3 for Yaw
-    float throttle = (_ibus_task->getChannel(2) - 1000.0f) / 1000.0f;          // Channel 2 for Throttle (0.0 to 1.0)
+    float desired_roll_rate = (_ibus_task->getChannel(IBUS_CHANNEL_ROLL) - RC_CHANNEL_CENTER) / RC_CHANNEL_RANGE_SYMMETRIC;
+    float desired_pitch_rate = (_ibus_task->getChannel(IBUS_CHANNEL_PITCH) - RC_CHANNEL_CENTER) / RC_CHANNEL_RANGE_SYMMETRIC;
+    float desired_yaw_rate = (_ibus_task->getChannel(IBUS_CHANNEL_YAW) - RC_CHANNEL_CENTER) / RC_CHANNEL_RANGE_SYMMETRIC;
+    float throttle = (_ibus_task->getChannel(IBUS_CHANNEL_THROTTLE) - RC_CHANNEL_MIN) / RC_CHANNEL_RANGE_THROTTLE;
 
     float actual_roll_rate = _mpu6050_task->getMpu6050Sensor().readings.gyroscope.x;
     float actual_pitch_rate = _mpu6050_task->getMpu6050Sensor().readings.gyroscope.y;
@@ -65,27 +74,7 @@ PidGains PidTask::getGains(PidAxis axis)
 
 void PidTask::setGains(PidAxis axis, PidGains gains)
 {
-    switch (axis)
-    {
-    case PidAxis::ROLL:
-        _pid_roll.setGains(gains.p, gains.i, gains.d);
-        _settings_manager->setSettingValue(KEY_PID_ROLL_P, String(gains.p));
-        _settings_manager->setSettingValue(KEY_PID_ROLL_I, String(gains.i));
-        _settings_manager->setSettingValue(KEY_PID_ROLL_D, String(gains.d));
-        break;
-    case PidAxis::PITCH:
-        _pid_pitch.setGains(gains.p, gains.i, gains.d);
-        _settings_manager->setSettingValue(KEY_PID_PITCH_P, String(gains.p));
-        _settings_manager->setSettingValue(KEY_PID_PITCH_I, String(gains.i));
-        _settings_manager->setSettingValue(KEY_PID_PITCH_D, String(gains.d));
-        break;
-    case PidAxis::YAW:
-        _pid_yaw.setGains(gains.p, gains.i, gains.d);
-        _settings_manager->setSettingValue(KEY_PID_YAW_P, String(gains.p));
-        _settings_manager->setSettingValue(KEY_PID_YAW_I, String(gains.i));
-        _settings_manager->setSettingValue(KEY_PID_YAW_D, String(gains.d));
-        break;
-    }
+    _set_and_save_gains(axis, gains);
 }
 
 void PidTask::_load_gains()
@@ -110,21 +99,35 @@ void PidTask::_load_gains()
 
 void PidTask::resetToDefaults()
 {
-    _pid_roll.setGains(DEFAULT_PID_ROLL_P, DEFAULT_PID_ROLL_I, DEFAULT_PID_ROLL_D);
-    _settings_manager->setSettingValue(KEY_PID_ROLL_P, String(DEFAULT_PID_ROLL_P));
-    _settings_manager->setSettingValue(KEY_PID_ROLL_I, String(DEFAULT_PID_ROLL_I));
-    _settings_manager->setSettingValue(KEY_PID_ROLL_D, String(DEFAULT_PID_ROLL_D));
-
-    _pid_pitch.setGains(DEFAULT_PID_PITCH_P, DEFAULT_PID_PITCH_I, DEFAULT_PID_PITCH_D);
-    _settings_manager->setSettingValue(KEY_PID_PITCH_P, String(DEFAULT_PID_PITCH_P));
-    _settings_manager->setSettingValue(KEY_PID_PITCH_I, String(DEFAULT_PID_PITCH_I));
-    _settings_manager->setSettingValue(KEY_PID_PITCH_D, String(DEFAULT_PID_PITCH_D));
-
-    _pid_yaw.setGains(DEFAULT_PID_YAW_P, DEFAULT_PID_YAW_I, DEFAULT_PID_YAW_D);
-    _settings_manager->setSettingValue(KEY_PID_YAW_P, String(DEFAULT_PID_YAW_P));
-    _settings_manager->setSettingValue(KEY_PID_YAW_I, String(DEFAULT_PID_YAW_I));
-    _settings_manager->setSettingValue(KEY_PID_YAW_D, String(DEFAULT_PID_YAW_D));
+    _set_and_save_gains(PidAxis::ROLL, {DEFAULT_PID_ROLL_P, DEFAULT_PID_ROLL_I, DEFAULT_PID_ROLL_D});
+    _set_and_save_gains(PidAxis::PITCH, {DEFAULT_PID_PITCH_P, DEFAULT_PID_PITCH_I, DEFAULT_PID_PITCH_D});
+    _set_and_save_gains(PidAxis::YAW, {DEFAULT_PID_YAW_P, DEFAULT_PID_YAW_I, DEFAULT_PID_YAW_D});
 
     _settings_manager->saveSettings();
     com_send_log(LOG_INFO, "PidTask: Reset PID gains to defaults and saved.");
+}
+
+void PidTask::_set_and_save_gains(PidAxis axis, PidGains gains)
+{
+    switch (axis)
+    {
+    case PidAxis::ROLL:
+        _pid_roll.setGains(gains.p, gains.i, gains.d);
+        _settings_manager->setSettingValue(KEY_PID_ROLL_P, String(gains.p));
+        _settings_manager->setSettingValue(KEY_PID_ROLL_I, String(gains.i));
+        _settings_manager->setSettingValue(KEY_PID_ROLL_D, String(gains.d));
+        break;
+    case PidAxis::PITCH:
+        _pid_pitch.setGains(gains.p, gains.i, gains.d);
+        _settings_manager->setSettingValue(KEY_PID_PITCH_P, String(gains.p));
+        _settings_manager->setSettingValue(KEY_PID_PITCH_I, String(gains.i));
+        _settings_manager->setSettingValue(KEY_PID_PITCH_D, String(gains.d));
+        break;
+    case PidAxis::YAW:
+        _pid_yaw.setGains(gains.p, gains.i, gains.d);
+        _settings_manager->setSettingValue(KEY_PID_YAW_P, String(gains.p));
+        _settings_manager->setSettingValue(KEY_PID_YAW_I, String(gains.i));
+        _settings_manager->setSettingValue(KEY_PID_YAW_D, String(gains.d));
+        break;
+    }
 }

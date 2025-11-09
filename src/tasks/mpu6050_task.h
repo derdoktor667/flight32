@@ -1,3 +1,11 @@
+/**
+ * @file mpu6050_task.h
+ * @brief Defines the Mpu6050Task class for reading data from the MPU6050 sensor.
+ * @author Wastl Kraus
+ * @date 2025-11-09
+ * @license MIT
+ */
+
 #pragma once
 
 #include "../scheduler/task_base.h"

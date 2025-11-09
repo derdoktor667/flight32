@@ -1,3 +1,11 @@
+/**
+ * @file com_manager.cpp
+ * @brief Implements the communication manager for serial logging and terminal output.
+ * @author Wastl Kraus
+ * @date 2025-11-09
+ * @license MIT
+ */
+
 #include "com_manager.h"
 #include "config.h"
 #include <Arduino.h>

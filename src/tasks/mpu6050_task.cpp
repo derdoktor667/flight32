@@ -1,3 +1,11 @@
+/**
+ * @file mpu6050_task.cpp
+ * @brief Implements the Mpu6050Task for reading and updating MPU6050 sensor data.
+ * @author Wastl Kraus
+ * @date 2025-11-09
+ * @license MIT
+ */
+
 #include "mpu6050_task.h"
 #include "../com_manager.h"
 

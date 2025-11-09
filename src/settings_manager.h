@@ -1,3 +1,11 @@
+/**
+ * @file settings_manager.h
+ * @brief Manages persistent settings for the Flight32 firmware using NVS.
+ * @author Wastl Kraus
+ * @date 2025-11-09
+ * @license MIT
+ */
+
 #pragma once
 
 #include <Preferences.h>
@@ -38,7 +46,6 @@ private:
 
     // --- Schema Version ---
 
-
     void _write_defaults();
 
     // --- Settings Metadata ---
@@ -50,16 +57,17 @@ private:
         STRING
     };
 
-    struct SettingMetadata {
-        const char* key;
-        const char* display_key; // New field for user-friendly display
-        const char* description;
+    struct SettingMetadata
+    {
+        const char *key;
+        const char *display_key; // New field for user-friendly display
+        const char *description;
         SettingType type;
-        const char* const* string_map; // Pointer to an array of strings for human-readable values
+        const char *const *string_map; // Pointer to an array of strings for human-readable values
         uint8_t string_map_size;       // Size of the string map
         int default_value;             // Default integer value for the setting
         float default_float_value;     // Default float value for the setting (new)
-        const char* string_default;    // Default string value
+        const char *string_default;    // Default string value
     };
 
     static const SettingMetadata _settings_metadata[];
