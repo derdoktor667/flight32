@@ -46,6 +46,15 @@ const Command TerminalTask::_commands[] = {
 // Calculate the number of commands
 const int TerminalTask::_num_commands = sizeof(TerminalTask::_commands) / sizeof(Command);
 
+const CategoryInfo TerminalTask::_category_info[] = {
+    {CommandCategory::MPU6050, "mpu", "MPU6050 sensor commands"},
+    {CommandCategory::IBUS, "ibus", "IBUS receiver commands"},
+    {CommandCategory::MOTOR, "motor", "Motor control commands"},
+    {CommandCategory::PID, "pid", "PID controller commands"},
+    {CommandCategory::SETTINGS, "settings", "Settings management commands"},
+};
+const int TerminalTask::_num_categories = sizeof(TerminalTask::_category_info) / sizeof(CategoryInfo);
+
 TerminalTask::TerminalTask(const char *name, uint32_t stackSize, UBaseType_t priority, BaseType_t coreID, uint32_t task_delay_ms, Scheduler *scheduler, ESP32_MPU6050 *mpu6050_sensor, IbusTask *ibus_receiver_task, MotorTask *motor_task, PidTask *pid_task, SettingsManager *settings_manager)
     : TaskBase(name, stackSize, priority, coreID, task_delay_ms),
       _scheduler(scheduler),
@@ -112,29 +121,9 @@ void TerminalTask::_handle_help(String &args)
         com_send_log(TERMINAL_OUTPUT, "  %-19s %s", "factory_reset", "Resets all settings to their default values.");
         com_send_log(TERMINAL_OUTPUT, "");
         com_send_log(TERMINAL_OUTPUT, "Available Command Categories:");
-
-        // List unique categories in a formatted way
-        CommandCategory displayed_categories[static_cast<int>(CommandCategory::SETTINGS) + 1];
-        int num_displayed_categories = 0;
-
-        for (int i = 0; i < _num_commands; ++i)
+        for (int i = 0; i < _num_categories; ++i)
         {
-            bool already_displayed = false;
-            for (int j = 0; j < num_displayed_categories; ++j)
-            {
-                if (displayed_categories[j] == _commands[i].category)
-                {
-                    already_displayed = true;
-                    break;
-                }
-            }
-
-            if (!already_displayed)
-            {
-                displayed_categories[num_displayed_categories++] = _commands[i].category;
-                const char *category_str = _get_category_string(_commands[i].category);
-                com_send_log(TERMINAL_OUTPUT, "  - %s", category_str);
-            }
+            com_send_log(TERMINAL_OUTPUT, "  %-19s %s", _category_info[i].prefix, _category_info[i].description);
         }
         com_send_log(TERMINAL_OUTPUT, "\n------------------------------");
     }
@@ -571,8 +560,9 @@ bool TerminalTask::_check_pid_task_available()
 void TerminalTask::_show_prompt()
 {
     com_flush_output();
+    com_send_log(TERMINAL_OUTPUT, ""); // Add a blank line before the prompt
     String system_name = _settings_manager->getSettingValue(SettingsManager::KEY_SYSTEM_NAME);
-    String prompt = "[" + system_name + " ~]$";
+    String prompt = "[" + system_name + " ~]$ "; // Add a space after $
     com_send_prompt(prompt.c_str());
 }
 

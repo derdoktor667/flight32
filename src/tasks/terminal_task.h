@@ -42,6 +42,13 @@ struct Command
     CommandCategory category;
 };
 
+// Struct to hold category information for help display
+struct CategoryInfo {
+    CommandCategory category;
+    const char* prefix;
+    const char* description;
+};
+
 class TerminalTask : public TaskBase
 {
 public:
@@ -101,6 +108,9 @@ private:
     // Command table definition
     static const Command _commands[];
     static const int _num_commands;
+
+    static const CategoryInfo _category_info[];
+    static const int _num_categories;
 
     char _byte_buffer[15]; // Buffer for human-readable byte output
     const char *_format_bytes(uint32_t bytes);
