@@ -38,10 +38,10 @@ void PidTask::run()
     // Raw IBUS values can vary (e.g., 988-2024). For internal calculations, we constrain them
     // to the standard 1000-2000 range to ensure stable flight control.
     // The terminal will still display the raw, unconstrained values for user calibration.
-    int constrained_roll = constrain(_ibus_task->getChannel(IBUS_CHANNEL_ROLL), 1000, 2000);
-    int constrained_pitch = constrain(_ibus_task->getChannel(IBUS_CHANNEL_PITCH), 1000, 2000);
-    int constrained_yaw = constrain(_ibus_task->getChannel(IBUS_CHANNEL_YAW), 1000, 2000);
-    int constrained_throttle = constrain(_ibus_task->getChannel(IBUS_CHANNEL_THROTTLE), 1000, 2000);
+    int constrained_roll = constrain(_ibus_task->getChannel(_settings_manager->getSettingValue(SettingsManager::KEY_IBUS_CHANNEL_ROLL).toInt()), 1000, 2000);
+    int constrained_pitch = constrain(_ibus_task->getChannel(_settings_manager->getSettingValue(SettingsManager::KEY_IBUS_CHANNEL_PITCH).toInt()), 1000, 2000);
+    int constrained_yaw = constrain(_ibus_task->getChannel(_settings_manager->getSettingValue(SettingsManager::KEY_IBUS_CHANNEL_YAW).toInt()), 1000, 2000);
+    int constrained_throttle = constrain(_ibus_task->getChannel(_settings_manager->getSettingValue(SettingsManager::KEY_IBUS_CHANNEL_THRO).toInt()), 1000, 2000);
 
     float desired_roll_rate = (constrained_roll - RC_CHANNEL_CENTER) / RC_CHANNEL_RANGE_SYMMETRIC;
     float desired_pitch_rate = (constrained_pitch - RC_CHANNEL_CENTER) / RC_CHANNEL_RANGE_SYMMETRIC;

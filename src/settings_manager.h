@@ -36,6 +36,18 @@ public:
     static constexpr const char *KEY_MPU_GYRO_RANGE = "mpu.g_range";
     static constexpr const char *KEY_MOTOR_PROTOCOL = "motor.protocol";
 
+    // --- IBUS Channel Mapping Keys ---
+    static constexpr const char *KEY_IBUS_CHANNEL_ROLL = "ibus.ch.roll";
+    static constexpr const char *KEY_IBUS_CHANNEL_PITCH = "ibus.ch.pitch";
+    static constexpr const char *KEY_IBUS_CHANNEL_THRO = "ibus.ch.thro";
+    static constexpr const char *KEY_IBUS_CHANNEL_YAW = "ibus.ch.yaw";
+    static constexpr const char *KEY_IBUS_CHANNEL_ARM = "ibus.ch.arm";
+    static constexpr const char *KEY_IBUS_CHANNEL_FMODE = "ibus.ch.fmode";
+    static constexpr const char *KEY_IBUS_CHANNEL_AUX1 = "ibus.ch.aux1";
+    static constexpr const char *KEY_IBUS_CHANNEL_AUX2 = "ibus.ch.aux2";
+    static constexpr const char *KEY_IBUS_CHANNEL_AUX3 = "ibus.ch.aux3";
+    static constexpr const char *KEY_IBUS_CHANNEL_AUX4 = "ibus.ch.aux4";
+
     // --- Gyroscope Range Mappings ---
     static const char *GYRO_RANGE_STRINGS[];
     static const uint8_t NUM_GYRO_RANGES;
@@ -65,7 +77,7 @@ private:
         SettingType type;
         const char *const *string_map; // Pointer to an array of strings for human-readable values
         uint8_t string_map_size;       // Size of the string map
-        int default_value;             // Default integer value for the setting
+        uint8_t default_value;             // Default integer value for the setting
         float default_float_value;     // Default float value for the setting (new)
         const char *string_default;    // Default string value
     };

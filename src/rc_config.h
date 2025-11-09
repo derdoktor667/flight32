@@ -11,12 +11,7 @@
 #include <cstdint>
 
 // --- IBUS Channel Mapping ---
-// This maps the FlyskyIBUS library channel index to its logical function.
-// Based on current implementation in pid_task.cpp
-static constexpr uint8_t IBUS_CHANNEL_PITCH = 0;
-static constexpr uint8_t IBUS_CHANNEL_ROLL = 1;
-static constexpr uint8_t IBUS_CHANNEL_THROTTLE = 2;
-static constexpr uint8_t IBUS_CHANNEL_YAW = 3;
+// These mappings are now configurable via the SettingsManager.
 
 // --- RC Channel Interpretation ---
 static constexpr float RC_CHANNEL_CENTER = 1500.0f;

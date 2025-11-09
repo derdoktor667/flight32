@@ -18,6 +18,18 @@ const SettingsManager::SettingMetadata SettingsManager::_settings_metadata[] = {
     {SettingsManager::KEY_MPU_GYRO_RANGE, "gyro.resolution", "MPU6050 Gyroscope Range", SettingsManager::UINT8, SettingsManager::GYRO_RANGE_STRINGS, SettingsManager::NUM_GYRO_RANGES, DEFAULT_GYRO_RANGE, 0.0f, nullptr},
     {SettingsManager::KEY_MOTOR_PROTOCOL, "motor.protocol", "DShot Motor Protocol", SettingsManager::UINT8, DSHOT_PROTOCOL_STRINGS, NUM_DSHOT_PROTOCOLS, DEFAULT_MOTOR_PROTOCOL, 0.0f, nullptr},
 
+    // IBUS Channel Mappings
+    {SettingsManager::KEY_IBUS_CHANNEL_ROLL, "rx.channel.roll", "IBUS Roll Channel Index", SettingsManager::UINT8, nullptr, 0, 1, 0.0f, nullptr},
+    {SettingsManager::KEY_IBUS_CHANNEL_PITCH, "rx.channel.pitch", "IBUS Pitch Channel Index", SettingsManager::UINT8, nullptr, 0, 0, 0.0f, nullptr},
+    {SettingsManager::KEY_IBUS_CHANNEL_THRO, "rx.channel.thro", "IBUS Throttle Channel Index", SettingsManager::UINT8, nullptr, 0, 2, 0.0f, nullptr},
+    {SettingsManager::KEY_IBUS_CHANNEL_YAW, "rx.channel.yaw", "IBUS Yaw Channel Index", SettingsManager::UINT8, nullptr, 0, 3, 0.0f, nullptr},
+    {SettingsManager::KEY_IBUS_CHANNEL_ARM, "rx.channel.arm", "IBUS Arming Channel Index", SettingsManager::UINT8, nullptr, 0, 4, 0.0f, nullptr},
+    {SettingsManager::KEY_IBUS_CHANNEL_FMODE, "rx.channel.fmode", "IBUS Flight Mode Channel Index", SettingsManager::UINT8, nullptr, 0, 5, 0.0f, nullptr},
+    {SettingsManager::KEY_IBUS_CHANNEL_AUX1, "rx.channel.aux1", "IBUS Auxiliary Channel 1 Index", SettingsManager::UINT8, nullptr, 0, 6, 0.0f, nullptr},
+    {SettingsManager::KEY_IBUS_CHANNEL_AUX2, "rx.channel.aux2", "IBUS Auxiliary Channel 2 Index", SettingsManager::UINT8, nullptr, 0, 7, 0.0f, nullptr},
+    {SettingsManager::KEY_IBUS_CHANNEL_AUX3, "rx.channel.aux3", "IBUS Auxiliary Channel 3 Index", SettingsManager::UINT8, nullptr, 0, 8, 0.0f, nullptr},
+    {SettingsManager::KEY_IBUS_CHANNEL_AUX4, "rx.channel.aux4", "IBUS Auxiliary Channel 4 Index", SettingsManager::UINT8, nullptr, 0, 9, 0.0f, nullptr},
+
     {KEY_PID_ROLL_P, "pid.roll.p", "PID Roll Proportional Gain", SettingsManager::FLOAT, nullptr, 0, 0, DEFAULT_PID_ROLL_P, nullptr},
     {KEY_PID_ROLL_I, "pid.roll.i", "PID Roll Integral Gain", SettingsManager::FLOAT, nullptr, 0, 0, DEFAULT_PID_ROLL_I, nullptr},
     {KEY_PID_ROLL_D, "pid.roll.d", "PID Roll Derivative Gain", SettingsManager::FLOAT, nullptr, 0, 0, DEFAULT_PID_ROLL_D, nullptr},

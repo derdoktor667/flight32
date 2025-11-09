@@ -26,7 +26,7 @@
 
 ### ✈️ Flight & Control
 *   **MPU6050 IMU Integration**: Get reliable attitude and heading data with our seamless MPU6050 integration. Includes on-the-fly calibration.
-*   **Flysky IBUS Receiver Support**: Rock-solid connection to your Flysky receiver using the IBUS protocol.
+*   **Flysky IBUS Receiver Support**: Rock-solid connection to your Flysky receiver using the IBUS protocol. Channel mappings (Roll, Pitch, Throttle, Yaw, Arming, Flight Mode, and Auxiliary channels) are fully configurable via the terminal and saved persistently.
 *   **DShot Motor Control**: Precise and efficient motor control using the ESP32's RMT peripheral and DShot300 protocol.
 *   **PID Controller**: A full PID controller for flight stabilization with easily adjustable gains via the terminal.
 
@@ -84,10 +84,11 @@ Our interactive terminal gives you complete control over your flight controller.
 <details>
   <summary><strong>Settings & Configuration Commands</strong></summary>
   
-  *   `get <key>`      - Gets the value of a specific setting.
-  *   `set <key> <value>`- Sets a new value for a setting.
+  *   `get <key>`      - Gets the value of a specific setting (e.g., 'get gyro.resolution').
+  *   `set <key> <value>`- Sets a new value for a setting (e.g., 'set gyro.resolution = 250_DPS').
   *   `dump`           - Dumps all settings in a parsable format for backup.
   *   `save`           - Saves all current settings to persistent storage.
+  *   `settings`       - Lists all available settings.
 </details>
 
 ---
