@@ -11,7 +11,6 @@
 #include <cstdint>
 
 // --- IBUS Channel Mapping ---
-// These mappings are now configurable via the SettingsManager.
 
 // --- RC Channel Interpretation ---
 static constexpr float RC_CHANNEL_CENTER = 1500.0f;

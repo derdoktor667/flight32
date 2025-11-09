@@ -11,7 +11,9 @@
 #include "scheduler/scheduler.h"
 #include "com_manager.h"
 #include "tasks/mpu6050_task.h"
-#include "tasks/ibus_task.h"
+#include "tasks/rx_task.h"
+#include "rx_protocol.h"
+#include "rx_ibus_protocol.h"
 #include "tasks/terminal_task.h"
 #include "tasks/motor_task.h"
 #include "tasks/pid_task.h"
@@ -31,7 +33,8 @@ private:
     Scheduler _scheduler;
     ESP32_MPU6050 _mpu6050_sensor;
     Mpu6050Task *_mpu6050_task = nullptr;
-    IbusTask *_ibus_receiver_task = nullptr;
+    RxProtocol *_rx_protocol = nullptr;
+    RxTask *_rx_task = nullptr;
     TerminalTask *_terminal_task = nullptr;
     MotorTask *_motor_task = nullptr;
     PidTask *_pid_task = nullptr;

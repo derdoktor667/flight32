@@ -26,8 +26,8 @@
 
 ### ✈️ Flight & Control
 *   **MPU6050 IMU Integration**: Get reliable attitude and heading data with our seamless MPU6050 integration. Includes on-the-fly calibration.
-*   **Flysky IBUS Receiver Support**: Rock-solid connection to your Flysky receiver using the IBUS protocol. Channel mappings (Roll, Pitch, Throttle, Yaw, Arming, Flight Mode, and Auxiliary channels) are fully configurable via the terminal and saved persistently.
-*   **DShot Motor Control**: Precise and efficient motor control using the ESP32's RMT peripheral and DShot300 protocol.
+*   **Receiver Support**: Generic receiver task (`RxTask`) with initial support for **Flysky IBUS**. Channel mappings (Roll, Pitch, Throttle, Yaw, Arming, Flight Mode, and Auxiliary channels) are fully configurable via the terminal and saved persistently. The system is designed to easily integrate other receiver protocols in the future.
+*   **DShot Motor Control**: Precise and efficient motor control using the ESP32's RMT peripheral. The DShot protocol (DShot150, DShot300, DShot600, DShot1200) is configurable via settings.
 *   **PID Controller**: A full PID controller for flight stabilization with easily adjustable gains via the terminal.
 
 ### ⚙️ System & Configuration
@@ -61,10 +61,14 @@ Our interactive terminal gives you complete control over your flight controller.
 </details>
 
 <details>
-  <summary><strong>Receiver Commands (IBUS)</strong></summary>
+  <summary><strong>Receiver Commands (RX)</strong></summary>
   
-  *   `get ibus.data`  - Shows the latest channel data from your receiver.
-  *   `get ibus.status`- Shows the connection status.
+  *   `get rx.data`        - Shows the latest RX channel data.
+  *   `get rx.status`      - Shows the RX connection status.
+  *   `set rx.protocol <protocol>` - Sets the RX protocol (e.g., 'set rx.protocol IBUS').
+  *   `get rx.value.all`   - Shows all mapped RX channel values.
+  *   `get rx.value.<channel>` - Shows a specific RX channel value (e.g., 'get rx.value.roll').
+  *   `set rx.channel.<channel> <index>` - Sets the RX channel mapping (e.g., 'set rx.channel.roll 1').
 </details>
 
 <details>
@@ -77,7 +81,7 @@ Our interactive terminal gives you complete control over your flight controller.
   <summary><strong>PID Tuning Commands</strong></summary>
   
   *   `get pid`        - Gets the current PID gains for all axes.
-  *   `set pid <axis> <p|i|d> <value>` - Sets a specific PID gain (e.g., `set pid roll p 20`).
+  *   `set pid <axis> <p|i|d> <value>` - Sets a specific PID gain (e.g., `set pid roll p 20` where value is scaled by 100).
   *   `reset pid confirm` - Resets all PID gains to their default values.
 </details>
 

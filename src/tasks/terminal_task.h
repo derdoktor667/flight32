@@ -12,7 +12,7 @@
 #include "../scheduler/task_base.h"
 #include "../scheduler/scheduler.h" // Include for Scheduler class
 #include <ESP32_MPU6050.h>
-#include "ibus_task.h"
+#include "rx_task.h"
 #include "motor_task.h"
 #include "pid_task.h"
 
@@ -26,7 +26,7 @@ enum class CommandCategory
 {
     SYSTEM,
     MPU6050,
-    IBUS,
+    RX,
     MOTOR,
     PID,
     SETTINGS,
@@ -52,7 +52,7 @@ struct CategoryInfo {
 class TerminalTask : public TaskBase
 {
 public:
-    TerminalTask(const char *name, uint32_t stackSize, UBaseType_t priority, BaseType_t coreID, uint32_t task_delay_ms, Scheduler *scheduler, ESP32_MPU6050 *mpu6050_sensor, IbusTask *ibus_receiver_task, MotorTask *motor_task, PidTask *pid_task, SettingsManager *settings_manager);
+    TerminalTask(const char *name, uint32_t stackSize, UBaseType_t priority, BaseType_t coreID, uint32_t task_delay_ms, Scheduler *scheduler, ESP32_MPU6050 *mpu6050_sensor, RxTask *rx_task, MotorTask *motor_task, PidTask *pid_task, SettingsManager *settings_manager);
 
     void setup() override;
     void run() override;
@@ -62,7 +62,7 @@ public:
 private:
     Scheduler *_scheduler;
     ESP32_MPU6050 *_mpu6050_sensor;
-    IbusTask *_ibus_receiver_task;
+    RxTask *_rx_task;
     MotorTask *_motor_task;
     PidTask *_pid_task;
     SettingsManager *_settings_manager;
@@ -71,7 +71,7 @@ private:
 
     // Helper functions
     bool _check_mpu6050_sensor_available();
-    bool _check_ibus_receiver_available();
+    bool _check_rx_task_available();
     bool _check_motor_task_available();
     bool _check_pid_task_available();
 
@@ -80,13 +80,18 @@ private:
     // New helper declarations for help command
     const char *_get_category_string(CommandCategory category);
     CommandCategory _get_category_from_string(String &category_str);
+    CommandCategory _get_setting_category(const char *display_key); // New: Helper to get category from setting display key
 
     // New handler declarations for categorized commands
     void _handle_mpu_data(String &args);
     void _handle_mpu_config(String &args);
     void _handle_mpu_calibrate(String &args);
-    void _handle_ibus_data(String &args);
-    void _handle_ibus_status(String &args);
+    void _handle_rx_data(String &args);
+    void _handle_rx_status(String &args);
+    void _handle_rx_protocol(String &args); // New: Handles getting/setting RX protocol
+    void _handle_rx_value_single(String &args); // New: Handles getting a single RX channel value
+    void _handle_rx_value_all(String &args);   // New: Handles getting all RX channel values
+    void _handle_rx_channel_mapping(String &args); // New: Handles setting RX channel mappings
     void _handle_motor_throttle(String &args);
     void _handle_pid_get(String &args);
     void _handle_pid_set(String &args);

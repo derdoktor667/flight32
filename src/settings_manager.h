@@ -35,6 +35,7 @@ public:
     static constexpr const char *DEFAULT_SYSTEM_NAME = "Flight32";
     static constexpr const char *KEY_MPU_GYRO_RANGE = "mpu.g_range";
     static constexpr const char *KEY_MOTOR_PROTOCOL = "motor.protocol";
+    static constexpr const char *KEY_RX_PROTOCOL = "rx.protocol";
 
     // --- IBUS Channel Mapping Keys ---
     static constexpr const char *KEY_IBUS_CHANNEL_ROLL = "ibus.ch.roll";
@@ -52,15 +53,7 @@ public:
     static const char *GYRO_RANGE_STRINGS[];
     static const uint8_t NUM_GYRO_RANGES;
 
-private:
-    Preferences _preferences;
-    bool _is_begun = false;
-
-    // --- Schema Version ---
-
-    void _write_defaults();
-
-    // --- Settings Metadata ---
+    // --- Settings Metadata (Made public for terminal access) ---
     enum SettingType
     {
         UINT8,
@@ -72,16 +65,22 @@ private:
     struct SettingMetadata
     {
         const char *key;
-        const char *display_key; // New field for user-friendly display
+        const char *display_key;
         const char *description;
         SettingType type;
-        const char *const *string_map; // Pointer to an array of strings for human-readable values
-        uint8_t string_map_size;       // Size of the string map
-        uint8_t default_value;             // Default integer value for the setting
-        float default_float_value;     // Default float value for the setting (new)
-        const char *string_default;    // Default string value
+        const char *const *string_map;
+        uint8_t string_map_size;
+        uint8_t default_value;
+        float default_float_value;
+        const char *string_default;
     };
 
     static const SettingMetadata _settings_metadata[];
     static const int _num_settings;
+
+private:
+    Preferences _preferences;
+    bool _is_begun = false;
+
+    void _write_defaults();
 };

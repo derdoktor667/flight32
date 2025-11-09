@@ -13,12 +13,20 @@
 const char *SettingsManager::GYRO_RANGE_STRINGS[] = {"250_DPS", "500_DPS", "1000_DPS", "2000_DPS"};
 const uint8_t SettingsManager::NUM_GYRO_RANGES = sizeof(SettingsManager::GYRO_RANGE_STRINGS) / sizeof(SettingsManager::GYRO_RANGE_STRINGS[0]);
 
-const SettingsManager::SettingMetadata SettingsManager::_settings_metadata[] = {
-    {SettingsManager::KEY_SYSTEM_NAME, "system.name", "Configurable model name", SettingsManager::STRING, nullptr, 0, 0, 0.0f, SettingsManager::DEFAULT_SYSTEM_NAME},
-    {SettingsManager::KEY_MPU_GYRO_RANGE, "gyro.resolution", "MPU6050 Gyroscope Range", SettingsManager::UINT8, SettingsManager::GYRO_RANGE_STRINGS, SettingsManager::NUM_GYRO_RANGES, DEFAULT_GYRO_RANGE, 0.0f, nullptr},
-    {SettingsManager::KEY_MOTOR_PROTOCOL, "motor.protocol", "DShot Motor Protocol", SettingsManager::UINT8, DSHOT_PROTOCOL_STRINGS, NUM_DSHOT_PROTOCOLS, DEFAULT_MOTOR_PROTOCOL, 0.0f, nullptr},
+const char *RX_PROTOCOL_STRINGS[] = {"IBUS", "PPM"};
+static constexpr uint8_t NUM_RX_PROTOCOLS = sizeof(RX_PROTOCOL_STRINGS) / sizeof(RX_PROTOCOL_STRINGS[0]);
 
-    // IBUS Channel Mappings
+const SettingsManager::SettingMetadata SettingsManager::_settings_metadata[] = {
+    // --- System Settings ---
+    {SettingsManager::KEY_SYSTEM_NAME, "system.name", "Configurable model name", SettingsManager::STRING, nullptr, 0, 0, 0.0f, SettingsManager::DEFAULT_SYSTEM_NAME},
+
+    // --- MPU6050 Settings ---
+    {SettingsManager::KEY_MPU_GYRO_RANGE, "gyro.resolution", "MPU6050 Gyroscope Range", SettingsManager::UINT8, SettingsManager::GYRO_RANGE_STRINGS, SettingsManager::NUM_GYRO_RANGES, DEFAULT_GYRO_RANGE, 0.0f, nullptr},
+
+    // --- RX Protocol Settings ---
+    {SettingsManager::KEY_RX_PROTOCOL, "rx.protocol", "Receiver Protocol", SettingsManager::UINT8, RX_PROTOCOL_STRINGS, NUM_RX_PROTOCOLS, (uint8_t)DEFAULT_RX_PROTOCOL, 0.0f, nullptr},
+
+    // --- IBUS Channel Mappings ---
     {SettingsManager::KEY_IBUS_CHANNEL_ROLL, "rx.channel.roll", "IBUS Roll Channel Index", SettingsManager::UINT8, nullptr, 0, 1, 0.0f, nullptr},
     {SettingsManager::KEY_IBUS_CHANNEL_PITCH, "rx.channel.pitch", "IBUS Pitch Channel Index", SettingsManager::UINT8, nullptr, 0, 0, 0.0f, nullptr},
     {SettingsManager::KEY_IBUS_CHANNEL_THRO, "rx.channel.thro", "IBUS Throttle Channel Index", SettingsManager::UINT8, nullptr, 0, 2, 0.0f, nullptr},
@@ -30,6 +38,10 @@ const SettingsManager::SettingMetadata SettingsManager::_settings_metadata[] = {
     {SettingsManager::KEY_IBUS_CHANNEL_AUX3, "rx.channel.aux3", "IBUS Auxiliary Channel 3 Index", SettingsManager::UINT8, nullptr, 0, 8, 0.0f, nullptr},
     {SettingsManager::KEY_IBUS_CHANNEL_AUX4, "rx.channel.aux4", "IBUS Auxiliary Channel 4 Index", SettingsManager::UINT8, nullptr, 0, 9, 0.0f, nullptr},
 
+    // --- Motor Settings ---
+    {SettingsManager::KEY_MOTOR_PROTOCOL, "motor.protocol", "DShot Motor Protocol", SettingsManager::UINT8, DSHOT_PROTOCOL_STRINGS, NUM_DSHOT_PROTOCOLS, DEFAULT_MOTOR_PROTOCOL, 0.0f, nullptr},
+
+    // --- PID Gain Settings ---
     {KEY_PID_ROLL_P, "pid.roll.p", "PID Roll Proportional Gain", SettingsManager::FLOAT, nullptr, 0, 0, DEFAULT_PID_ROLL_P, nullptr},
     {KEY_PID_ROLL_I, "pid.roll.i", "PID Roll Integral Gain", SettingsManager::FLOAT, nullptr, 0, 0, DEFAULT_PID_ROLL_I, nullptr},
     {KEY_PID_ROLL_D, "pid.roll.d", "PID Roll Derivative Gain", SettingsManager::FLOAT, nullptr, 0, 0, DEFAULT_PID_ROLL_D, nullptr},
@@ -43,7 +55,6 @@ const int SettingsManager::_num_settings = sizeof(SettingsManager::_settings_met
 
 SettingsManager::SettingsManager()
 {
-    // Constructor can be empty
 }
 
 void SettingsManager::begin()
@@ -123,19 +134,39 @@ void SettingsManager::saveSettings()
         return;
 
     _preferences.putUShort(KEY_SCHEMA_VERSION, CURRENT_SCHEMA_VERSION);
-    // Save all settings based on metadata
-    // The actual values are already in preferences if set via setSettingValue
-    // This loop ensures all keys are written if they were modified directly
-    // For now, we just ensure the schema version is saved.
+    // Ensure the schema version is saved.
 }
 
 void SettingsManager::listSettings()
 {
     com_send_log(TERMINAL_OUTPUT, "\n--- Available Settings ---");
+
+    // Calculate max display_key length
+    int max_display_key_len = 0;
+    for (int i = 0; i < _num_settings; ++i)
+    {
+        int len = strlen(_settings_metadata[i].display_key);
+        if (len > max_display_key_len)
+        {
+            max_display_key_len = len;
+        }
+    }
+    max_display_key_len += 2; // Add a small buffer
+
+    // Print header
+    com_send_log(TERMINAL_OUTPUT, "  %-*s %s", max_display_key_len, "Setting", "Description");
+    String separator = "  ";
+    for (int i = 0; i < max_display_key_len; ++i) {
+        separator += "-";
+    }
+    separator += "--------------------------------------------------"; // Fixed length for description part
+    com_send_log(TERMINAL_OUTPUT, separator.c_str());
+
     for (int i = 0; i < _num_settings; i++)
     {
-        com_send_log(TERMINAL_OUTPUT, "  %-20s - %s", _settings_metadata[i].display_key, _settings_metadata[i].description);
+        com_send_log(TERMINAL_OUTPUT, "  %-*s - %s", max_display_key_len, _settings_metadata[i].display_key, _settings_metadata[i].description);
     }
+    com_send_log(TERMINAL_OUTPUT, separator.c_str());
     com_send_log(TERMINAL_OUTPUT, "--------------------------");
 }
 
@@ -185,6 +216,39 @@ String SettingsManager::getSettingValueHumanReadable(const char *key)
                 if (value >= 0 && value < _settings_metadata[i].string_map_size)
                 {
                     return _settings_metadata[i].string_map[value];
+                }
+            }
+            // Special handling for RX channel keys: display as 1-based
+            if (strcmp(key, SettingsManager::KEY_IBUS_CHANNEL_ROLL) == 0 ||
+                strcmp(key, SettingsManager::KEY_IBUS_CHANNEL_PITCH) == 0 ||
+                strcmp(key, SettingsManager::KEY_IBUS_CHANNEL_THRO) == 0 ||
+                strcmp(key, SettingsManager::KEY_IBUS_CHANNEL_YAW) == 0 ||
+                strcmp(key, SettingsManager::KEY_IBUS_CHANNEL_ARM) == 0 ||
+                strcmp(key, SettingsManager::KEY_IBUS_CHANNEL_FMODE) == 0 ||
+                strcmp(key, SettingsManager::KEY_IBUS_CHANNEL_AUX1) == 0 ||
+                strcmp(key, SettingsManager::KEY_IBUS_CHANNEL_AUX2) == 0 ||
+                strcmp(key, SettingsManager::KEY_IBUS_CHANNEL_AUX3) == 0 ||
+                strcmp(key, SettingsManager::KEY_IBUS_CHANNEL_AUX4) == 0)
+            {
+                if (_settings_metadata[i].type == UINT8)
+                {
+                    return String(getSettingValue(key).toInt() + 1); // Convert to 1-based
+                }
+            }
+            // Special handling for PID keys: display as scaled integers
+            if (strcmp(key, KEY_PID_ROLL_P) == 0 ||
+                strcmp(key, KEY_PID_ROLL_I) == 0 ||
+                strcmp(key, KEY_PID_ROLL_D) == 0 ||
+                strcmp(key, KEY_PID_PITCH_P) == 0 ||
+                strcmp(key, KEY_PID_PITCH_I) == 0 ||
+                strcmp(key, KEY_PID_PITCH_D) == 0 ||
+                strcmp(key, KEY_PID_YAW_P) == 0 ||
+                strcmp(key, KEY_PID_YAW_I) == 0 ||
+                strcmp(key, KEY_PID_YAW_D) == 0)
+            {
+                if (_settings_metadata[i].type == FLOAT)
+                {
+                    return String((int)(getSettingValue(key).toFloat() * PID_SCALE_FACTOR));
                 }
             }
             return getSettingValue(key); // Fallback to raw value if no string map or out of bounds

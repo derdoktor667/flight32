@@ -12,12 +12,12 @@
 
 PidTask::PidTask(const char *name, uint32_t stack_size, UBaseType_t priority, BaseType_t core_id, uint32_t task_delay_ms,
                  Mpu6050Task *mpu6050_task,
-                 IbusTask *ibus_task,
+                 RxTask *rx_task,
                  MotorTask *motor_task,
                  SettingsManager *settings_manager)
     : TaskBase(name, stack_size, priority, core_id, task_delay_ms),
       _mpu6050_task(mpu6050_task),
-      _ibus_task(ibus_task),
+      _rx_task(rx_task),
       _motor_task(motor_task),
       _settings_manager(settings_manager),
       _pid_roll(0, 0, 0),
@@ -38,10 +38,10 @@ void PidTask::run()
     // Raw IBUS values can vary (e.g., 988-2024). For internal calculations, we constrain them
     // to the standard 1000-2000 range to ensure stable flight control.
     // The terminal will still display the raw, unconstrained values for user calibration.
-    int constrained_roll = constrain(_ibus_task->getChannel(_settings_manager->getSettingValue(SettingsManager::KEY_IBUS_CHANNEL_ROLL).toInt()), 1000, 2000);
-    int constrained_pitch = constrain(_ibus_task->getChannel(_settings_manager->getSettingValue(SettingsManager::KEY_IBUS_CHANNEL_PITCH).toInt()), 1000, 2000);
-    int constrained_yaw = constrain(_ibus_task->getChannel(_settings_manager->getSettingValue(SettingsManager::KEY_IBUS_CHANNEL_YAW).toInt()), 1000, 2000);
-    int constrained_throttle = constrain(_ibus_task->getChannel(_settings_manager->getSettingValue(SettingsManager::KEY_IBUS_CHANNEL_THRO).toInt()), 1000, 2000);
+    int constrained_roll = constrain(_rx_task->getChannel(_settings_manager->getSettingValue(SettingsManager::KEY_IBUS_CHANNEL_ROLL).toInt()), IBUS_CHANNEL_MIN_RAW, IBUS_CHANNEL_MAX_RAW);
+    int constrained_pitch = constrain(_rx_task->getChannel(_settings_manager->getSettingValue(SettingsManager::KEY_IBUS_CHANNEL_PITCH).toInt()), IBUS_CHANNEL_MIN_RAW, IBUS_CHANNEL_MAX_RAW);
+    int constrained_yaw = constrain(_rx_task->getChannel(_settings_manager->getSettingValue(SettingsManager::KEY_IBUS_CHANNEL_YAW).toInt()), IBUS_CHANNEL_MIN_RAW, IBUS_CHANNEL_MAX_RAW);
+    int constrained_throttle = constrain(_rx_task->getChannel(_settings_manager->getSettingValue(SettingsManager::KEY_IBUS_CHANNEL_THRO).toInt()), IBUS_CHANNEL_MIN_RAW, IBUS_CHANNEL_MAX_RAW);
 
     float desired_roll_rate = (constrained_roll - RC_CHANNEL_CENTER) / RC_CHANNEL_RANGE_SYMMETRIC;
     float desired_pitch_rate = (constrained_pitch - RC_CHANNEL_CENTER) / RC_CHANNEL_RANGE_SYMMETRIC;
@@ -52,7 +52,7 @@ void PidTask::run()
     float actual_pitch_rate = _mpu6050_task->getMpu6050Sensor().readings.gyroscope.y;
     float actual_yaw_rate = _mpu6050_task->getMpu6050Sensor().readings.gyroscope.z;
 
-    float dt = getTaskDelayMs() / 1000.0f;
+    float dt = getTaskDelayMs() / MS_TO_SECONDS_FACTOR;
 
     // Calculate PID outputs
     float roll_output = _pid_roll.update(desired_roll_rate, actual_roll_rate, dt);

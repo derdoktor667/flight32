@@ -1,0 +1,26 @@
+/**
+ * @file rx_task.h
+ * @brief Defines the RxTask class for handling various RC receiver protocol inputs.
+ * @author Wastl Kraus
+ * @date 2025-11-09
+ * @license MIT
+ */
+
+#pragma once
+
+#include <Arduino.h>
+#include "../scheduler/task_base.h"
+#include "../rx_protocol.h"
+
+class RxTask : public TaskBase
+{
+public:
+    RxTask(const char *name, uint32_t stackSize, UBaseType_t priority, BaseType_t coreID, uint32_t task_delay_ms, RxProtocol *rx_protocol);
+    void setup() override;
+    void run() override;
+
+    int16_t getChannel(const uint8_t channel_nr) const;
+
+private:
+    RxProtocol *_rx_protocol;
+};

@@ -10,7 +10,6 @@
 #include "../com_manager.h"
 #include "../settings_manager.h"
 
-// Helper function to convert DShot protocol index to dshot_mode_t
 dshot_mode_t get_dshot_mode_from_index(uint8_t index)
 {
     switch (index)
@@ -24,7 +23,7 @@ dshot_mode_t get_dshot_mode_from_index(uint8_t index)
     case 3:
         return DSHOT1200;
     default:
-        return DSHOT300; // Default to DSHOT300 if invalid index
+        return DSHOT300;
     }
 }
 
@@ -40,8 +39,8 @@ MotorTask::MotorTask(const char *name, uint32_t stack_size, UBaseType_t priority
 {
     for (int i = 0; i < NUM_MOTORS; ++i)
     {
-        _motor_throttles[i] = 0;     // Initialize all throttles to 0
-        _dshot_drivers[i] = nullptr; // Initialize all driver pointers to nullptr
+        _motor_throttles[i] = 0;
+        _dshot_drivers[i] = nullptr;
     }
 }
 
@@ -73,10 +72,9 @@ void MotorTask::setup()
 void MotorTask::run()
 {
     if (!_dshot_drivers[0])
-        return; // Ensure drivers are initialized
+        return;
 
-    // If throttle is very low, consider it disarmed and send 0 to motors
-    if (_throttle_command < 0.01f)
+    if (_throttle_command < THROTTLE_DEADZONE_THRESHOLD)
     {
         for (int i = 0; i < NUM_MOTORS; ++i)
         {
@@ -85,20 +83,11 @@ void MotorTask::run()
     }
     else
     {
-        // Mixer logic for Quad-X configuration.
-        // Assumed motor layout (matching Betaflight):
-        // _motor_throttles[0] -> Motor 1: Rear Right
-        // _motor_throttles[1] -> Motor 2: Front Right
-        // _motor_throttles[2] -> Motor 3: Rear Left
-        // _motor_throttles[3] -> Motor 4: Front Left
-
         float m_rr = _throttle_command - _pitch_command + _roll_command - _yaw_command; // Motor 1 (Rear Right)
         float m_fr = _throttle_command - _pitch_command - _roll_command + _yaw_command; // Motor 2 (Front Right)
         float m_rl = _throttle_command + _pitch_command + _roll_command + _yaw_command; // Motor 3 (Rear Left)
         float m_fl = _throttle_command + _pitch_command - _roll_command - _yaw_command; // Motor 4 (Front Left)
 
-        // Scale and constrain the motor values
-        // DShot values range from 48 to 2047 for throttle.
         const float min_throttle = 48.0f;
         const float max_throttle = 2047.0f;
 
@@ -108,7 +97,6 @@ void MotorTask::run()
         _motor_throttles[3] = constrain(m_fl * (max_throttle - min_throttle) + min_throttle, min_throttle, max_throttle);
     }
 
-    // Send current throttle values to motors
     for (int i = 0; i < NUM_MOTORS; ++i)
     {
         if (_dshot_drivers[i])
@@ -128,9 +116,7 @@ void MotorTask::update(float throttle, float pitch, float roll, float yaw)
 
 void MotorTask::setThrottle(uint8_t motor_id, uint16_t throttle)
 {
-    if (motor_id < NUM_MOTORS && _dshot_drivers[motor_id])
-    {
-        // This method is for testing individual motors from the terminal.
+    if (motor_id < NUM_MOTORS && _dshot_drivers[motor_id]) {
         // It bypasses the mixer and sends a command directly to the motor.
         _dshot_drivers[motor_id]->sendThrottle(throttle);
         _motor_throttles[motor_id] = throttle; // Also update the state for consistency

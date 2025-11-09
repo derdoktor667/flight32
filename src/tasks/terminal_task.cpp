@@ -27,8 +27,31 @@ const Command TerminalTask::_commands[] = {
     {"get mpu.config", &TerminalTask::_handle_mpu_config, "Shows the current MPU6050 settings.", CommandCategory::MPU6050},
     {"set mpu.calibrate", &TerminalTask::_handle_mpu_calibrate, "Calibrates the MPU6050.", CommandCategory::MPU6050},
 
-    {"get ibus.data", &TerminalTask::_handle_ibus_data, "Shows the latest IBUS channel data.", CommandCategory::IBUS},
-    {"get ibus.status", &TerminalTask::_handle_ibus_status, "Shows the IBUS connection status.", CommandCategory::IBUS},
+    {"get rx.data", &TerminalTask::_handle_rx_data, "Shows the latest RX channel data.", CommandCategory::RX},
+    {"get rx.status", &TerminalTask::_handle_rx_status, "Shows the RX connection status.", CommandCategory::RX},
+    {"set rx.protocol", &TerminalTask::_handle_rx_protocol, "Sets the RX protocol (e.g., 'set rx.protocol IBUS').", CommandCategory::RX},
+    {"get rx.value.all", &TerminalTask::_handle_rx_value_all, "Shows all mapped RX channel values.", CommandCategory::RX},
+    {"get rx.value.roll", &TerminalTask::_handle_rx_value_single, "Shows the RX Roll channel value.", CommandCategory::RX},
+    {"get rx.value.pitch", &TerminalTask::_handle_rx_value_single, "Shows the RX Pitch channel value.", CommandCategory::RX},
+    {"get rx.value.throttle", &TerminalTask::_handle_rx_value_single, "Shows the RX Throttle channel value.", CommandCategory::RX},
+    {"get rx.value.yaw", &TerminalTask::_handle_rx_value_single, "Shows the RX Yaw channel value.", CommandCategory::RX},
+    {"get rx.value.arm", &TerminalTask::_handle_rx_value_single, "Shows the RX Arm channel value.", CommandCategory::RX},
+    {"get rx.value.fmode", &TerminalTask::_handle_rx_value_single, "Shows the RX Flight Mode channel value.", CommandCategory::RX},
+    {"get rx.value.aux1", &TerminalTask::_handle_rx_value_single, "Shows the RX Auxiliary 1 channel value.", CommandCategory::RX},
+    {"get rx.value.aux2", &TerminalTask::_handle_rx_value_single, "Shows the RX Auxiliary 2 channel value.", CommandCategory::RX},
+    {"get rx.value.aux3", &TerminalTask::_handle_rx_value_single, "Shows the RX Auxiliary 3 channel value.", CommandCategory::RX},
+    {"get rx.value.aux4", &TerminalTask::_handle_rx_value_single, "Shows the RX Auxiliary 4 channel value.", CommandCategory::RX},
+
+    {"set rx.channel.roll", &TerminalTask::_handle_rx_channel_mapping, "Sets the RX Roll channel index (1-based).", CommandCategory::RX},
+    {"set rx.channel.pitch", &TerminalTask::_handle_rx_channel_mapping, "Sets the RX Pitch channel index (1-based).", CommandCategory::RX},
+    {"set rx.channel.throttle", &TerminalTask::_handle_rx_channel_mapping, "Sets the RX Throttle channel index (1-based).", CommandCategory::RX},
+    {"set rx.channel.yaw", &TerminalTask::_handle_rx_channel_mapping, "Sets the RX Yaw channel index (1-based).", CommandCategory::RX},
+    {"set rx.channel.arm", &TerminalTask::_handle_rx_channel_mapping, "Sets the RX Arm channel index (1-based).", CommandCategory::RX},
+    {"set rx.channel.fmode", &TerminalTask::_handle_rx_channel_mapping, "Sets the RX Flight Mode channel index (1-based).", CommandCategory::RX},
+    {"set rx.channel.aux1", &TerminalTask::_handle_rx_channel_mapping, "Sets the RX Auxiliary 1 channel index (1-based).", CommandCategory::RX},
+    {"set rx.channel.aux2", &TerminalTask::_handle_rx_channel_mapping, "Sets the RX Auxiliary 2 channel index (1-based).", CommandCategory::RX},
+    {"set rx.channel.aux3", &TerminalTask::_handle_rx_channel_mapping, "Sets the RX Auxiliary 3 channel index (1-based).", CommandCategory::RX},
+    {"set rx.channel.aux4", &TerminalTask::_handle_rx_channel_mapping, "Sets the RX Auxiliary 4 channel index (1-based).", CommandCategory::RX},
 
     {"set motor.throttle", &TerminalTask::_handle_motor_throttle, "Sets the throttle for a specific motor (e.g., 'set motor.throttle 0 1000').", CommandCategory::MOTOR},
 
@@ -47,32 +70,31 @@ const Command TerminalTask::_commands[] = {
 const int TerminalTask::_num_commands = sizeof(TerminalTask::_commands) / sizeof(Command);
 
 const CategoryInfo TerminalTask::_category_info[] = {
+    {CommandCategory::SYSTEM, "system", "System commands and settings"},
     {CommandCategory::MPU6050, "mpu", "MPU6050 sensor commands"},
-    {CommandCategory::IBUS, "ibus", "IBUS receiver commands"},
+    {CommandCategory::RX, "rx", "Receiver commands"},
     {CommandCategory::MOTOR, "motor", "Motor control commands"},
     {CommandCategory::PID, "pid", "PID controller commands"},
     {CommandCategory::SETTINGS, "settings", "Settings management commands"},
 };
 const int TerminalTask::_num_categories = sizeof(TerminalTask::_category_info) / sizeof(CategoryInfo);
 
-TerminalTask::TerminalTask(const char *name, uint32_t stackSize, UBaseType_t priority, BaseType_t coreID, uint32_t task_delay_ms, Scheduler *scheduler, ESP32_MPU6050 *mpu6050_sensor, IbusTask *ibus_receiver_task, MotorTask *motor_task, PidTask *pid_task, SettingsManager *settings_manager)
+TerminalTask::TerminalTask(const char *name, uint32_t stackSize, UBaseType_t priority, BaseType_t coreID, uint32_t task_delay_ms, Scheduler *scheduler, ESP32_MPU6050 *mpu6050_sensor, RxTask *rx_task, MotorTask *motor_task, PidTask *pid_task, SettingsManager *settings_manager)
     : TaskBase(name, stackSize, priority, coreID, task_delay_ms),
       _scheduler(scheduler),
       _mpu6050_sensor(mpu6050_sensor),
-      _ibus_receiver_task(ibus_receiver_task),
+      _rx_task(rx_task),
       _motor_task(motor_task),
       _pid_task(pid_task),
       _settings_manager(settings_manager)
 {
 }
 
-//
 void TerminalTask::setup()
 {
     _input_buffer.reserve(TERMINAL_INPUT_BUFFER_SIZE);
 }
 
-//
 void TerminalTask::run()
 {
     while (Serial.available() > 0)
@@ -113,18 +135,75 @@ void TerminalTask::_handle_help(String &args)
         com_send_log(TERMINAL_OUTPUT, "");
         com_send_log(TERMINAL_OUTPUT, "Usage: help <category>");
         com_send_log(TERMINAL_OUTPUT, "");
+
+        // --- Core Commands ---
         com_send_log(TERMINAL_OUTPUT, "Core Commands:");
-        com_send_log(TERMINAL_OUTPUT, "  %-19s %s", "status", "Shows firmware information.");
-        com_send_log(TERMINAL_OUTPUT, "  %-19s %s", "tasks", "Shows information about running tasks.");
-        com_send_log(TERMINAL_OUTPUT, "  %-19s %s", "mem", "Shows current memory usage.");
-        com_send_log(TERMINAL_OUTPUT, "  %-19s %s", "reboot", "Reboots the ESP32.");
-        com_send_log(TERMINAL_OUTPUT, "  %-19s %s", "factory_reset", "Resets all settings to their default values.");
+
+        // Calculate max length for core commands
+        int max_core_cmd_len = 0;
+        const char* core_commands[] = {"status", "tasks", "mem", "reboot", "factory_reset"};
+        const char* core_commands_desc[] = {
+            "Shows firmware information.",
+            "Shows information about running tasks.",
+            "Shows current memory usage.",
+            "Reboots the ESP32.",
+            "Resets all settings to their default values."
+        };
+        int num_core_commands = sizeof(core_commands) / sizeof(core_commands[0]);
+
+        for (int i = 0; i < num_core_commands; ++i) {
+            int len = strlen(core_commands[i]);
+            if (len > max_core_cmd_len) {
+                max_core_cmd_len = len;
+            }
+        }
+        max_core_cmd_len += TERMINAL_COLUMN_BUFFER_WIDTH; // Add buffer
+
+        // Print header for core commands
+        com_send_log(TERMINAL_OUTPUT, "  %-*s %s", max_core_cmd_len, "Command", "Description");
+        String core_separator = "  ";
+        for (int i = 0; i < max_core_cmd_len; ++i) {
+            core_separator += "-";
+        }
+        core_separator += "--------------------------------------------------";
+        com_send_log(TERMINAL_OUTPUT, core_separator.c_str());
+
+        for (int i = 0; i < num_core_commands; ++i)
+        {
+            com_send_log(TERMINAL_OUTPUT, "  %-*s %s", max_core_cmd_len, core_commands[i], core_commands_desc[i]);
+        }
+        com_send_log(TERMINAL_OUTPUT, core_separator.c_str());
         com_send_log(TERMINAL_OUTPUT, "");
+
+        // --- Available Command Categories ---
         com_send_log(TERMINAL_OUTPUT, "Available Command Categories:");
+
+        // Calculate max length for category prefixes
+        int max_category_prefix_len = 0;
         for (int i = 0; i < _num_categories; ++i)
         {
-            com_send_log(TERMINAL_OUTPUT, "  %-19s %s", _category_info[i].prefix, _category_info[i].description);
+            int len = strlen(_category_info[i].prefix);
+            if (len > max_category_prefix_len)
+            {
+                max_category_prefix_len = len;
+            }
         }
+        max_category_prefix_len += TERMINAL_COLUMN_BUFFER_WIDTH; // Add buffer
+
+        // Print header for categories
+        com_send_log(TERMINAL_OUTPUT, "  %-*s %s", max_category_prefix_len, "Category", "Description");
+        String category_separator = "  ";
+        for (int i = 0; i < max_category_prefix_len; ++i) {
+            category_separator += "-";
+        }
+        category_separator += "--------------------------------------------------";
+        com_send_log(TERMINAL_OUTPUT, category_separator.c_str());
+
+        for (int i = 0; i < _num_categories; ++i)
+        {
+            com_send_log(TERMINAL_OUTPUT, "  %-*s %s", max_category_prefix_len, _category_info[i].prefix, _category_info[i].description);
+        }
+        com_send_log(TERMINAL_OUTPUT, category_separator.c_str());
         com_send_log(TERMINAL_OUTPUT, "\n------------------------------");
     }
     else
@@ -140,16 +219,45 @@ void TerminalTask::_handle_help(String &args)
 
         com_send_log(TERMINAL_OUTPUT, "--- %s Commands ---", _get_category_string(requested_category));
         com_send_log(TERMINAL_OUTPUT, "");
-        com_send_log(TERMINAL_OUTPUT, "  Command             Description");
-        com_send_log(TERMINAL_OUTPUT, "  --------------------------------------------------");
+
+        // Calculate max command name length for this category
+        int max_command_name_len = 0;
         for (int i = 0; i < _num_commands; ++i)
         {
             if (_commands[i].category == requested_category)
             {
-                com_send_log(TERMINAL_OUTPUT, "  %-19s %s", _commands[i].name, _commands[i].help);
+                int len = strlen(_commands[i].name);
+                if (len > max_command_name_len)
+                {
+                    max_command_name_len = len;
+                }
             }
         }
-        com_send_log(TERMINAL_OUTPUT, "  --------------------------------------------------");
+
+        // Add a small buffer for spacing
+        max_command_name_len += TERMINAL_COLUMN_BUFFER_WIDTH; 
+        if (max_command_name_len < strlen("Command")) { // Ensure header is not cut off
+            max_command_name_len = strlen("Command");
+        }
+
+        // Print header
+        com_send_log(TERMINAL_OUTPUT, "  %-*s %s", max_command_name_len, "Command", "Description");
+        // Print separator line
+        String separator = "  ";
+        for (int i = 0; i < max_command_name_len; ++i) {
+            separator += "-";
+        }
+        separator += "--------------------------------------------------"; // Fixed length for description part
+        com_send_log(TERMINAL_OUTPUT, separator.c_str());
+
+        for (int i = 0; i < _num_commands; ++i)
+        {
+            if (_commands[i].category == requested_category)
+            {
+                com_send_log(TERMINAL_OUTPUT, "  %-*s %s", max_command_name_len, _commands[i].name, _commands[i].help);
+            }
+        }
+        com_send_log(TERMINAL_OUTPUT, separator.c_str());
         com_send_log(TERMINAL_OUTPUT, "\n--------------------------");
     }
 }
@@ -163,8 +271,8 @@ const char *TerminalTask::_get_category_string(CommandCategory category)
         return "System";
     case CommandCategory::MPU6050:
         return "MPU6050 Sensor";
-    case CommandCategory::IBUS:
-        return "IBUS Receiver";
+    case CommandCategory::RX:
+        return "Receiver";
     case CommandCategory::MOTOR:
         return "Motor Control";
     case CommandCategory::PID:
@@ -183,8 +291,8 @@ CommandCategory TerminalTask::_get_category_from_string(String &category_str)
         return CommandCategory::SYSTEM;
     if (category_str.equalsIgnoreCase("mpu6050") || category_str.equalsIgnoreCase("sensor"))
         return CommandCategory::MPU6050;
-    if (category_str.equalsIgnoreCase("ibus") || category_str.equalsIgnoreCase("receiver"))
-        return CommandCategory::IBUS;
+    if (category_str.equalsIgnoreCase("rx") || category_str.equalsIgnoreCase("receiver"))
+        return CommandCategory::RX;
     if (category_str.equalsIgnoreCase("motor") || category_str.equalsIgnoreCase("motors"))
         return CommandCategory::MOTOR;
     if (category_str.equalsIgnoreCase("pid") || category_str.equalsIgnoreCase("controller"))
@@ -192,6 +300,24 @@ CommandCategory TerminalTask::_get_category_from_string(String &category_str)
     if (category_str.equalsIgnoreCase("settings") || category_str.equalsIgnoreCase("config"))
         return CommandCategory::SETTINGS;
     return CommandCategory::UNKNOWN;
+}
+
+// Helper to determine the category of a setting based on its display_key
+CommandCategory TerminalTask::_get_setting_category(const char *display_key)
+{
+    String key_str = String(display_key);
+    if (key_str.startsWith("system."))
+        return CommandCategory::SYSTEM;
+    if (key_str.startsWith("gyro.") || key_str.startsWith("mpu."))
+        return CommandCategory::MPU6050;
+    if (key_str.startsWith("rx."))
+        return CommandCategory::RX;
+    if (key_str.startsWith("motor."))
+        return CommandCategory::MOTOR;
+    if (key_str.startsWith("pid."))
+        return CommandCategory::PID;
+    // Settings that don't fit neatly into other categories, or general settings
+    return CommandCategory::SETTINGS;
 }
 
 void TerminalTask::_handle_status(String &args)
@@ -306,9 +432,21 @@ void TerminalTask::_handle_mem(String &args)
 {
     com_send_log(TERMINAL_OUTPUT, "");
     com_send_log(TERMINAL_OUTPUT, "Memory (Heap):");
-    com_send_log(TERMINAL_OUTPUT, "  Total: %s", TerminalTask::_format_bytes(ESP.getHeapSize()));
-    com_send_log(TERMINAL_OUTPUT, "  Free:  %s", TerminalTask::_format_bytes(ESP.getFreeHeap()));
-    com_send_log(TERMINAL_OUTPUT, "  Min Free: %s", TerminalTask::_format_bytes(ESP.getMinFreeHeap()));
+
+    // Calculate max length for labels
+    int max_label_len = 0;
+    const char* labels[] = {"Total:", "Free:", "Min Free:"};
+    for (int i = 0; i < sizeof(labels) / sizeof(labels[0]); ++i) {
+        int len = strlen(labels[i]);
+        if (len > max_label_len) {
+            max_label_len = len;
+        }
+    }
+    max_label_len += TERMINAL_COLUMN_BUFFER_WIDTH; // Add a small buffer
+
+    com_send_log(TERMINAL_OUTPUT, "  %-*s %s", max_label_len, "Total:", TerminalTask::_format_bytes(ESP.getHeapSize()));
+    com_send_log(TERMINAL_OUTPUT, "  %-*s %s", max_label_len, "Free:", TerminalTask::_format_bytes(ESP.getFreeHeap()));
+    com_send_log(TERMINAL_OUTPUT, "  %-*s %s", max_label_len, "Min Free:", TerminalTask::_format_bytes(ESP.getMinFreeHeap()));
 }
 
 void TerminalTask::_handle_reboot(String &args)
@@ -346,9 +484,21 @@ void TerminalTask::_handle_mpu_config(String &args)
         return;
 
     com_send_log(TERMINAL_OUTPUT, "MPU6050 Settings:");
-    com_send_log(TERMINAL_OUTPUT, "  Gyro Range: %d DPS", _mpu6050_sensor->getGyroscopeRange());
-    com_send_log(TERMINAL_OUTPUT, "  Accel Range: %d G", _mpu6050_sensor->getAccelerometerRange());
-    com_send_log(TERMINAL_OUTPUT, "  LPF Bandwidth: %d Hz", _mpu6050_sensor->getLpfBandwidth());
+
+    // Calculate max length for labels
+    int max_label_len = 0;
+    const char* labels[] = {"Gyro Range:", "Accel Range:", "LPF Bandwidth:"};
+    for (int i = 0; i < sizeof(labels) / sizeof(labels[0]); ++i) {
+        int len = strlen(labels[i]);
+        if (len > max_label_len) {
+            max_label_len = len;
+        }
+    }
+    max_label_len += TERMINAL_COLUMN_BUFFER_WIDTH; // Add a small buffer
+
+    com_send_log(TERMINAL_OUTPUT, "  %-*s %d DPS", max_label_len, "Gyro Range:", _mpu6050_sensor->getGyroscopeRange());
+    com_send_log(TERMINAL_OUTPUT, "  %-*s %d G", max_label_len, "Accel Range:", _mpu6050_sensor->getAccelerometerRange());
+    com_send_log(TERMINAL_OUTPUT, "  %-*s %d Hz", max_label_len, "LPF Bandwidth:", _mpu6050_sensor->getLpfBandwidth());
 }
 
 void TerminalTask::_handle_mpu_calibrate(String &args)
@@ -361,24 +511,237 @@ void TerminalTask::_handle_mpu_calibrate(String &args)
     com_send_log(LOG_INFO, "MPU6050 sensor calibration complete.");
 }
 
-void TerminalTask::_handle_ibus_data(String &args)
+void TerminalTask::_handle_rx_data(String &args)
 {
-    if (!TerminalTask::_check_ibus_receiver_available())
+    if (!TerminalTask::_check_rx_task_available())
         return;
 
-    com_send_log(TERMINAL_OUTPUT, "IBUS Channels:");
-    for (int i = 0; i < _ibus_receiver_task->getChannelCount(); ++i)
+    com_send_log(TERMINAL_OUTPUT, "RX Channels:");
+
+    // Calculate max length for "CHX" (e.g., "CH10")
+    int max_ch_len = 0;
+    for (int i = 0; i < TERMINAL_RX_DATA_DISPLAY_CHANNELS; ++i)
     {
-        com_send_log(TERMINAL_OUTPUT, "  CH%d: %d", i + 1, _ibus_receiver_task->getChannel(i));
+        String ch_str = "CH" + String(i + 1);
+        if (ch_str.length() > max_ch_len) {
+            max_ch_len = ch_str.length();
+        }
+    }
+    max_ch_len += TERMINAL_COLUMN_BUFFER_WIDTH; // Add a small buffer
+
+    // Print header
+    com_send_log(TERMINAL_OUTPUT, "  %-*s %s", max_ch_len, "Channel", "Value");
+    String separator = "  ";
+    for (int i = 0; i < max_ch_len; ++i) {
+        separator += "-";
+    }
+    separator += "--------------------"; // Fixed length for value part
+    com_send_log(TERMINAL_OUTPUT, separator.c_str());
+
+    // Print all channels
+    for (int i = 0; i < TERMINAL_RX_DATA_DISPLAY_CHANNELS; ++i)
+    {
+        String ch_str = "CH" + String(i + 1);
+        com_send_log(TERMINAL_OUTPUT, "  %-*s %d", max_ch_len, ch_str.c_str(), _rx_task->getChannel(i));
+    }
+    com_send_log(TERMINAL_OUTPUT, separator.c_str());
+}
+
+void TerminalTask::_handle_rx_status(String &args)
+{
+    if (!TerminalTask::_check_rx_task_available())
+        return;
+
+    com_send_log(TERMINAL_OUTPUT, "RX Status: Task Available");
+}
+
+void TerminalTask::_handle_rx_protocol(String &args)
+{
+    if (args.length() == 0)
+    {
+        // Get current RX protocol
+        String current_protocol = _settings_manager->getSettingValueHumanReadable(KEY_RX_PROTOCOL);
+        com_send_log(TERMINAL_OUTPUT, "Current RX Protocol: %s", current_protocol.c_str());
+        com_send_log(TERMINAL_OUTPUT, "Available protocols: IBUS, PPM (PPM not yet implemented)");
+    }
+    else
+    {
+        // Set RX protocol
+        if (_settings_manager->setSettingValue(KEY_RX_PROTOCOL, args))
+        {
+            com_send_log(LOG_INFO, "RX Protocol set to %s. Reboot to apply changes.", _settings_manager->getSettingValueHumanReadable(KEY_RX_PROTOCOL).c_str());
+        }
+        else
+        {
+            com_send_log(LOG_ERROR, "Failed to set RX Protocol to %s. Invalid protocol or value.", args.c_str());
+        }
     }
 }
 
-void TerminalTask::_handle_ibus_status(String &args)
+void TerminalTask::_handle_rx_value_single(String &args)
 {
-    if (!TerminalTask::_check_ibus_receiver_available())
+    if (!TerminalTask::_check_rx_task_available())
         return;
 
-    com_send_log(TERMINAL_OUTPUT, "IBUS Status: Task Available");
+    // Extract the channel name from the command (e.g., "roll" from "get rx.value.roll")
+    int last_dot_index = args.lastIndexOf('.');
+    String channel_name = args.substring(last_dot_index + 1);
+
+    const char *key = nullptr;
+    if (channel_name.equalsIgnoreCase("roll"))
+        key = SettingsManager::KEY_IBUS_CHANNEL_ROLL;
+    else if (channel_name.equalsIgnoreCase("pitch"))
+        key = SettingsManager::KEY_IBUS_CHANNEL_PITCH;
+    else if (channel_name.equalsIgnoreCase("throttle"))
+        key = SettingsManager::KEY_IBUS_CHANNEL_THRO;
+    else if (channel_name.equalsIgnoreCase("yaw"))
+        key = SettingsManager::KEY_IBUS_CHANNEL_YAW;
+    else if (channel_name.equalsIgnoreCase("arm"))
+        key = SettingsManager::KEY_IBUS_CHANNEL_ARM;
+    else if (channel_name.equalsIgnoreCase("fmode"))
+        key = SettingsManager::KEY_IBUS_CHANNEL_FMODE;
+    else if (channel_name.equalsIgnoreCase("aux1"))
+        key = SettingsManager::KEY_IBUS_CHANNEL_AUX1;
+    else if (channel_name.equalsIgnoreCase("aux2"))
+        key = SettingsManager::KEY_IBUS_CHANNEL_AUX2;
+    else if (channel_name.equalsIgnoreCase("aux3"))
+        key = SettingsManager::KEY_IBUS_CHANNEL_AUX3;
+    else if (channel_name.equalsIgnoreCase("aux4"))
+        key = SettingsManager::KEY_IBUS_CHANNEL_AUX4;
+    else
+    {
+        com_send_log(LOG_ERROR, "Unknown RX channel: %s", channel_name.c_str());
+        return;
+    }
+
+    int channel_index = _settings_manager->getSettingValue(key).toInt();
+    int16_t value = _rx_task->getChannel(channel_index);
+    
+    // Determine the longest possible channel description for consistent formatting
+    // "RX Flight Mode (CH14)" is likely the longest.
+    const int fixed_desc_width = TERMINAL_RX_SINGLE_DESC_WIDTH;
+
+    String desc_str = "RX " + channel_name + " (CH" + String(channel_index + 1) + ")";
+    com_send_log(TERMINAL_OUTPUT, "  %-*s %d", fixed_desc_width, desc_str.c_str(), value);
+}
+
+void TerminalTask::_handle_rx_value_all(String &args)
+{
+    if (!TerminalTask::_check_rx_task_available())
+        return;
+
+    com_send_log(TERMINAL_OUTPUT, "All Mapped RX Channels:");
+
+    // Define channel names and their corresponding setting keys
+    struct ChannelInfo {
+        const char* name;
+        const char* key;
+    };
+
+    const ChannelInfo channel_map[] = {
+        {"Roll", SettingsManager::KEY_IBUS_CHANNEL_ROLL},
+        {"Pitch", SettingsManager::KEY_IBUS_CHANNEL_PITCH},
+        {"Throttle", SettingsManager::KEY_IBUS_CHANNEL_THRO},
+        {"Yaw", SettingsManager::KEY_IBUS_CHANNEL_YAW},
+        {"Arm", SettingsManager::KEY_IBUS_CHANNEL_ARM},
+        {"Flight Mode", SettingsManager::KEY_IBUS_CHANNEL_FMODE},
+        {"Aux1", SettingsManager::KEY_IBUS_CHANNEL_AUX1},
+        {"Aux2", SettingsManager::KEY_IBUS_CHANNEL_AUX2},
+        {"Aux3", SettingsManager::KEY_IBUS_CHANNEL_AUX3},
+        {"Aux4", SettingsManager::KEY_IBUS_CHANNEL_AUX4}
+    };
+    const int num_mapped_channels = sizeof(channel_map) / sizeof(channel_map[0]);
+
+    // Calculate max length for the descriptive part (e.g., "Roll (CHX)")
+    int max_desc_len = 0;
+    for (int i = 0; i < num_mapped_channels; ++i) {
+        int channel_index_1_based = _settings_manager->getSettingValue(channel_map[i].key).toInt() + 1;
+        // Format: "Name (CHX)"
+        String desc_str = String(channel_map[i].name) + " (CH" + String(channel_index_1_based) + ")";
+        if (desc_str.length() > max_desc_len) {
+            max_desc_len = desc_str.length();
+        }
+    }
+    max_desc_len += TERMINAL_COLUMN_BUFFER_WIDTH; // Add a small buffer
+
+    // Print header
+    com_send_log(TERMINAL_OUTPUT, "  %-*s %s", max_desc_len, "Channel", "Value");
+    String separator = "  ";
+    for (int i = 0; i < max_desc_len; ++i) {
+        separator += "-";
+    }
+    separator += "--------------------"; // Fixed length for value part
+    com_send_log(TERMINAL_OUTPUT, separator.c_str());
+
+    // Print all mapped channels
+    for (int i = 0; i < num_mapped_channels; ++i) {
+        int channel_index_0_based = _settings_manager->getSettingValue(channel_map[i].key).toInt();
+        int channel_index_1_based = channel_index_0_based + 1;
+        int16_t value = _rx_task->getChannel(channel_index_0_based);
+        String desc_str = String(channel_map[i].name) + " (CH" + String(channel_index_1_based) + ")";
+        com_send_log(TERMINAL_OUTPUT, "  %-*s %d", max_desc_len, desc_str.c_str(), value);
+    }
+    com_send_log(TERMINAL_OUTPUT, separator.c_str());
+}
+
+void TerminalTask::_handle_rx_channel_mapping(String &args)
+{
+    // Expected format: <channel_name> <channel_index_1_based>
+    int space_index = args.indexOf(' ');
+    if (space_index == -1)
+    {
+        com_send_log(LOG_ERROR, "Usage: set rx.channel.<name> <1-based_index>");
+        return;
+    }
+
+    String channel_name_arg = args.substring(0, space_index);
+    String index_str = args.substring(space_index + 1);
+    int channel_index_1_based = index_str.toInt();
+
+    if (channel_index_1_based < TERMINAL_MIN_CHANNEL_INDEX || channel_index_1_based > TERMINAL_MAX_CHANNEL_INDEX) // Assuming max 14 channels
+    {
+        com_send_log(LOG_ERROR, "Invalid channel index: %d. Must be between %d and %d.", channel_index_1_based, TERMINAL_MIN_CHANNEL_INDEX, TERMINAL_MAX_CHANNEL_INDEX);
+        return;
+    }
+
+    // Convert 1-based to 0-based for internal use
+    int channel_index_0_based = channel_index_1_based - 1;
+
+    const char *key = nullptr;
+    if (channel_name_arg.equalsIgnoreCase("roll"))
+        key = SettingsManager::KEY_IBUS_CHANNEL_ROLL;
+    else if (channel_name_arg.equalsIgnoreCase("pitch"))
+        key = SettingsManager::KEY_IBUS_CHANNEL_PITCH;
+    else if (channel_name_arg.equalsIgnoreCase("throttle"))
+        key = SettingsManager::KEY_IBUS_CHANNEL_THRO;
+    else if (channel_name_arg.equalsIgnoreCase("yaw"))
+        key = SettingsManager::KEY_IBUS_CHANNEL_YAW;
+    else if (channel_name_arg.equalsIgnoreCase("arm"))
+        key = SettingsManager::KEY_IBUS_CHANNEL_ARM;
+    else if (channel_name_arg.equalsIgnoreCase("fmode"))
+        key = SettingsManager::KEY_IBUS_CHANNEL_FMODE;
+    else if (channel_name_arg.equalsIgnoreCase("aux1"))
+        key = SettingsManager::KEY_IBUS_CHANNEL_AUX1;
+    else if (channel_name_arg.equalsIgnoreCase("aux2"))
+        key = SettingsManager::KEY_IBUS_CHANNEL_AUX2;
+    else if (channel_name_arg.equalsIgnoreCase("aux3"))
+        key = SettingsManager::KEY_IBUS_CHANNEL_AUX3;
+    else if (channel_name_arg.equalsIgnoreCase("aux4"))
+        key = SettingsManager::KEY_IBUS_CHANNEL_AUX4;
+    else
+    {
+        com_send_log(LOG_ERROR, "Unknown RX channel name for mapping: %s", channel_name_arg.c_str());
+        return;
+    }
+
+    if (_settings_manager->setSettingValue(key, String(channel_index_0_based)))
+    {
+        com_send_log(LOG_INFO, "RX channel '%s' mapped to physical channel %d. Reboot to apply changes.", channel_name_arg.c_str(), channel_index_1_based);
+    }
+    else
+    {
+        com_send_log(LOG_ERROR, "Failed to map RX channel '%s' to physical channel %d.", channel_name_arg.c_str(), channel_index_1_based);
+    }
 }
 
 void TerminalTask::_handle_motor_throttle(String &args)
@@ -512,7 +875,51 @@ void TerminalTask::_handle_list_settings(String &args)
 
 void TerminalTask::_handle_dump_settings(String &args)
 {
-    _settings_manager->dumpSettings();
+    com_send_log(TERMINAL_OUTPUT, "\n# Settings Dump");
+
+    // Iterate through each category and print settings belonging to it
+    for (int cat_idx = 0; cat_idx < _num_categories; ++cat_idx)
+    {
+        CommandCategory current_category = _category_info[cat_idx].category;
+        const char *category_name = _get_category_string(current_category);
+
+        // Skip UNKNOWN category
+        if (current_category == CommandCategory::UNKNOWN)
+            continue;
+
+        // Calculate max display_key length for this category
+        int max_display_key_len = 0;
+        bool category_has_settings = false;
+        for (int i = 0; i < _settings_manager->_num_settings; ++i)
+        {
+            const char *display_key = _settings_manager->_settings_metadata[i].display_key;
+            if (_get_setting_category(display_key) == current_category)
+            {
+                int len = strlen(display_key);
+                if (len > max_display_key_len)
+                {
+                    max_display_key_len = len;
+                }
+                category_has_settings = true;
+            }
+        }
+
+        if (category_has_settings)
+        {
+            com_send_log(TERMINAL_OUTPUT, "\n--- %s Settings ---", category_name);
+            max_display_key_len += TERMINAL_COLUMN_BUFFER_WIDTH; // Add a small buffer
+            for (int i = 0; i < _settings_manager->_num_settings; ++i)
+            {
+                const char *display_key = _settings_manager->_settings_metadata[i].display_key;
+                const char *internal_key = _settings_manager->_settings_metadata[i].key;
+                if (_get_setting_category(display_key) == current_category)
+                {
+                    com_send_log(TERMINAL_OUTPUT, "set %-*s = %s", max_display_key_len, display_key, _settings_manager->getSettingValueHumanReadable(internal_key).c_str());
+                }
+            }
+        }
+    }
+    com_send_log(TERMINAL_OUTPUT, "\n# End of Dump");
 }
 
 // --- Helper Functions ---
@@ -527,11 +934,11 @@ bool TerminalTask::_check_mpu6050_sensor_available()
     return true;
 }
 
-bool TerminalTask::_check_ibus_receiver_available()
+bool TerminalTask::_check_rx_task_available()
 {
-    if (!_ibus_receiver_task)
+    if (!_rx_task)
     {
-        com_send_log(LOG_ERROR, "IBUS receiver not available.");
+        com_send_log(LOG_ERROR, "RX task not available.");
         return false;
     }
     return true;
@@ -560,9 +967,9 @@ bool TerminalTask::_check_pid_task_available()
 void TerminalTask::_show_prompt()
 {
     com_flush_output();
-    com_send_log(TERMINAL_OUTPUT, ""); // Add a blank line before the prompt
+    com_send_log(TERMINAL_OUTPUT, "");
     String system_name = _settings_manager->getSettingValue(SettingsManager::KEY_SYSTEM_NAME);
-    String prompt = "[" + system_name + " ~]$ "; // Add a space after $
+    String prompt = "[" + system_name + " ~]$ ";
     com_send_prompt(prompt.c_str());
 }
 
@@ -637,18 +1044,40 @@ void TerminalTask::_handle_pid_get(String &args)
         return;
 
     com_send_log(TERMINAL_OUTPUT, "PID Gains (scaled by 100):");
-    com_send_log(TERMINAL_OUTPUT, "  Roll:  P=%d, I=%d, D=%d",
+
+    // Calculate max length for labels
+    int max_label_len = 0;
+    const char* labels[] = {"Roll:", "Pitch:", "Yaw:"};
+    for (int i = 0; i < sizeof(labels) / sizeof(labels[0]); ++i) {
+        int len = strlen(labels[i]);
+        if (len > max_label_len) {
+            max_label_len = len;
+        }
+    }
+    max_label_len += TERMINAL_COLUMN_BUFFER_WIDTH; // Add a small buffer
+
+    // Print header
+    com_send_log(TERMINAL_OUTPUT, "  %-*s %s", max_label_len, "Axis", "Gains (P, I, D)");
+    String separator = "  ";
+    for (int i = 0; i < max_label_len; ++i) {
+        separator += "-";
+    }
+    separator += "-------------------------"; // Fixed length for "Gains (P, I, D)" part
+    com_send_log(TERMINAL_OUTPUT, separator.c_str());
+
+    com_send_log(TERMINAL_OUTPUT, "  %-*s P=%d, I=%d, D=%d", max_label_len, "Roll:",
                  (int)(_pid_task->getGains(PidAxis::ROLL).p * 100.0f),
                  (int)(_pid_task->getGains(PidAxis::ROLL).i * 100.0f),
                  (int)(_pid_task->getGains(PidAxis::ROLL).d * 100.0f));
-    com_send_log(TERMINAL_OUTPUT, "  Pitch: P=%d, I=%d, D=%d",
+    com_send_log(TERMINAL_OUTPUT, "  %-*s P=%d, I=%d, D=%d", max_label_len, "Pitch:",
                  (int)(_pid_task->getGains(PidAxis::PITCH).p * 100.0f),
                  (int)(_pid_task->getGains(PidAxis::PITCH).i * 100.0f),
                  (int)(_pid_task->getGains(PidAxis::PITCH).d * 100.0f));
-    com_send_log(TERMINAL_OUTPUT, "  Yaw:   P=%d, I=%d, D=%d",
+    com_send_log(TERMINAL_OUTPUT, "  %-*s P=%d, I=%d, D=%d", max_label_len, "Yaw:",
                  (int)(_pid_task->getGains(PidAxis::YAW).p * 100.0f),
                  (int)(_pid_task->getGains(PidAxis::YAW).i * 100.0f),
                  (int)(_pid_task->getGains(PidAxis::YAW).d * 100.0f));
+    com_send_log(TERMINAL_OUTPUT, separator.c_str());
 }
 
 void TerminalTask::_handle_pid_set(String &args)
@@ -717,7 +1146,7 @@ void TerminalTask::_handle_pid_set(String &args)
     }
 
     _pid_task->setGains(axis, gains);
-    com_send_log(TERMINAL_OUTPUT, "Set %s %s to %d (%.2f actual).", axis_str.c_str(), gain_str.c_str(), int_value, value);
+    com_send_log(TERMINAL_OUTPUT, "Set %s %s to %d.", axis_str.c_str(), gain_str.c_str(), int_value);
 }
 
 void TerminalTask::_handle_pid_reset_defaults(String &args)
