@@ -15,7 +15,19 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
-// Define the command table
+static const ChannelMapping _channel_map[] = {
+    {"roll", SettingsManager::KEY_RC_CHANNEL_ROLL},
+    {"pitch", SettingsManager::KEY_RC_CHANNEL_PITCH},
+    {"throttle", SettingsManager::KEY_RC_CHANNEL_THRO},
+    {"yaw", SettingsManager::KEY_RC_CHANNEL_YAW},
+    {"arm", SettingsManager::KEY_RC_CHANNEL_ARM},
+    {"fmode", SettingsManager::KEY_RC_CHANNEL_FMODE},
+    {"aux1", SettingsManager::KEY_RC_CHANNEL_AUX1},
+    {"aux2", SettingsManager::KEY_RC_CHANNEL_AUX2},
+    {"aux3", SettingsManager::KEY_RC_CHANNEL_AUX3},
+    {"aux4", SettingsManager::KEY_RC_CHANNEL_AUX4}};
+const int _num_channel_mappings = sizeof(_channel_map) / sizeof(ChannelMapping);
+
 const Command TerminalTask::_commands[] = {
     {"help", &TerminalTask::_handle_help, "Shows this help message.", CommandCategory::SYSTEM},
     {"status", &TerminalTask::_handle_status, "Shows firmware information.", CommandCategory::SYSTEM},
@@ -68,7 +80,6 @@ const Command TerminalTask::_commands[] = {
     {"settings", &TerminalTask::_handle_list_settings, "Lists all available settings.", CommandCategory::SETTINGS},
     {"dump", &TerminalTask::_handle_dump_settings, "Dumps all settings for backup.", CommandCategory::SETTINGS}};
 
-// Calculate the number of commands
 const int TerminalTask::_num_commands = sizeof(TerminalTask::_commands) / sizeof(Command);
 
 const CategoryInfo TerminalTask::_category_info[] = {
@@ -132,16 +143,13 @@ void TerminalTask::_handle_help(String &args)
 
     if (args.length() == 0)
     {
-        // General help message
         com_send_log(TERMINAL_OUTPUT, "--- Flight32 Terminal Help ---");
         com_send_log(TERMINAL_OUTPUT, "");
         com_send_log(TERMINAL_OUTPUT, "Usage: help <category>");
         com_send_log(TERMINAL_OUTPUT, "");
 
-        // --- Core Commands ---
         com_send_log(TERMINAL_OUTPUT, "Core Commands:");
 
-        // Calculate max length for core commands
         int max_core_cmd_len = 0;
         const char* core_commands[] = {"status", "tasks", "mem", "reboot", "factory_reset"};
         const char* core_commands_desc[] = {
@@ -159,9 +167,8 @@ void TerminalTask::_handle_help(String &args)
                 max_core_cmd_len = len;
             }
         }
-        max_core_cmd_len += TERMINAL_COLUMN_BUFFER_WIDTH; // Add buffer
+        max_core_cmd_len += TERMINAL_COLUMN_BUFFER_WIDTH;
 
-        // Print header for core commands
         com_send_log(TERMINAL_OUTPUT, "  %-*s %s", max_core_cmd_len, "Command", "Description");
         String core_separator = "  ";
         for (int i = 0; i < max_core_cmd_len; ++i) {
@@ -177,10 +184,8 @@ void TerminalTask::_handle_help(String &args)
         com_send_log(TERMINAL_OUTPUT, core_separator.c_str());
         com_send_log(TERMINAL_OUTPUT, "");
 
-        // --- Available Command Categories ---
         com_send_log(TERMINAL_OUTPUT, "Available Command Categories:");
 
-        // Calculate max length for category prefixes
         int max_category_prefix_len = 0;
         for (int i = 0; i < _num_categories; ++i)
         {
@@ -190,9 +195,8 @@ void TerminalTask::_handle_help(String &args)
                 max_category_prefix_len = len;
             }
         }
-        max_category_prefix_len += TERMINAL_COLUMN_BUFFER_WIDTH; // Add buffer
+        max_category_prefix_len += TERMINAL_COLUMN_BUFFER_WIDTH;
 
-        // Print header for categories
         com_send_log(TERMINAL_OUTPUT, "  %-*s %s", max_category_prefix_len, "Category", "Description");
         String category_separator = "  ";
         for (int i = 0; i < max_category_prefix_len; ++i) {
@@ -210,7 +214,6 @@ void TerminalTask::_handle_help(String &args)
     }
     else
     {
-        // Category-specific help
         CommandCategory requested_category = _get_category_from_string(args);
 
         if (requested_category == CommandCategory::UNKNOWN)
@@ -222,7 +225,6 @@ void TerminalTask::_handle_help(String &args)
         com_send_log(TERMINAL_OUTPUT, "--- %s Commands ---", _get_category_string(requested_category));
         com_send_log(TERMINAL_OUTPUT, "");
 
-        // Calculate max command name length for this category
         int max_command_name_len = 0;
         for (int i = 0; i < _num_commands; ++i)
         {
@@ -236,20 +238,17 @@ void TerminalTask::_handle_help(String &args)
             }
         }
 
-        // Add a small buffer for spacing
         max_command_name_len += TERMINAL_COLUMN_BUFFER_WIDTH; 
-        if (max_command_name_len < strlen("Command")) { // Ensure header is not cut off
+        if (max_command_name_len < strlen("Command")) { 
             max_command_name_len = strlen("Command");
         }
 
-        // Print header
         com_send_log(TERMINAL_OUTPUT, "  %-*s %s", max_command_name_len, "Command", "Description");
-        // Print separator line
         String separator = "  ";
         for (int i = 0; i < max_command_name_len; ++i) {
             separator += "-";
         }
-        separator += "--------------------------------------------------"; // Fixed length for description part
+        separator += "--------------------------------------------------"; 
         com_send_log(TERMINAL_OUTPUT, separator.c_str());
 
         for (int i = 0; i < _num_commands; ++i)
@@ -264,7 +263,6 @@ void TerminalTask::_handle_help(String &args)
     }
 }
 
-// Helper to convert CommandCategory enum to string
 const char *TerminalTask::_get_category_string(CommandCategory category)
 {
     switch (category)
@@ -286,7 +284,6 @@ const char *TerminalTask::_get_category_string(CommandCategory category)
     }
 }
 
-// Helper to convert string to CommandCategory enum
 CommandCategory TerminalTask::_get_category_from_string(String &category_str)
 {
     if (category_str.equalsIgnoreCase("system"))
@@ -304,7 +301,6 @@ CommandCategory TerminalTask::_get_category_from_string(String &category_str)
     return CommandCategory::UNKNOWN;
 }
 
-// Helper to determine the category of a setting based on its display_key
 CommandCategory TerminalTask::_get_setting_category(const char *display_key)
 {
     String key_str = String(display_key);
@@ -318,7 +314,6 @@ CommandCategory TerminalTask::_get_setting_category(const char *display_key)
         return CommandCategory::MOTOR;
     if (key_str.startsWith("pid."))
         return CommandCategory::PID;
-    // Settings that don't fit neatly into other categories, or general settings
     return CommandCategory::SETTINGS;
 }
 
@@ -328,7 +323,6 @@ void TerminalTask::_handle_status(String &args)
     com_send_log(TERMINAL_OUTPUT, "Flight32 Firmware v%s", get_firmware_version());
 }
 
-// Helper to convert task state enum to a readable string
 const char *TerminalTask::_get_task_state_string(eTaskState state)
 {
     switch (state)
@@ -366,16 +360,13 @@ void TerminalTask::_handle_tasks(String &args)
         return;
     }
 
-    // Get FreeRTOS task states and total run time
     num_freertos_tasks = uxTaskGetSystemState(freertos_task_status_array, num_freertos_tasks, &total_run_time);
 
-    // Print header
     com_send_log(TERMINAL_OUTPUT, "");
     com_send_log(TERMINAL_OUTPUT, "% -16s %-10s %-6s %-8s %-10s %-10s %-10s %s",
                  "Task Name", "State", "Prio", "CPU %", "Loop (us)", "Avg (us)", "Max (us)", "Stack HWM (bytes)");
     com_send_log(TERMINAL_OUTPUT, "-------------------------------------------------------------------------------------------------------------------");
 
-    // Iterate through tasks managed by our scheduler
     for (uint8_t i = 0; i < _scheduler->getTaskCount(); i++)
     {
         TaskBase *current_task = _scheduler->getTask(i);
@@ -383,13 +374,11 @@ void TerminalTask::_handle_tasks(String &args)
             continue;
 
         const char *name = current_task->getName();
-        // Filter out irrelevant tasks (IDLE and Tmr Svc are handled by FreeRTOS directly, not our TaskBase)
         if (strcmp(name, IDLE_TASK_NAME_0) == 0 || strcmp(name, IDLE_TASK_NAME_1) == 0 || strcmp(name, TIMER_SERVICE_TASK_NAME) == 0)
         {
             continue;
         }
 
-        // Find the corresponding FreeRTOS task status
         TaskStatus_t freertos_status = {};
         bool found_freertos_status = false;
         for (UBaseType_t j = 0; j < num_freertos_tasks; j++)
@@ -411,7 +400,7 @@ void TerminalTask::_handle_tasks(String &args)
         char cpu_str[8];
         snprintf(cpu_str, sizeof(cpu_str), "%.2f", cpu_percentage);
 
-        char output_buffer[256]; // Sufficiently large buffer for the output line
+        char output_buffer[256];
         snprintf(output_buffer, sizeof(output_buffer),
                  "% -*s %-*s %-*u %-*s %-*u %-*u %-*u %u",
                  TASK_NAME_COLUMN_WIDTH, name,
@@ -426,7 +415,6 @@ void TerminalTask::_handle_tasks(String &args)
     }
     com_send_log(TERMINAL_OUTPUT, "-------------------------------------------------------------------------------------------------------------------");
 
-    // Free the allocated memory
     vPortFree(freertos_task_status_array);
 }
 
@@ -435,7 +423,6 @@ void TerminalTask::_handle_mem(String &args)
     com_send_log(TERMINAL_OUTPUT, "");
     com_send_log(TERMINAL_OUTPUT, "Memory (Heap):");
 
-    // Calculate max length for labels
     int max_label_len = 0;
     const char* labels[] = {"Total:", "Free:", "Min Free:"};
     for (int i = 0; i < sizeof(labels) / sizeof(labels[0]); ++i) {
@@ -444,7 +431,7 @@ void TerminalTask::_handle_mem(String &args)
             max_label_len = len;
         }
     }
-    max_label_len += TERMINAL_COLUMN_BUFFER_WIDTH; // Add a small buffer
+    max_label_len += TERMINAL_COLUMN_BUFFER_WIDTH;
 
     com_send_log(TERMINAL_OUTPUT, "  %-*s %s", max_label_len, "Total:", TerminalTask::_format_bytes(ESP.getHeapSize()));
     com_send_log(TERMINAL_OUTPUT, "  %-*s %s", max_label_len, "Free:", TerminalTask::_format_bytes(ESP.getFreeHeap()));
@@ -505,7 +492,6 @@ void TerminalTask::_handle_rx_data(String &args)
 
     com_send_log(TERMINAL_OUTPUT, "RX Channels:");
 
-    // Calculate max length for "CHX" (e.g., "CH10")
     int max_ch_len = 0;
     for (int i = 0; i < TERMINAL_RX_DATA_DISPLAY_CHANNELS; ++i)
     {
@@ -514,18 +500,16 @@ void TerminalTask::_handle_rx_data(String &args)
             max_ch_len = ch_str.length();
         }
     }
-    max_ch_len += TERMINAL_COLUMN_BUFFER_WIDTH; // Add a small buffer
+    max_ch_len += TERMINAL_COLUMN_BUFFER_WIDTH;
 
-    // Print header
     com_send_log(TERMINAL_OUTPUT, "  %-*s %s", max_ch_len, "Channel", "Value");
     String separator = "  ";
     for (int i = 0; i < max_ch_len; ++i) {
         separator += "-";
     }
-    separator += "--------------------"; // Fixed length for value part
+    separator += "--------------------";
     com_send_log(TERMINAL_OUTPUT, separator.c_str());
 
-    // Print all channels
     for (int i = 0; i < TERMINAL_RX_DATA_DISPLAY_CHANNELS; ++i)
     {
         String ch_str = "CH" + String(i + 1);
@@ -546,14 +530,12 @@ void TerminalTask::_handle_rx_protocol(String &args)
 {
     if (args.length() == 0)
     {
-        // Get current RC protocol
         String current_protocol = _settings_manager->getSettingValueHumanReadable(KEY_RC_PROTOCOL_TYPE);
         com_send_log(TERMINAL_OUTPUT, "Current RC Protocol: %s", current_protocol.c_str());
         com_send_log(TERMINAL_OUTPUT, "Available protocols: IBUS, CRSF, SBUS");
     }
     else
     {
-        // Set RC protocol
         if (_settings_manager->setSettingValue(KEY_RC_PROTOCOL_TYPE, args))
         {
             com_send_log(LOG_INFO, "RC Protocol set to %s. Reboot to apply changes.", _settings_manager->getSettingValueHumanReadable(KEY_RC_PROTOCOL_TYPE).c_str());
@@ -575,27 +557,16 @@ void TerminalTask::_handle_rx_value_single(String &args)
     String channel_name = args.substring(last_dot_index + 1);
 
     const char *key = nullptr;
-    if (channel_name.equalsIgnoreCase("roll"))
-        key = SettingsManager::KEY_RC_CHANNEL_ROLL;
-    else if (channel_name.equalsIgnoreCase("pitch"))
-        key = SettingsManager::KEY_RC_CHANNEL_PITCH;
-    else if (channel_name.equalsIgnoreCase("throttle"))
-        key = SettingsManager::KEY_RC_CHANNEL_THRO;
-    else if (channel_name.equalsIgnoreCase("yaw"))
-        key = SettingsManager::KEY_RC_CHANNEL_YAW;
-    else if (channel_name.equalsIgnoreCase("arm"))
-        key = SettingsManager::KEY_RC_CHANNEL_ARM;
-    else if (channel_name.equalsIgnoreCase("fmode"))
-        key = SettingsManager::KEY_RC_CHANNEL_FMODE;
-    else if (channel_name.equalsIgnoreCase("aux1"))
-        key = SettingsManager::KEY_RC_CHANNEL_AUX1;
-    else if (channel_name.equalsIgnoreCase("aux2"))
-        key = SettingsManager::KEY_RC_CHANNEL_AUX2;
-    else if (channel_name.equalsIgnoreCase("aux3"))
-        key = SettingsManager::KEY_RC_CHANNEL_AUX3;
-    else if (channel_name.equalsIgnoreCase("aux4"))
-        key = SettingsManager::KEY_RC_CHANNEL_AUX4;
-    else
+    for (const auto &mapping : _channel_map)
+    {
+        if (channel_name.equalsIgnoreCase(mapping.name))
+        {
+            key = mapping.key;
+            break;
+        }
+    }
+
+    if (key == nullptr)
     {
         com_send_log(LOG_ERROR, "Unknown RX channel: %s", channel_name.c_str());
         return;
@@ -604,7 +575,6 @@ void TerminalTask::_handle_rx_value_single(String &args)
     int channel_index = _settings_manager->getSettingValue(key).toInt();
     int16_t value = _rx_task->getChannel(channel_index);
     
-    // Determine the longest possible channel description for consistent formatting
     // "RX Flight Mode (CH14)" is likely the longest.
     const int fixed_desc_width = TERMINAL_RX_SINGLE_DESC_WIDTH;
 
@@ -619,33 +589,15 @@ void TerminalTask::_handle_rx_value_all(String &args)
 
     com_send_log(TERMINAL_OUTPUT, "All Mapped RX Channels:");
 
-    // Define channel names and their corresponding setting keys
-    struct ChannelInfo {
-        const char* name;
-        const char* key;
-    };
-
-    const ChannelInfo channel_map[] = {
-        {"Roll", SettingsManager::KEY_RC_CHANNEL_ROLL},
-        {"Pitch", SettingsManager::KEY_RC_CHANNEL_PITCH},
-        {"Throttle", SettingsManager::KEY_RC_CHANNEL_THRO},
-        {"Yaw", SettingsManager::KEY_RC_CHANNEL_YAW},
-        {"Arm", SettingsManager::KEY_RC_CHANNEL_ARM},
-        {"Flight Mode", SettingsManager::KEY_RC_CHANNEL_FMODE},
-        {"Aux1", SettingsManager::KEY_RC_CHANNEL_AUX1},
-        {"Aux2", SettingsManager::KEY_RC_CHANNEL_AUX2},
-        {"Aux3", SettingsManager::KEY_RC_CHANNEL_AUX3},
-        {"Aux4", SettingsManager::KEY_RC_CHANNEL_AUX4}
-    };
-    const int num_mapped_channels = sizeof(channel_map) / sizeof(channel_map[0]);
-
     // Calculate max length for the descriptive part (e.g., "Roll (CHX)")
     int max_desc_len = 0;
-    for (int i = 0; i < num_mapped_channels; ++i) {
-        int channel_index_1_based = _settings_manager->getSettingValue(channel_map[i].key).toInt() + 1;
+    for (const auto &mapping : _channel_map)
+    {
+        int channel_index_1_based = _settings_manager->getSettingValue(mapping.key).toInt() + 1;
         // Format: "Name (CHX)"
-        String desc_str = String(channel_map[i].name) + " (CH" + String(channel_index_1_based) + ")";
-        if (desc_str.length() > max_desc_len) {
+        String desc_str = String(mapping.name) + " (CH" + String(channel_index_1_based) + ")";
+        if (desc_str.length() > max_desc_len)
+        {
             max_desc_len = desc_str.length();
         }
     }
@@ -654,18 +606,20 @@ void TerminalTask::_handle_rx_value_all(String &args)
     // Print header
     com_send_log(TERMINAL_OUTPUT, "  %-*s %s", max_desc_len, "Channel", "Value");
     String separator = "  ";
-    for (int i = 0; i < max_desc_len; ++i) {
+    for (int i = 0; i < max_desc_len; ++i)
+    {
         separator += "-";
     }
     separator += "--------------------"; // Fixed length for value part
     com_send_log(TERMINAL_OUTPUT, separator.c_str());
 
     // Print all mapped channels
-    for (int i = 0; i < num_mapped_channels; ++i) {
-        int channel_index_0_based = _settings_manager->getSettingValue(channel_map[i].key).toInt();
+    for (const auto &mapping : _channel_map)
+    {
+        int channel_index_0_based = _settings_manager->getSettingValue(mapping.key).toInt();
         int channel_index_1_based = channel_index_0_based + 1;
         int16_t value = _rx_task->getChannel(channel_index_0_based);
-        String desc_str = String(channel_map[i].name) + " (CH" + String(channel_index_1_based) + ")";
+        String desc_str = String(mapping.name) + " (CH" + String(channel_index_1_based) + ")";
         com_send_log(TERMINAL_OUTPUT, "  %-*s %d", max_desc_len, desc_str.c_str(), value);
     }
     com_send_log(TERMINAL_OUTPUT, separator.c_str());
@@ -695,27 +649,16 @@ void TerminalTask::_handle_rx_channel_mapping(String &args)
     int channel_index_0_based = channel_index_1_based - 1;
 
     const char *key = nullptr;
-    if (channel_name_arg.equalsIgnoreCase("roll"))
-        key = SettingsManager::KEY_RC_CHANNEL_ROLL;
-    else if (channel_name_arg.equalsIgnoreCase("pitch"))
-        key = SettingsManager::KEY_RC_CHANNEL_PITCH;
-    else if (channel_name_arg.equalsIgnoreCase("throttle"))
-        key = SettingsManager::KEY_RC_CHANNEL_THRO;
-    else if (channel_name_arg.equalsIgnoreCase("yaw"))
-        key = SettingsManager::KEY_RC_CHANNEL_YAW;
-    else if (channel_name_arg.equalsIgnoreCase("arm"))
-        key = SettingsManager::KEY_RC_CHANNEL_ARM;
-    else if (channel_name_arg.equalsIgnoreCase("fmode"))
-        key = SettingsManager::KEY_RC_CHANNEL_FMODE;
-    else if (channel_name_arg.equalsIgnoreCase("aux1"))
-        key = SettingsManager::KEY_RC_CHANNEL_AUX1;
-    else if (channel_name_arg.equalsIgnoreCase("aux2"))
-        key = SettingsManager::KEY_RC_CHANNEL_AUX2;
-    else if (channel_name_arg.equalsIgnoreCase("aux3"))
-        key = SettingsManager::KEY_RC_CHANNEL_AUX3;
-    else if (channel_name_arg.equalsIgnoreCase("aux4"))
-        key = SettingsManager::KEY_RC_CHANNEL_AUX4;
-    else
+    for (const auto &mapping : _channel_map)
+    {
+        if (channel_name_arg.equalsIgnoreCase(mapping.name))
+        {
+            key = mapping.key;
+            break;
+        }
+    }
+
+    if (key == nullptr)
     {
         com_send_log(LOG_ERROR, "Unknown RX channel name for mapping: %s", channel_name_arg.c_str());
         return;
@@ -783,14 +726,13 @@ void TerminalTask::_handle_get_setting(String &args)
     }
 
     String value = _settings_manager->getSettingValueHumanReadable(internal_key);
-    const char *description = _settings_manager->getSettingDescription(internal_key); // Use internal_key for description
+    const char *description = _settings_manager->getSettingDescription(internal_key);
     if (value.length() > 0)
     {
         com_send_log(TERMINAL_OUTPUT, "%s (%s): %s", args.c_str(), description, value.c_str());
     }
     else
     {
-        // This case should ideally not be reached if internal_key is valid and setting exists
         com_send_log(LOG_ERROR, "Could not retrieve value for setting: %s", args.c_str());
     }
 }
@@ -823,8 +765,6 @@ void TerminalTask::_handle_set_setting(String &args)
     }
     else
     {
-        // If internal_key is valid but setting failed, it's due to invalid value or out of range.
-        // The description is always available if internal_key is not nullptr.
         com_send_log(LOG_ERROR, "Failed to set %s (%s) to %s. Invalid value or out of range.", display_key.c_str(), _settings_manager->getSettingDescription(internal_key), value_str.c_str());
     }
 }
@@ -858,17 +798,14 @@ void TerminalTask::_handle_dump_settings(String &args)
 {
     com_send_log(TERMINAL_OUTPUT, "\n# Settings Dump");
 
-    // Iterate through each category and print settings belonging to it
     for (int cat_idx = 0; cat_idx < _num_categories; ++cat_idx)
     {
         CommandCategory current_category = _category_info[cat_idx].category;
         const char *category_name = _get_category_string(current_category);
 
-        // Skip UNKNOWN category
         if (current_category == CommandCategory::UNKNOWN)
             continue;
 
-        // Calculate max display_key length for this category
         int max_display_key_len = 0;
         bool category_has_settings = false;
         for (int i = 0; i < _settings_manager->_num_settings; ++i)
@@ -888,7 +825,7 @@ void TerminalTask::_handle_dump_settings(String &args)
         if (category_has_settings)
         {
             com_send_log(TERMINAL_OUTPUT, "\n--- %s Settings ---", category_name);
-            max_display_key_len += TERMINAL_COLUMN_BUFFER_WIDTH; // Add a small buffer
+            max_display_key_len += TERMINAL_COLUMN_BUFFER_WIDTH;
             for (int i = 0; i < _settings_manager->_num_settings; ++i)
             {
                 const char *display_key = _settings_manager->_settings_metadata[i].display_key;
@@ -977,7 +914,6 @@ void TerminalTask::_parse_command(String &command_line)
     if (command_line.length() == 0)
         return;
 
-    // Iterate through commands to find the longest matching command name
     int best_match_index = -1;
     int longest_match_len = 0;
 
@@ -986,10 +922,8 @@ void TerminalTask::_parse_command(String &command_line)
         const char *cmd_name = _commands[i].name;
         int cmd_name_len = strlen(cmd_name);
 
-        // Check if command_line starts with cmd_name
         if (command_line.startsWith(cmd_name))
         {
-            // Check if it's an exact match or followed by a space
             if (command_line.length() == cmd_name_len || command_line.charAt(cmd_name_len) == ' ')
             {
                 if (cmd_name_len > longest_match_len)
@@ -1003,19 +937,17 @@ void TerminalTask::_parse_command(String &command_line)
 
     if (best_match_index != -1)
     {
-        // Found a matching command
         const Command &matched_command = _commands[best_match_index];
         String args = "";
         if (command_line.length() > longest_match_len)
         {
-            args = command_line.substring(longest_match_len + 1); // +1 to skip the space
+            args = command_line.substring(longest_match_len + 1);
             args.trim();
         }
         (this->*matched_command.handler)(args);
         return;
     }
 
-    // No command found
     com_send_log(LOG_ERROR, "Unknown command: %s", command_line.c_str());
 }
 
@@ -1047,17 +979,17 @@ void TerminalTask::_handle_pid_get(String &args)
     com_send_log(TERMINAL_OUTPUT, separator.c_str());
 
     com_send_log(TERMINAL_OUTPUT, "  %-*s P=%d, I=%d, D=%d", max_label_len, "Roll:",
-                 (int)(_pid_task->getGains(PidAxis::ROLL).p * 100.0f),
-                 (int)(_pid_task->getGains(PidAxis::ROLL).i * 100.0f),
-                 (int)(_pid_task->getGains(PidAxis::ROLL).d * 100.0f));
+                 (int)(_pid_task->getGains(PidAxis::ROLL).p * PID_SCALE_FACTOR),
+                 (int)(_pid_task->getGains(PidAxis::ROLL).i * PID_SCALE_FACTOR),
+                 (int)(_pid_task->getGains(PidAxis::ROLL).d * PID_SCALE_FACTOR));
     com_send_log(TERMINAL_OUTPUT, "  %-*s P=%d, I=%d, D=%d", max_label_len, "Pitch:",
-                 (int)(_pid_task->getGains(PidAxis::PITCH).p * 100.0f),
-                 (int)(_pid_task->getGains(PidAxis::PITCH).i * 100.0f),
-                 (int)(_pid_task->getGains(PidAxis::PITCH).d * 100.0f));
+                 (int)(_pid_task->getGains(PidAxis::PITCH).p * PID_SCALE_FACTOR),
+                 (int)(_pid_task->getGains(PidAxis::PITCH).i * PID_SCALE_FACTOR),
+                 (int)(_pid_task->getGains(PidAxis::PITCH).d * PID_SCALE_FACTOR));
     com_send_log(TERMINAL_OUTPUT, "  %-*s P=%d, I=%d, D=%d", max_label_len, "Yaw:",
-                 (int)(_pid_task->getGains(PidAxis::YAW).p * 100.0f),
-                 (int)(_pid_task->getGains(PidAxis::YAW).i * 100.0f),
-                 (int)(_pid_task->getGains(PidAxis::YAW).d * 100.0f));
+                 (int)(_pid_task->getGains(PidAxis::YAW).p * PID_SCALE_FACTOR),
+                 (int)(_pid_task->getGains(PidAxis::YAW).i * PID_SCALE_FACTOR),
+                 (int)(_pid_task->getGains(PidAxis::YAW).d * PID_SCALE_FACTOR));
     com_send_log(TERMINAL_OUTPUT, separator.c_str());
 }
 
@@ -1106,7 +1038,7 @@ void TerminalTask::_handle_pid_set(String &args)
     PidGains gains = _pid_task->getGains(axis);
     // Parse as integer and scale down to float
     int int_value = value_str.toInt();
-    float value = (float)int_value / 100.0f;
+    float value = (float)int_value / PID_SCALE_FACTOR;
 
     if (gain_str.equalsIgnoreCase("p"))
     {

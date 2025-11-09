@@ -23,26 +23,17 @@ class ImuSensor
 public:
     virtual ~ImuSensor() = default;
 
-    /**
-     * @brief Initializes the sensor.
-     * @return True if initialization was successful, false otherwise.
-     */
+    // Initializes the sensor.
+    // Returns true if initialization was successful, false otherwise.
     virtual bool begin() = 0;
 
-    /**
-     * @brief Calibrates the sensor (e.g., gyro).
-     */
+    // Calibrates the sensor (e.g., gyro).
     virtual void calibrate() = 0;
 
-    /**
-     * @brief Reads the latest data from the sensor.
-     */
+    // Reads the latest data from the sensor.
     virtual void read() = 0;
 
-    /**
-     * @brief Gets the most recently read sensor data.
-     * @return A constant reference to the ImuData struct.
-     */
+    // Gets the most recently read sensor data.
     const ImuData &getData() const { return _data; }
 
 protected:

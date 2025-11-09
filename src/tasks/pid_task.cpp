@@ -116,25 +116,33 @@ void PidTask::resetToDefaults()
 
 void PidTask::_set_and_save_gains(PidAxis axis, PidGains gains)
 {
+    const char *p_key, *i_key, *d_key;
+
     switch (axis)
     {
     case PidAxis::ROLL:
         _pid_roll.setGains(gains.p, gains.i, gains.d);
-        _settings_manager->setSettingValue(KEY_PID_ROLL_P, String(gains.p));
-        _settings_manager->setSettingValue(KEY_PID_ROLL_I, String(gains.i));
-        _settings_manager->setSettingValue(KEY_PID_ROLL_D, String(gains.d));
+        p_key = KEY_PID_ROLL_P;
+        i_key = KEY_PID_ROLL_I;
+        d_key = KEY_PID_ROLL_D;
         break;
     case PidAxis::PITCH:
         _pid_pitch.setGains(gains.p, gains.i, gains.d);
-        _settings_manager->setSettingValue(KEY_PID_PITCH_P, String(gains.p));
-        _settings_manager->setSettingValue(KEY_PID_PITCH_I, String(gains.i));
-        _settings_manager->setSettingValue(KEY_PID_PITCH_D, String(gains.d));
+        p_key = KEY_PID_PITCH_P;
+        i_key = KEY_PID_PITCH_I;
+        d_key = KEY_PID_PITCH_D;
         break;
     case PidAxis::YAW:
         _pid_yaw.setGains(gains.p, gains.i, gains.d);
-        _settings_manager->setSettingValue(KEY_PID_YAW_P, String(gains.p));
-        _settings_manager->setSettingValue(KEY_PID_YAW_I, String(gains.i));
-        _settings_manager->setSettingValue(KEY_PID_YAW_D, String(gains.d));
+        p_key = KEY_PID_YAW_P;
+        i_key = KEY_PID_YAW_I;
+        d_key = KEY_PID_YAW_D;
         break;
+    default:
+        return; // Should not happen
     }
+
+    _settings_manager->setSettingValue(p_key, String(gains.p));
+    _settings_manager->setSettingValue(i_key, String(gains.i));
+    _settings_manager->setSettingValue(d_key, String(gains.d));
 }

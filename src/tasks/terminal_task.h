@@ -49,6 +49,11 @@ struct CategoryInfo {
     const char* description;
 };
 
+struct ChannelMapping {
+    const char* name;
+    const char* key;
+};
+
 class TerminalTask : public TaskBase
 {
 public:
