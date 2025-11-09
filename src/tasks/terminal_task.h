@@ -104,4 +104,6 @@ private:
 
     char _byte_buffer[15]; // Buffer for human-readable byte output
     const char *_format_bytes(uint32_t bytes);
+
+    static const char *_get_task_state_string(eTaskState state);
 };

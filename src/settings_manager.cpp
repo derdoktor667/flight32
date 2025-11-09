@@ -36,7 +36,7 @@ SettingsManager::SettingsManager()
 
 void SettingsManager::begin()
 {
-    com_send_log(LOG_INFO, "SettingsManager: begin()\n");
+    com_send_log(LOG_INFO, "SettingsManager: begin()");
     _preferences.begin(SETTINGS_NAMESPACE, false);
     _is_begun = true;
     loadOrInitSettings();
@@ -48,22 +48,22 @@ void SettingsManager::loadOrInitSettings()
         return;
 
     uint16_t saved_version = _preferences.getUShort(KEY_SCHEMA_VERSION, 0);
-    com_send_log(LOG_INFO, "Settings: Saved version: %d, Current version: %d\n", saved_version, CURRENT_SCHEMA_VERSION);
+    com_send_log(LOG_INFO, "Settings: Saved version: %d, Current version: %d", saved_version, CURRENT_SCHEMA_VERSION);
 
     if (saved_version != CURRENT_SCHEMA_VERSION)
     {
-        com_send_log(LOG_WARN, "Settings: Schema mismatch or first run. Applying defaults.\n");
+        com_send_log(LOG_WARN, "Settings: Schema mismatch or first run. Applying defaults.");
         factoryReset();
     }
     else
     {
-        com_send_log(LOG_INFO, "Settings: Loading existing configuration.\n");
+        com_send_log(LOG_INFO, "Settings: Loading existing configuration.");
     }
 }
 
 void SettingsManager::factoryReset()
 {
-    com_send_log(LOG_INFO, "SettingsManager: factoryReset()\n");
+    com_send_log(LOG_INFO, "SettingsManager: factoryReset()");
     if (!_is_begun)
         return;
     _preferences.clear();
@@ -73,7 +73,7 @@ void SettingsManager::factoryReset()
 
 void SettingsManager::_write_defaults()
 {
-    com_send_log(LOG_INFO, "SettingsManager: _write_defaults()\n");
+    com_send_log(LOG_INFO, "SettingsManager: _write_defaults()");
     // Set default values for all settings based on metadata
     for (int i = 0; i < _num_settings; ++i)
     {
@@ -92,12 +92,12 @@ void SettingsManager::_write_defaults()
         case STRING:
             if (_settings_metadata[i].string_default != nullptr)
             {
-                com_send_log(LOG_INFO, "Writing default for %s: %s\n", key, _settings_metadata[i].string_default);
+                com_send_log(LOG_INFO, "Writing default for %s: %s", key, _settings_metadata[i].string_default);
                 _preferences.putString(key, _settings_metadata[i].string_default);
             }
             else
             {
-                com_send_log(LOG_INFO, "Writing empty default for %s\n", key);
+                com_send_log(LOG_INFO, "Writing empty default for %s", key);
                 _preferences.putString(key, "");
             }
             break;

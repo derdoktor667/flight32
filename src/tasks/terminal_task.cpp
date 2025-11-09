@@ -212,7 +212,7 @@ void TerminalTask::_handle_status(String &args)
 }
 
 // Helper to convert task state enum to a readable string
-const char *_get_task_state_string(eTaskState state)
+const char *TerminalTask::_get_task_state_string(eTaskState state)
 {
     switch (state)
     {
@@ -298,7 +298,7 @@ void TerminalTask::_handle_tasks(String &args)
         snprintf(output_buffer, sizeof(output_buffer),
                  "% -*s %-*s %-*u %-*s %-*u %-*u %-*u %u",
                  TASK_NAME_COLUMN_WIDTH, name,
-                 TASK_STATE_COLUMN_WIDTH, _get_task_state_string(freertos_status.eCurrentState),
+                 TASK_STATE_COLUMN_WIDTH, TerminalTask::_get_task_state_string(freertos_status.eCurrentState),
                  TASK_PRIO_COLUMN_WIDTH, freertos_status.uxBasePriority,
                  TASK_CPU_COLUMN_WIDTH, cpu_str,
                  TASK_LOOP_COLUMN_WIDTH, current_task->getLoopTime(),

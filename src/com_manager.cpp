@@ -49,16 +49,6 @@ void com_task(void *pvParameters)
                 // Signal that flush message has been processed
                 xQueueSend(com_flush_signal_queue, &dummy, 0);
                 break;
-            case MPU6050_DATA:
-                Serial.printf("Acc: x=%.2f, y=%.2f, z=%.2f | Gyro: x=%.2f, y=%.2f, z=%.2f | Temp: %.2f C\n",
-                              msg.mpu6050_data.accelerometer.x,
-                              msg.mpu6050_data.accelerometer.y,
-                              msg.mpu6050_data.accelerometer.z,
-                              msg.mpu6050_data.gyroscope.x,
-                              msg.mpu6050_data.gyroscope.y,
-                              msg.mpu6050_data.gyroscope.z,
-                              msg.mpu6050_data.temperature_celsius);
-                break;
             default:
                 break;
             }
@@ -76,14 +66,6 @@ void com_send_log(com_message_type_t type, const char *format, ...)
     vsnprintf(msg.content, COM_MESSAGE_MAX_LENGTH, format, args);
     va_end(args);
 
-    xQueueSend(com_queue, &msg, 0);
-}
-
-void com_send_mpu6050_data(const SensorReadings &data)
-{
-    com_message_t msg;
-    msg.type = MPU6050_DATA;
-    msg.mpu6050_data = data;
     xQueueSend(com_queue, &msg, 0);
 }
 

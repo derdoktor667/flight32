@@ -25,7 +25,6 @@ static constexpr uint32_t TERMINAL_TASK_STACK_SIZE = 8192;
 static constexpr uint8_t TERMINAL_TASK_PRIORITY = 1;
 static constexpr int8_t TERMINAL_TASK_CORE = 0;
 static constexpr uint16_t TERMINAL_INPUT_BUFFER_SIZE = 128;
-static constexpr uint16_t TERMINAL_STATS_BUFFER_SIZE = 2048;
 static constexpr uint8_t TERMINAL_TASK_DELAY_MS = 50;
 
 // --- Com Task Configuration ---
@@ -58,12 +57,6 @@ static constexpr uint8_t MOTOR_TASK_PRIORITY = 3;
 static constexpr int8_t MOTOR_TASK_CORE = 1;
 static constexpr uint8_t MOTOR_TASK_DELAY_MS = 10;
 static constexpr uint8_t NUM_MOTORS = 4;
-static constexpr uint16_t MOTOR_PWM_FREQUENCY = 500;
-static constexpr uint8_t MOTOR_PWM_RESOLUTION = 10;
-static constexpr uint8_t MOTOR_PWM_CHANNEL_0 = 0;
-static constexpr uint8_t MOTOR_PWM_CHANNEL_1 = 1;
-static constexpr uint8_t MOTOR_PWM_CHANNEL_2 = 2;
-static constexpr uint8_t MOTOR_PWM_CHANNEL_3 = 3;
 static constexpr uint8_t MOTOR_PIN_FR = 25;              // Front Right
 static constexpr uint8_t MOTOR_PIN_RL = 26;              // Rear Left
 static constexpr uint8_t MOTOR_PIN_FL = 33;              // Front Left

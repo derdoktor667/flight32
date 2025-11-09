@@ -35,12 +35,18 @@ void PidTask::setup()
 void PidTask::run()
 {
     // Get the desired setpoints from the receiver
-    // The IBUS values are typically in the range 1000-2000. We need to map them to a more usable range, e.g., -1.0 to 1.0 for roll/pitch/yaw rates.
-    // For now, let's assume a simple mapping. This will need refinement.
-    float desired_roll_rate = (_ibus_task->getChannel(IBUS_CHANNEL_ROLL) - RC_CHANNEL_CENTER) / RC_CHANNEL_RANGE_SYMMETRIC;
-    float desired_pitch_rate = (_ibus_task->getChannel(IBUS_CHANNEL_PITCH) - RC_CHANNEL_CENTER) / RC_CHANNEL_RANGE_SYMMETRIC;
-    float desired_yaw_rate = (_ibus_task->getChannel(IBUS_CHANNEL_YAW) - RC_CHANNEL_CENTER) / RC_CHANNEL_RANGE_SYMMETRIC;
-    float throttle = (_ibus_task->getChannel(IBUS_CHANNEL_THROTTLE) - RC_CHANNEL_MIN) / RC_CHANNEL_RANGE_THROTTLE;
+    // Raw IBUS values can vary (e.g., 988-2024). For internal calculations, we constrain them
+    // to the standard 1000-2000 range to ensure stable flight control.
+    // The terminal will still display the raw, unconstrained values for user calibration.
+    int constrained_roll = constrain(_ibus_task->getChannel(IBUS_CHANNEL_ROLL), 1000, 2000);
+    int constrained_pitch = constrain(_ibus_task->getChannel(IBUS_CHANNEL_PITCH), 1000, 2000);
+    int constrained_yaw = constrain(_ibus_task->getChannel(IBUS_CHANNEL_YAW), 1000, 2000);
+    int constrained_throttle = constrain(_ibus_task->getChannel(IBUS_CHANNEL_THROTTLE), 1000, 2000);
+
+    float desired_roll_rate = (constrained_roll - RC_CHANNEL_CENTER) / RC_CHANNEL_RANGE_SYMMETRIC;
+    float desired_pitch_rate = (constrained_pitch - RC_CHANNEL_CENTER) / RC_CHANNEL_RANGE_SYMMETRIC;
+    float desired_yaw_rate = (constrained_yaw - RC_CHANNEL_CENTER) / RC_CHANNEL_RANGE_SYMMETRIC;
+    float throttle = (constrained_throttle - RC_CHANNEL_MIN) / RC_CHANNEL_RANGE_THROTTLE;
 
     float actual_roll_rate = _mpu6050_task->getMpu6050Sensor().readings.gyroscope.x;
     float actual_pitch_rate = _mpu6050_task->getMpu6050Sensor().readings.gyroscope.y;
