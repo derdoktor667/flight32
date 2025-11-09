@@ -29,7 +29,9 @@ const Command TerminalTask::_commands[] = {
 
     {"get rx.data", &TerminalTask::_handle_rx_data, "Shows the latest RX channel data.", CommandCategory::RX},
     {"get rx.status", &TerminalTask::_handle_rx_status, "Shows the RX connection status.", CommandCategory::RX},
-    {"set rx.protocol", &TerminalTask::_handle_rx_protocol, "Sets the RX protocol (e.g., 'set rx.protocol IBUS').", CommandCategory::RX},
+    {"get ppm.pin", &TerminalTask::_handle_get_setting, "Gets the PPM input pin.", CommandCategory::RX},
+    {"set ppm.pin", &TerminalTask::_handle_set_setting, "Sets the PPM input pin (GPIO number).", CommandCategory::RX},
+    {"set rx.protocol", &TerminalTask::_handle_rx_protocol, "Sets the RX protocol (e.g., 'set rx.protocol IBUS'). Available: IBUS, PPM.", CommandCategory::RX},
     {"get rx.value.all", &TerminalTask::_handle_rx_value_all, "Shows all mapped RX channel values.", CommandCategory::RX},
     {"get rx.value.roll", &TerminalTask::_handle_rx_value_single, "Shows the RX Roll channel value.", CommandCategory::RX},
     {"get rx.value.pitch", &TerminalTask::_handle_rx_value_single, "Shows the RX Pitch channel value.", CommandCategory::RX},
@@ -559,21 +561,21 @@ void TerminalTask::_handle_rx_protocol(String &args)
 {
     if (args.length() == 0)
     {
-        // Get current RX protocol
-        String current_protocol = _settings_manager->getSettingValueHumanReadable(KEY_RX_PROTOCOL);
-        com_send_log(TERMINAL_OUTPUT, "Current RX Protocol: %s", current_protocol.c_str());
-        com_send_log(TERMINAL_OUTPUT, "Available protocols: IBUS, PPM (PPM not yet implemented)");
+        // Get current RC protocol
+        String current_protocol = _settings_manager->getSettingValueHumanReadable(KEY_RC_PROTOCOL_TYPE);
+        com_send_log(TERMINAL_OUTPUT, "Current RC Protocol: %s", current_protocol.c_str());
+        com_send_log(TERMINAL_OUTPUT, "Available protocols: IBUS, CRSF, SBUS");
     }
     else
     {
-        // Set RX protocol
-        if (_settings_manager->setSettingValue(KEY_RX_PROTOCOL, args))
+        // Set RC protocol
+        if (_settings_manager->setSettingValue(KEY_RC_PROTOCOL_TYPE, args))
         {
-            com_send_log(LOG_INFO, "RX Protocol set to %s. Reboot to apply changes.", _settings_manager->getSettingValueHumanReadable(KEY_RX_PROTOCOL).c_str());
+            com_send_log(LOG_INFO, "RC Protocol set to %s. Reboot to apply changes.", _settings_manager->getSettingValueHumanReadable(KEY_RC_PROTOCOL_TYPE).c_str());
         }
         else
         {
-            com_send_log(LOG_ERROR, "Failed to set RX Protocol to %s. Invalid protocol or value.", args.c_str());
+            com_send_log(LOG_ERROR, "Failed to set RC Protocol to %s. Invalid protocol or value.", args.c_str());
         }
     }
 }
@@ -589,25 +591,25 @@ void TerminalTask::_handle_rx_value_single(String &args)
 
     const char *key = nullptr;
     if (channel_name.equalsIgnoreCase("roll"))
-        key = SettingsManager::KEY_IBUS_CHANNEL_ROLL;
+        key = SettingsManager::KEY_RC_CHANNEL_ROLL;
     else if (channel_name.equalsIgnoreCase("pitch"))
-        key = SettingsManager::KEY_IBUS_CHANNEL_PITCH;
+        key = SettingsManager::KEY_RC_CHANNEL_PITCH;
     else if (channel_name.equalsIgnoreCase("throttle"))
-        key = SettingsManager::KEY_IBUS_CHANNEL_THRO;
+        key = SettingsManager::KEY_RC_CHANNEL_THRO;
     else if (channel_name.equalsIgnoreCase("yaw"))
-        key = SettingsManager::KEY_IBUS_CHANNEL_YAW;
+        key = SettingsManager::KEY_RC_CHANNEL_YAW;
     else if (channel_name.equalsIgnoreCase("arm"))
-        key = SettingsManager::KEY_IBUS_CHANNEL_ARM;
+        key = SettingsManager::KEY_RC_CHANNEL_ARM;
     else if (channel_name.equalsIgnoreCase("fmode"))
-        key = SettingsManager::KEY_IBUS_CHANNEL_FMODE;
+        key = SettingsManager::KEY_RC_CHANNEL_FMODE;
     else if (channel_name.equalsIgnoreCase("aux1"))
-        key = SettingsManager::KEY_IBUS_CHANNEL_AUX1;
+        key = SettingsManager::KEY_RC_CHANNEL_AUX1;
     else if (channel_name.equalsIgnoreCase("aux2"))
-        key = SettingsManager::KEY_IBUS_CHANNEL_AUX2;
+        key = SettingsManager::KEY_RC_CHANNEL_AUX2;
     else if (channel_name.equalsIgnoreCase("aux3"))
-        key = SettingsManager::KEY_IBUS_CHANNEL_AUX3;
+        key = SettingsManager::KEY_RC_CHANNEL_AUX3;
     else if (channel_name.equalsIgnoreCase("aux4"))
-        key = SettingsManager::KEY_IBUS_CHANNEL_AUX4;
+        key = SettingsManager::KEY_RC_CHANNEL_AUX4;
     else
     {
         com_send_log(LOG_ERROR, "Unknown RX channel: %s", channel_name.c_str());
@@ -639,16 +641,16 @@ void TerminalTask::_handle_rx_value_all(String &args)
     };
 
     const ChannelInfo channel_map[] = {
-        {"Roll", SettingsManager::KEY_IBUS_CHANNEL_ROLL},
-        {"Pitch", SettingsManager::KEY_IBUS_CHANNEL_PITCH},
-        {"Throttle", SettingsManager::KEY_IBUS_CHANNEL_THRO},
-        {"Yaw", SettingsManager::KEY_IBUS_CHANNEL_YAW},
-        {"Arm", SettingsManager::KEY_IBUS_CHANNEL_ARM},
-        {"Flight Mode", SettingsManager::KEY_IBUS_CHANNEL_FMODE},
-        {"Aux1", SettingsManager::KEY_IBUS_CHANNEL_AUX1},
-        {"Aux2", SettingsManager::KEY_IBUS_CHANNEL_AUX2},
-        {"Aux3", SettingsManager::KEY_IBUS_CHANNEL_AUX3},
-        {"Aux4", SettingsManager::KEY_IBUS_CHANNEL_AUX4}
+        {"Roll", SettingsManager::KEY_RC_CHANNEL_ROLL},
+        {"Pitch", SettingsManager::KEY_RC_CHANNEL_PITCH},
+        {"Throttle", SettingsManager::KEY_RC_CHANNEL_THRO},
+        {"Yaw", SettingsManager::KEY_RC_CHANNEL_YAW},
+        {"Arm", SettingsManager::KEY_RC_CHANNEL_ARM},
+        {"Flight Mode", SettingsManager::KEY_RC_CHANNEL_FMODE},
+        {"Aux1", SettingsManager::KEY_RC_CHANNEL_AUX1},
+        {"Aux2", SettingsManager::KEY_RC_CHANNEL_AUX2},
+        {"Aux3", SettingsManager::KEY_RC_CHANNEL_AUX3},
+        {"Aux4", SettingsManager::KEY_RC_CHANNEL_AUX4}
     };
     const int num_mapped_channels = sizeof(channel_map) / sizeof(channel_map[0]);
 
@@ -709,25 +711,25 @@ void TerminalTask::_handle_rx_channel_mapping(String &args)
 
     const char *key = nullptr;
     if (channel_name_arg.equalsIgnoreCase("roll"))
-        key = SettingsManager::KEY_IBUS_CHANNEL_ROLL;
+        key = SettingsManager::KEY_RC_CHANNEL_ROLL;
     else if (channel_name_arg.equalsIgnoreCase("pitch"))
-        key = SettingsManager::KEY_IBUS_CHANNEL_PITCH;
+        key = SettingsManager::KEY_RC_CHANNEL_PITCH;
     else if (channel_name_arg.equalsIgnoreCase("throttle"))
-        key = SettingsManager::KEY_IBUS_CHANNEL_THRO;
+        key = SettingsManager::KEY_RC_CHANNEL_THRO;
     else if (channel_name_arg.equalsIgnoreCase("yaw"))
-        key = SettingsManager::KEY_IBUS_CHANNEL_YAW;
+        key = SettingsManager::KEY_RC_CHANNEL_YAW;
     else if (channel_name_arg.equalsIgnoreCase("arm"))
-        key = SettingsManager::KEY_IBUS_CHANNEL_ARM;
+        key = SettingsManager::KEY_RC_CHANNEL_ARM;
     else if (channel_name_arg.equalsIgnoreCase("fmode"))
-        key = SettingsManager::KEY_IBUS_CHANNEL_FMODE;
+        key = SettingsManager::KEY_RC_CHANNEL_FMODE;
     else if (channel_name_arg.equalsIgnoreCase("aux1"))
-        key = SettingsManager::KEY_IBUS_CHANNEL_AUX1;
+        key = SettingsManager::KEY_RC_CHANNEL_AUX1;
     else if (channel_name_arg.equalsIgnoreCase("aux2"))
-        key = SettingsManager::KEY_IBUS_CHANNEL_AUX2;
+        key = SettingsManager::KEY_RC_CHANNEL_AUX2;
     else if (channel_name_arg.equalsIgnoreCase("aux3"))
-        key = SettingsManager::KEY_IBUS_CHANNEL_AUX3;
+        key = SettingsManager::KEY_RC_CHANNEL_AUX3;
     else if (channel_name_arg.equalsIgnoreCase("aux4"))
-        key = SettingsManager::KEY_IBUS_CHANNEL_AUX4;
+        key = SettingsManager::KEY_RC_CHANNEL_AUX4;
     else
     {
         com_send_log(LOG_ERROR, "Unknown RX channel name for mapping: %s", channel_name_arg.c_str());

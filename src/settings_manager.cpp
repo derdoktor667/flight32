@@ -13,8 +13,8 @@
 const char *SettingsManager::GYRO_RANGE_STRINGS[] = {"250_DPS", "500_DPS", "1000_DPS", "2000_DPS"};
 const uint8_t SettingsManager::NUM_GYRO_RANGES = sizeof(SettingsManager::GYRO_RANGE_STRINGS) / sizeof(SettingsManager::GYRO_RANGE_STRINGS[0]);
 
-const char *RX_PROTOCOL_STRINGS[] = {"IBUS", "PPM"};
-static constexpr uint8_t NUM_RX_PROTOCOLS = sizeof(RX_PROTOCOL_STRINGS) / sizeof(RX_PROTOCOL_STRINGS[0]);
+const char *RC_PROTOCOL_STRINGS[] = {"IBUS", "PPM"};
+static constexpr uint8_t NUM_RC_PROTOCOLS = sizeof(RC_PROTOCOL_STRINGS) / sizeof(RC_PROTOCOL_STRINGS[0]);
 
 const SettingsManager::SettingMetadata SettingsManager::_settings_metadata[] = {
     // --- System Settings ---
@@ -23,20 +23,21 @@ const SettingsManager::SettingMetadata SettingsManager::_settings_metadata[] = {
     // --- MPU6050 Settings ---
     {SettingsManager::KEY_MPU_GYRO_RANGE, "gyro.resolution", "MPU6050 Gyroscope Range", SettingsManager::UINT8, SettingsManager::GYRO_RANGE_STRINGS, SettingsManager::NUM_GYRO_RANGES, DEFAULT_GYRO_RANGE, 0.0f, nullptr},
 
-    // --- RX Protocol Settings ---
-    {SettingsManager::KEY_RX_PROTOCOL, "rx.protocol", "Receiver Protocol", SettingsManager::UINT8, RX_PROTOCOL_STRINGS, NUM_RX_PROTOCOLS, (uint8_t)DEFAULT_RX_PROTOCOL, 0.0f, nullptr},
+    // --- RC Protocol Settings ---
+    {SettingsManager::KEY_RC_PROTOCOL_TYPE, "rc.protocol", "RC Receiver Protocol", SettingsManager::UINT8, RC_PROTOCOL_STRINGS, NUM_RC_PROTOCOLS, (uint8_t)DEFAULT_RC_PROTOCOL_TYPE, 0.0f, nullptr},
+    {SettingsManager::KEY_RX_PIN, "rx.pin", "Generic RX Input Pin (GPIO)", SettingsManager::UINT8, nullptr, 0, DEFAULT_RX_PIN, 0.0f, nullptr},
 
-    // --- IBUS Channel Mappings ---
-    {SettingsManager::KEY_IBUS_CHANNEL_ROLL, "rx.channel.roll", "IBUS Roll Channel Index", SettingsManager::UINT8, nullptr, 0, 1, 0.0f, nullptr},
-    {SettingsManager::KEY_IBUS_CHANNEL_PITCH, "rx.channel.pitch", "IBUS Pitch Channel Index", SettingsManager::UINT8, nullptr, 0, 0, 0.0f, nullptr},
-    {SettingsManager::KEY_IBUS_CHANNEL_THRO, "rx.channel.thro", "IBUS Throttle Channel Index", SettingsManager::UINT8, nullptr, 0, 2, 0.0f, nullptr},
-    {SettingsManager::KEY_IBUS_CHANNEL_YAW, "rx.channel.yaw", "IBUS Yaw Channel Index", SettingsManager::UINT8, nullptr, 0, 3, 0.0f, nullptr},
-    {SettingsManager::KEY_IBUS_CHANNEL_ARM, "rx.channel.arm", "IBUS Arming Channel Index", SettingsManager::UINT8, nullptr, 0, 4, 0.0f, nullptr},
-    {SettingsManager::KEY_IBUS_CHANNEL_FMODE, "rx.channel.fmode", "IBUS Flight Mode Channel Index", SettingsManager::UINT8, nullptr, 0, 5, 0.0f, nullptr},
-    {SettingsManager::KEY_IBUS_CHANNEL_AUX1, "rx.channel.aux1", "IBUS Auxiliary Channel 1 Index", SettingsManager::UINT8, nullptr, 0, 6, 0.0f, nullptr},
-    {SettingsManager::KEY_IBUS_CHANNEL_AUX2, "rx.channel.aux2", "IBUS Auxiliary Channel 2 Index", SettingsManager::UINT8, nullptr, 0, 7, 0.0f, nullptr},
-    {SettingsManager::KEY_IBUS_CHANNEL_AUX3, "rx.channel.aux3", "IBUS Auxiliary Channel 3 Index", SettingsManager::UINT8, nullptr, 0, 8, 0.0f, nullptr},
-    {SettingsManager::KEY_IBUS_CHANNEL_AUX4, "rx.channel.aux4", "IBUS Auxiliary Channel 4 Index", SettingsManager::UINT8, nullptr, 0, 9, 0.0f, nullptr},
+    // --- RC Channel Mappings ---
+    {SettingsManager::KEY_RC_CHANNEL_ROLL, "rc.channel.roll", "RC Roll Channel Index", SettingsManager::UINT8, nullptr, 0, 1, 0.0f, nullptr},
+    {SettingsManager::KEY_RC_CHANNEL_PITCH, "rc.channel.pitch", "RC Pitch Channel Index", SettingsManager::UINT8, nullptr, 0, 0, 0.0f, nullptr},
+    {SettingsManager::KEY_RC_CHANNEL_THRO, "rc.channel.thro", "RC Throttle Channel Index", SettingsManager::UINT8, nullptr, 0, 2, 0.0f, nullptr},
+    {SettingsManager::KEY_RC_CHANNEL_YAW, "rc.channel.yaw", "RC Yaw Channel Index", SettingsManager::UINT8, nullptr, 0, 3, 0.0f, nullptr},
+    {SettingsManager::KEY_RC_CHANNEL_ARM, "rc.channel.arm", "RC Arming Channel Index", SettingsManager::UINT8, nullptr, 0, 4, 0.0f, nullptr},
+    {SettingsManager::KEY_RC_CHANNEL_FMODE, "rc.channel.fmode", "RC Flight Mode Channel Index", SettingsManager::UINT8, nullptr, 0, 5, 0.0f, nullptr},
+    {SettingsManager::KEY_RC_CHANNEL_AUX1, "rc.channel.aux1", "RC Auxiliary Channel 1 Index", SettingsManager::UINT8, nullptr, 0, 6, 0.0f, nullptr},
+    {SettingsManager::KEY_RC_CHANNEL_AUX2, "rc.channel.aux2", "RC Auxiliary Channel 2 Index", SettingsManager::UINT8, nullptr, 0, 7, 0.0f, nullptr},
+    {SettingsManager::KEY_RC_CHANNEL_AUX3, "rc.channel.aux3", "RC Auxiliary Channel 3 Index", SettingsManager::UINT8, nullptr, 0, 8, 0.0f, nullptr},
+    {SettingsManager::KEY_RC_CHANNEL_AUX4, "rc.channel.aux4", "RC Auxiliary Channel 4 Index", SettingsManager::UINT8, nullptr, 0, 9, 0.0f, nullptr},
 
     // --- Motor Settings ---
     {SettingsManager::KEY_MOTOR_PROTOCOL, "motor.protocol", "DShot Motor Protocol", SettingsManager::UINT8, DSHOT_PROTOCOL_STRINGS, NUM_DSHOT_PROTOCOLS, DEFAULT_MOTOR_PROTOCOL, 0.0f, nullptr},
@@ -219,16 +220,16 @@ String SettingsManager::getSettingValueHumanReadable(const char *key)
                 }
             }
             // Special handling for RX channel keys: display as 1-based
-            if (strcmp(key, SettingsManager::KEY_IBUS_CHANNEL_ROLL) == 0 ||
-                strcmp(key, SettingsManager::KEY_IBUS_CHANNEL_PITCH) == 0 ||
-                strcmp(key, SettingsManager::KEY_IBUS_CHANNEL_THRO) == 0 ||
-                strcmp(key, SettingsManager::KEY_IBUS_CHANNEL_YAW) == 0 ||
-                strcmp(key, SettingsManager::KEY_IBUS_CHANNEL_ARM) == 0 ||
-                strcmp(key, SettingsManager::KEY_IBUS_CHANNEL_FMODE) == 0 ||
-                strcmp(key, SettingsManager::KEY_IBUS_CHANNEL_AUX1) == 0 ||
-                strcmp(key, SettingsManager::KEY_IBUS_CHANNEL_AUX2) == 0 ||
-                strcmp(key, SettingsManager::KEY_IBUS_CHANNEL_AUX3) == 0 ||
-                strcmp(key, SettingsManager::KEY_IBUS_CHANNEL_AUX4) == 0)
+            if (strcmp(key, SettingsManager::KEY_RC_CHANNEL_ROLL) == 0 ||
+                strcmp(key, SettingsManager::KEY_RC_CHANNEL_PITCH) == 0 ||
+                strcmp(key, SettingsManager::KEY_RC_CHANNEL_THRO) == 0 ||
+                strcmp(key, SettingsManager::KEY_RC_CHANNEL_YAW) == 0 ||
+                strcmp(key, SettingsManager::KEY_RC_CHANNEL_ARM) == 0 ||
+                strcmp(key, SettingsManager::KEY_RC_CHANNEL_FMODE) == 0 ||
+                strcmp(key, SettingsManager::KEY_RC_CHANNEL_AUX1) == 0 ||
+                strcmp(key, SettingsManager::KEY_RC_CHANNEL_AUX2) == 0 ||
+                strcmp(key, SettingsManager::KEY_RC_CHANNEL_AUX3) == 0 ||
+                strcmp(key, SettingsManager::KEY_RC_CHANNEL_AUX4) == 0)
             {
                 if (_settings_metadata[i].type == UINT8)
                 {

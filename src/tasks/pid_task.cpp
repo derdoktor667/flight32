@@ -35,18 +35,18 @@ void PidTask::setup()
 void PidTask::run()
 {
     // Get the desired setpoints from the receiver
-    // Raw IBUS values can vary (e.g., 988-2024). For internal calculations, we constrain them
-    // to the standard 1000-2000 range to ensure stable flight control.
+    // Raw RC values can vary. For internal calculations, we constrain them
+    // to the standard RC_CHANNEL_MIN_RAW - RC_CHANNEL_MAX_RAW range to ensure stable flight control.
     // The terminal will still display the raw, unconstrained values for user calibration.
-    int constrained_roll = constrain(_rx_task->getChannel(_settings_manager->getSettingValue(SettingsManager::KEY_IBUS_CHANNEL_ROLL).toInt()), IBUS_CHANNEL_MIN_RAW, IBUS_CHANNEL_MAX_RAW);
-    int constrained_pitch = constrain(_rx_task->getChannel(_settings_manager->getSettingValue(SettingsManager::KEY_IBUS_CHANNEL_PITCH).toInt()), IBUS_CHANNEL_MIN_RAW, IBUS_CHANNEL_MAX_RAW);
-    int constrained_yaw = constrain(_rx_task->getChannel(_settings_manager->getSettingValue(SettingsManager::KEY_IBUS_CHANNEL_YAW).toInt()), IBUS_CHANNEL_MIN_RAW, IBUS_CHANNEL_MAX_RAW);
-    int constrained_throttle = constrain(_rx_task->getChannel(_settings_manager->getSettingValue(SettingsManager::KEY_IBUS_CHANNEL_THRO).toInt()), IBUS_CHANNEL_MIN_RAW, IBUS_CHANNEL_MAX_RAW);
+    int constrained_roll = constrain(_rx_task->getChannel(_settings_manager->getSettingValue(SettingsManager::KEY_RC_CHANNEL_ROLL).toInt()), RC_CHANNEL_MIN_RAW, RC_CHANNEL_MAX_RAW);
+    int constrained_pitch = constrain(_rx_task->getChannel(_settings_manager->getSettingValue(SettingsManager::KEY_RC_CHANNEL_PITCH).toInt()), RC_CHANNEL_MIN_RAW, RC_CHANNEL_MAX_RAW);
+    int constrained_yaw = constrain(_rx_task->getChannel(_settings_manager->getSettingValue(SettingsManager::KEY_RC_CHANNEL_YAW).toInt()), RC_CHANNEL_MIN_RAW, RC_CHANNEL_MAX_RAW);
+    int constrained_throttle = constrain(_rx_task->getChannel(_settings_manager->getSettingValue(SettingsManager::KEY_RC_CHANNEL_THRO).toInt()), RC_CHANNEL_MIN_RAW, RC_CHANNEL_MAX_RAW);
 
     float desired_roll_rate = (constrained_roll - RC_CHANNEL_CENTER) / RC_CHANNEL_RANGE_SYMMETRIC;
     float desired_pitch_rate = (constrained_pitch - RC_CHANNEL_CENTER) / RC_CHANNEL_RANGE_SYMMETRIC;
     float desired_yaw_rate = (constrained_yaw - RC_CHANNEL_CENTER) / RC_CHANNEL_RANGE_SYMMETRIC;
-    float throttle = (constrained_throttle - RC_CHANNEL_MIN) / RC_CHANNEL_RANGE_THROTTLE;
+    float throttle = (constrained_throttle - RC_CHANNEL_MIN_RAW) / RC_CHANNEL_RANGE_THROTTLE;
 
     float actual_roll_rate = _mpu6050_task->getMpu6050Sensor().readings.gyroscope.x;
     float actual_pitch_rate = _mpu6050_task->getMpu6050Sensor().readings.gyroscope.y;

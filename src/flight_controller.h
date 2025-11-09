@@ -33,7 +33,6 @@ private:
     Scheduler _scheduler;
     ESP32_MPU6050 _mpu6050_sensor;
     Mpu6050Task *_mpu6050_task = nullptr;
-    RxProtocol *_rx_protocol = nullptr;
     RxTask *_rx_task = nullptr;
     TerminalTask *_terminal_task = nullptr;
     MotorTask *_motor_task = nullptr;

@@ -11,9 +11,3 @@
 #include <cstdint>
 
 // --- IBUS Channel Mapping ---
-
-// --- RC Channel Interpretation ---
-static constexpr float RC_CHANNEL_CENTER = 1500.0f;
-static constexpr float RC_CHANNEL_RANGE_SYMMETRIC = 500.0f; // For Roll, Pitch, Yaw (1500 +/- 500)
-static constexpr float RC_CHANNEL_MIN = 1000.0f;
-static constexpr float RC_CHANNEL_RANGE_THROTTLE = 1000.0f; // For Throttle (1000 to 2000)

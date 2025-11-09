@@ -17,15 +17,12 @@
 #include "tasks/mpu6050_task.h"
 #include "tasks/motor_task.h"
 #include "tasks/rx_task.h" // Include the generic RX task
-#include "rx_protocol.h"   // Include the RX protocol interface
-#include "rx_ibus_protocol.h" // Include the IBUS protocol implementation
 #include <Wire.h>
 
 FlightController::~FlightController()
 {
     delete _mpu6050_task;
     delete _rx_task;
-    delete _rx_protocol; // Delete the dynamically allocated protocol
     delete _terminal_task;
     delete _motor_task;
     delete _pid_task;
@@ -67,29 +64,9 @@ void FlightController::setup()
         com_send_log(LOG_INFO, "MPU6050 Calibration complete.");
     }
 
-    // --- RX Protocol Selection and Task Creation ---
-    RxProtocolType rx_protocol_type = (RxProtocolType)_settings_manager.getSettingValue(KEY_RX_PROTOCOL).toInt();
-
-    switch (rx_protocol_type)
-    {
-    case RxProtocolType::IBUS:
-        _rx_protocol = new RxIbusProtocol();
-        com_send_log(LOG_INFO, "Selected RX Protocol: IBUS");
-        break;
-    case RxProtocolType::PPM:
-        // _rx_protocol = new RxPpmProtocol(); // Placeholder for future PPM implementation
-        com_send_log(LOG_WARN, "Selected RX Protocol: PPM (Not yet implemented, falling back to IBUS)");
-        _rx_protocol = new RxIbusProtocol(); // Fallback
-        break;
-    default:
-        com_send_log(LOG_ERROR, "Unknown RX Protocol selected, falling back to IBUS");
-        _rx_protocol = new RxIbusProtocol(); // Fallback
-        break;
-    }
-
     // --- Task Creation ---
     _mpu6050_task = new Mpu6050Task(MPU6050_TASK_NAME, MPU6050_TASK_STACK_SIZE, MPU6050_TASK_PRIORITY, MPU6050_TASK_CORE, MPU6050_TASK_DELAY_MS, _mpu6050_sensor);
-    _rx_task = new RxTask(RX_TASK_NAME, RX_TASK_STACK_SIZE, RX_TASK_PRIORITY, RX_TASK_CORE, RX_TASK_DELAY_MS, _rx_protocol); // Use RX_TASK_NAME and _rx_protocol
+    _rx_task = new RxTask(RX_TASK_NAME, RX_TASK_STACK_SIZE, RX_TASK_PRIORITY, RX_TASK_CORE, RX_TASK_DELAY_MS, &_settings_manager); // Pass SettingsManager
     _motor_task = new MotorTask(MOTOR_TASK_NAME, MOTOR_TASK_STACK_SIZE, MOTOR_TASK_PRIORITY, MOTOR_TASK_CORE, MOTOR_TASK_DELAY_MS, MOTOR_PINS_ARRAY, &_settings_manager);
     _pid_task = new PidTask(PID_TASK_NAME, PID_TASK_STACK_SIZE, PID_TASK_PRIORITY, PID_TASK_CORE, PID_TASK_DELAY_MS, _mpu6050_task, _rx_task, _motor_task, &_settings_manager); // Pass _rx_task
     _terminal_task = new TerminalTask(TERMINAL_TASK_NAME, TERMINAL_TASK_STACK_SIZE, TERMINAL_TASK_PRIORITY, TERMINAL_TASK_CORE, TERMINAL_TASK_DELAY_MS, &_scheduler, &_mpu6050_sensor, _rx_task, _motor_task, _pid_task, &_settings_manager); // Pass _rx_task

@@ -8,12 +8,15 @@
 
 #include "rx_ibus_protocol.h"
 #include "config.h"
+#include "com_manager.h"
 
 RxIbusProtocol::RxIbusProtocol() : _ibus(Serial2, IBUS_RX_PIN) {}
 
 void RxIbusProtocol::begin(uint8_t uart_num, uint8_t rx_pin, uint8_t tx_pin, uint32_t baud_rate)
 {
     _ibus.begin();
+    // Log that the parameters are ignored as IBUS is configured in the constructor
+    com_send_log(LOG_INFO, "RxIbusProtocol: begin() parameters (UART:%d, RX:%d, TX:%d, Baud:%d) ignored. IBUS configured in constructor.", uart_num, rx_pin, tx_pin, baud_rate);
 }
 
 bool RxIbusProtocol::readChannels()

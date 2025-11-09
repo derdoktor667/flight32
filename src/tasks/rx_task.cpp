@@ -9,28 +9,87 @@
 #include "rx_task.h"
 #include "../config.h"
 #include "../com_manager.h"
+#include "../rx_ibus_protocol.h" // Include for IBUS
+#include "../rx_ppm_protocol.h" // Include for PPM
 
-RxTask::RxTask(const char *name, uint32_t stackSize, UBaseType_t priority, BaseType_t coreID, uint32_t task_delay_ms, RxProtocol *rx_protocol)
-    : TaskBase(name, stackSize, priority, coreID, task_delay_ms), _rx_protocol(rx_protocol) {}
+RxTask::RxTask(const char *name, uint32_t stackSize, UBaseType_t priority, BaseType_t coreID, uint32_t task_delay_ms, SettingsManager *settings_manager)
+    : TaskBase(name, stackSize, priority, coreID, task_delay_ms), _rx_protocol(nullptr), _settings_manager(settings_manager) {}
 
-void RxTask::setup()
+RxTask::~RxTask()
 {
     if (_rx_protocol)
     {
-        _rx_protocol->begin(IBUS_UART_NUM, IBUS_RX_PIN, IBUS_TX_PIN, IBUS_BAUD_RATE);
-        com_send_log(LOG_INFO, "RxTask: Initialized RX protocol.");
+        delete _rx_protocol;
+        _rx_protocol = nullptr;
+    }
+}
+
+void RxTask::setup()
+{
+    if (!_settings_manager)
+    {
+        com_send_log(LOG_ERROR, "RxTask: SettingsManager not provided!");
+        return;
+    }
+
+    RcProtocolType protocol_type = (RcProtocolType)_settings_manager->getSettingValue(KEY_RC_PROTOCOL_TYPE).toInt();
+
+    switch (protocol_type)
+    {
+    case RcProtocolType::IBUS:
+        _rx_protocol = new RxIbusProtocol();
+        com_send_log(LOG_INFO, "RxTask: Selected IBUS protocol.");
+        break;
+    case RcProtocolType::PPM:
+        _rx_protocol = new RxPpmProtocol();
+        com_send_log(LOG_INFO, "RxTask: Selected PPM protocol.");
+        break;
+    case RcProtocolType::NONE:
+    default:
+        com_send_log(LOG_ERROR, "RxTask: No valid RX protocol selected in settings!");
+        break;
+    }
+
+    if (_rx_protocol)
+    {
+        uint8_t rx_pin_to_use = 0;
+        uint8_t tx_pin_to_use = 0;
+        uint8_t uart_num_to_use = 0;
+        uint32_t baud_rate_to_use = 0;
+
+        switch (protocol_type)
+        {
+        case RcProtocolType::IBUS:
+            uart_num_to_use = IBUS_UART_NUM;
+            rx_pin_to_use = IBUS_RX_PIN;
+            tx_pin_to_use = IBUS_TX_PIN;
+            baud_rate_to_use = IBUS_BAUD_RATE;
+            com_send_log(LOG_INFO, "RxTask: Initializing IBUS on UART%d, RX:%d, TX:%d, Baud:%d", uart_num_to_use, rx_pin_to_use, tx_pin_to_use, baud_rate_to_use);
+            break;
+        case RcProtocolType::PPM:
+            rx_pin_to_use = _settings_manager->getSettingValue(KEY_RX_PIN).toInt(); // Use generic RX pin for PPM
+            com_send_log(LOG_INFO, "RxTask: Initializing PPM on pin %d", rx_pin_to_use);
+            // For PPM, uart_num, tx_pin, and baud_rate are ignored by RxPpmProtocol::begin()
+            break;
+        default:
+            com_send_log(LOG_ERROR, "RxTask: Unknown protocol type for pin configuration!");
+            return;
+        }
+        
+        _rx_protocol->begin(uart_num_to_use, rx_pin_to_use, tx_pin_to_use, baud_rate_to_use);
+        com_send_log(LOG_INFO, "RxTask: Initialized selected RX protocol.");
     }
     else
     {
-        com_send_log(LOG_ERROR, "RxTask: No RX protocol provided!");
+        com_send_log(LOG_ERROR, "RxTask: Failed to initialize RX protocol!");
     }
 }
 
 void RxTask::run()
 {
-    if (_rx_protocol)
+    if (_rx_protocol && _rx_protocol->readChannels())
     {
-        _rx_protocol->readChannels();
+        // Channels read successfully
     }
 }
 

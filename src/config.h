@@ -53,16 +53,22 @@ static constexpr uint8_t IBUS_RX_PIN = 16;
 static constexpr uint8_t IBUS_TX_PIN = 17;
 static constexpr uint32_t IBUS_BAUD_RATE = 115200;
 
+// --- Generic RX Pin Configuration ---
+static constexpr uint8_t DEFAULT_RX_PIN = 16; // Example default pin for generic RX input
+static constexpr const char *KEY_RX_PIN = "rx.pin";
+
 // --- RX Protocol Configuration ---
-enum class RxProtocolType : uint8_t
+enum class RcProtocolType : uint8_t
 {
     IBUS = 0,
-    PPM = 1, // Placeholder for future PPM implementation
-    // Add other protocols here
+    PPM = 1,
+    NONE = 255 // Represents no protocol selected or an error state
 };
 
-static constexpr const char *KEY_RX_PROTOCOL = "rx.protocol";
-static constexpr RxProtocolType DEFAULT_RX_PROTOCOL = RxProtocolType::IBUS;
+static constexpr const char *KEY_RC_PROTOCOL_TYPE = "rc.protocol";
+static constexpr RcProtocolType DEFAULT_RC_PROTOCOL_TYPE = RcProtocolType::IBUS;
+
+
 
 // --- Motor Task Configuration ---
 static constexpr uint32_t MOTOR_TASK_STACK_SIZE = 4096;
@@ -147,12 +153,25 @@ static constexpr uint8_t TERMINAL_COLUMN_BUFFER_WIDTH = 2;
 static constexpr uint8_t TERMINAL_RX_DATA_DISPLAY_CHANNELS = 10;
 static constexpr uint8_t TERMINAL_RX_SINGLE_DESC_WIDTH = 25; // "RX Flight Mode (CH14)" is 22 chars, plus buffer
 
-// --- IBUS Channel Constants ---
-static constexpr int16_t IBUS_CHANNEL_MIN_RAW = 1000;
-static constexpr int16_t IBUS_CHANNEL_MAX_RAW = 2000;
-static constexpr int16_t IBUS_CHANNEL_DEFAULT_MID = 1500;
-static constexpr int16_t IBUS_CHANNEL_DEFAULT_MIN = 1000;
-static constexpr int16_t IBUS_CHANNEL_DEFAULT_MAX = 2000;
+// --- RC Channel Mapping Keys ---
+static constexpr const char *KEY_RC_CHANNEL_ROLL = "rc.ch.roll";
+static constexpr const char *KEY_RC_CHANNEL_PITCH = "rc.ch.pitch";
+static constexpr const char *KEY_RC_CHANNEL_THRO = "rc.ch.thro";
+static constexpr const char *KEY_RC_CHANNEL_YAW = "rc.ch.yaw";
+static constexpr const char *KEY_RC_CHANNEL_ARM = "rc.ch.arm";
+static constexpr const char *KEY_RC_CHANNEL_FMODE = "rc.ch.fmode";
+static constexpr const char *KEY_RC_CHANNEL_AUX1 = "rc.ch.aux1";
+static constexpr const char *KEY_RC_CHANNEL_AUX2 = "rc.ch.aux2";
+static constexpr const char *KEY_RC_CHANNEL_AUX3 = "rc.ch.aux3";
+static constexpr const char *KEY_RC_CHANNEL_AUX4 = "rc.ch.aux4";
+
+// --- Generic RC Channel Constants ---
+static constexpr int16_t RC_CHANNEL_MIN_RAW = 1000;
+static constexpr int16_t RC_CHANNEL_MAX_RAW = 2000;
+static constexpr int16_t RC_CHANNEL_CENTER = 1500;
+static constexpr float RC_CHANNEL_RANGE_SYMMETRIC = 500.0f; // (MAX - MIN) / 2
+static constexpr float RC_CHANNEL_RANGE_THROTTLE = 1000.0f; // MAX - MIN
+
 static constexpr float THROTTLE_DEADZONE_THRESHOLD = 0.01f;
 static constexpr float MS_TO_SECONDS_FACTOR = 1000.0f;
 

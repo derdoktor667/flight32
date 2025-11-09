@@ -36,18 +36,20 @@ public:
     static constexpr const char *KEY_MPU_GYRO_RANGE = "mpu.g_range";
     static constexpr const char *KEY_MOTOR_PROTOCOL = "motor.protocol";
     static constexpr const char *KEY_RX_PROTOCOL = "rx.protocol";
+    static constexpr const char *KEY_RC_PROTOCOL_TYPE = "rc.protocol";
+    static constexpr const char *KEY_RX_PIN = "rx.pin";
 
-    // --- IBUS Channel Mapping Keys ---
-    static constexpr const char *KEY_IBUS_CHANNEL_ROLL = "ibus.ch.roll";
-    static constexpr const char *KEY_IBUS_CHANNEL_PITCH = "ibus.ch.pitch";
-    static constexpr const char *KEY_IBUS_CHANNEL_THRO = "ibus.ch.thro";
-    static constexpr const char *KEY_IBUS_CHANNEL_YAW = "ibus.ch.yaw";
-    static constexpr const char *KEY_IBUS_CHANNEL_ARM = "ibus.ch.arm";
-    static constexpr const char *KEY_IBUS_CHANNEL_FMODE = "ibus.ch.fmode";
-    static constexpr const char *KEY_IBUS_CHANNEL_AUX1 = "ibus.ch.aux1";
-    static constexpr const char *KEY_IBUS_CHANNEL_AUX2 = "ibus.ch.aux2";
-    static constexpr const char *KEY_IBUS_CHANNEL_AUX3 = "ibus.ch.aux3";
-    static constexpr const char *KEY_IBUS_CHANNEL_AUX4 = "ibus.ch.aux4";
+    // --- RC Channel Mapping Keys ---
+    static constexpr const char *KEY_RC_CHANNEL_ROLL = "rc.ch.roll";
+    static constexpr const char *KEY_RC_CHANNEL_PITCH = "rc.ch.pitch";
+    static constexpr const char *KEY_RC_CHANNEL_THRO = "rc.ch.thro";
+    static constexpr const char *KEY_RC_CHANNEL_YAW = "rc.ch.yaw";
+    static constexpr const char *KEY_RC_CHANNEL_ARM = "rc.ch.arm";
+    static constexpr const char *KEY_RC_CHANNEL_FMODE = "rc.ch.fmode";
+    static constexpr const char *KEY_RC_CHANNEL_AUX1 = "rc.ch.aux1";
+    static constexpr const char *KEY_RC_CHANNEL_AUX2 = "rc.ch.aux2";
+    static constexpr const char *KEY_RC_CHANNEL_AUX3 = "rc.ch.aux3";
+    static constexpr const char *KEY_RC_CHANNEL_AUX4 = "rc.ch.aux4";
 
     // --- Gyroscope Range Mappings ---
     static const char *GYRO_RANGE_STRINGS[];
