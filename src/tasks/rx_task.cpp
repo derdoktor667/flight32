@@ -77,7 +77,7 @@ void RxTask::setup()
         }
         
         _rx_protocol->begin(uart_num_to_use, rx_pin_to_use, tx_pin_to_use, baud_rate_to_use);
-        com_send_log(LOG_INFO, "RxTask: Initialized selected RX protocol.");
+
     }
     else
     {

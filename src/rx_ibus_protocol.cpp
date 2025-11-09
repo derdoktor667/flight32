@@ -16,7 +16,7 @@ void RxIbusProtocol::begin(uint8_t uart_num, uint8_t rx_pin, uint8_t tx_pin, uin
 {
     _ibus.begin();
     // Parameters (uart_num, rx_pin, tx_pin, baud_rate) are ignored as FlyskyIBUS is configured in the constructor.
-    com_send_log(LOG_INFO, "RxIbusProtocol: Initialized. begin() parameters ignored due to internal configuration.");
+
 }
 
 bool RxIbusProtocol::readChannels()

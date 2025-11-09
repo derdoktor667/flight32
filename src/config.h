@@ -34,14 +34,24 @@ static constexpr uint8_t COM_QUEUE_LENGTH = 20;
 static constexpr uint16_t COM_MESSAGE_MAX_LENGTH = 256;
 static constexpr uint32_t COM_TASK_STARTUP_DELAY_MS = 10;
 
-// --- MPU6050 Task Configuration ---
-static constexpr uint32_t MPU6050_TASK_STACK_SIZE = 4096;
-static constexpr uint8_t MPU6050_TASK_PRIORITY = 5;
-static constexpr int8_t MPU6050_TASK_CORE = 1;
-static constexpr uint8_t MPU6050_TASK_DELAY_MS = 10;
+// --- IMU Task Configuration ---
+static constexpr uint32_t IMU_TASK_STACK_SIZE = 4096;
+static constexpr uint8_t IMU_TASK_PRIORITY = 5;
+static constexpr int8_t IMU_TASK_CORE = 1;
+static constexpr uint8_t IMU_TASK_DELAY_MS = 10;
 static constexpr uint8_t MPU6050_I2C_SDA = 21;
 static constexpr uint8_t MPU6050_I2C_SCL = 22;
 static constexpr uint32_t MPU6050_I2C_CLOCK_SPEED = 400000;
+
+// --- IMU Protocol Configuration ---
+enum class ImuType : uint8_t
+{
+    MPU6050 = 0,
+    NONE = 255
+};
+
+static constexpr const char *KEY_IMU_TYPE = "imu.type";
+static constexpr ImuType DEFAULT_IMU_TYPE = ImuType::MPU6050;
 
 // --- IBUS Task Configuration ---
 static constexpr uint32_t RX_TASK_STACK_SIZE = 4096;
@@ -179,7 +189,7 @@ static constexpr float MS_TO_SECONDS_FACTOR = 1000.0f;
 
 // --- Task Names ---
 static constexpr const char *COM_TASK_NAME = "com_task";
-static constexpr const char *MPU6050_TASK_NAME = "GYRO / MPU6050";
+static constexpr const char *IMU_TASK_NAME = "IMU / Sensor";
 static constexpr const char *RX_TASK_NAME = "RX / Receiver"; // New generic RX task name
 static constexpr const char *IBUS_TASK_NAME = "RX / IBUS";
 static constexpr const char *MOTOR_TASK_NAME = "MOTORS / DShot";

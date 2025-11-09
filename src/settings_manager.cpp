@@ -60,7 +60,7 @@ SettingsManager::SettingsManager()
 
 void SettingsManager::begin()
 {
-    com_send_log(LOG_INFO, "SettingsManager: begin()");
+
     _preferences.begin(SETTINGS_NAMESPACE, false);
     _is_begun = true;
     loadOrInitSettings();
@@ -72,7 +72,7 @@ void SettingsManager::loadOrInitSettings()
         return;
 
     uint16_t saved_version = _preferences.getUShort(KEY_SCHEMA_VERSION, 0);
-    com_send_log(LOG_INFO, "Settings: Saved version: %d, Current version: %d", saved_version, CURRENT_SCHEMA_VERSION);
+
 
     if (saved_version != CURRENT_SCHEMA_VERSION)
     {

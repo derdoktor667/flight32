@@ -14,14 +14,16 @@
 #include "firmware.h"
 #include "settings_manager.h"
 #include <Arduino.h>
-#include "tasks/mpu6050_task.h"
+#include "tasks/imu_task.h"
+#include "imu_mpu6050.h" // Include the concrete MPU6050 wrapper
 #include "tasks/motor_task.h"
-#include "tasks/rx_task.h" // Include the generic RX task
+#include "tasks/rx_task.h"
 #include <Wire.h>
 
 FlightController::~FlightController()
 {
-    delete _mpu6050_task;
+    delete _imu_sensor; // Delete the sensor object
+    delete _imu_task;
     delete _rx_task;
     delete _terminal_task;
     delete _motor_task;
@@ -39,48 +41,69 @@ void FlightController::setup()
         COM_TASK_STACK_SIZE,
         NULL,
         COM_TASK_PRIORITY,
-        NULL
-    );
+        NULL);
 
     vTaskDelay(pdMS_TO_TICKS(COM_TASK_STARTUP_DELAY_MS));
 
     com_send_log(TERMINAL_OUTPUT, "");
-    com_send_log(LOG_INFO, "Flight32 Firmware v%s starting...", get_firmware_version());
+    com_send_log(TERMINAL_OUTPUT, "========================================");
+    com_send_log(TERMINAL_OUTPUT, " Flight32 Flight Controller");
+    com_send_log(TERMINAL_OUTPUT, "========================================");
+    com_send_log(LOG_INFO, "Firmware v%s starting...", get_firmware_version());
 
     _settings_manager.begin();
 
-    // --- MPU6050 Initialization ---
+    // --- IMU Initialization ---
     delay(SENSOR_POWER_UP_DELAY_MS); // Add a small delay to allow the sensor to power up
 
-    if (!_mpu6050_sensor.begin((GyroRange)DEFAULT_GYRO_RANGE, AccelRange::ACCEL_RANGE_2G, LpfBandwidth::LPF_188HZ_N_2MS))
+    // Read the configured IMU type from settings
+    String imu_type_str = _settings_manager.getSettingValue(KEY_IMU_TYPE);
+    ImuType imu_type;
+    if (imu_type_str.length() == 0)
     {
-        com_send_log(LOG_ERROR, "Failed to find MPU6050 chip");
+        imu_type = DEFAULT_IMU_TYPE;
     }
     else
     {
-        com_send_log(LOG_INFO, "MPU6050 Found! Calibrating...");
-        _mpu6050_sensor.calibrate();
-        com_send_log(LOG_INFO, "MPU6050 Calibration complete.");
+        imu_type = (ImuType)imu_type_str.toInt();
     }
 
+    switch (imu_type)
+    {
+    case ImuType::MPU6050:
+        _imu_sensor = new ImuMpu6050();
+        com_send_log(LOG_INFO, "Using MPU6050 IMU.");
+        break;
+    default:
+        com_send_log(LOG_ERROR, "No valid IMU type configured.");
+        // Handle error, maybe loop forever or use a dummy sensor
+        return;
+    }
+
+    if (!_imu_sensor->begin())
+    {
+        // Error message is already printed in the sensor's begin() method
+        // Handle error, maybe loop forever
+        return;
+    }
+    _imu_sensor->calibrate();
+
     // --- Task Creation ---
-    _mpu6050_task = new Mpu6050Task(MPU6050_TASK_NAME, MPU6050_TASK_STACK_SIZE, MPU6050_TASK_PRIORITY, MPU6050_TASK_CORE, MPU6050_TASK_DELAY_MS, _mpu6050_sensor);
+    _imu_task = new ImuTask(IMU_TASK_NAME, IMU_TASK_STACK_SIZE, IMU_TASK_PRIORITY, IMU_TASK_CORE, IMU_TASK_DELAY_MS, *_imu_sensor);
     _rx_task = new RxTask(RX_TASK_NAME, RX_TASK_STACK_SIZE, RX_TASK_PRIORITY, RX_TASK_CORE, RX_TASK_DELAY_MS, &_settings_manager);
     _motor_task = new MotorTask(MOTOR_TASK_NAME, MOTOR_TASK_STACK_SIZE, MOTOR_TASK_PRIORITY, MOTOR_TASK_CORE, MOTOR_TASK_DELAY_MS, MOTOR_PINS_ARRAY, &_settings_manager);
-    _pid_task = new PidTask(PID_TASK_NAME, PID_TASK_STACK_SIZE, PID_TASK_PRIORITY, PID_TASK_CORE, PID_TASK_DELAY_MS, _mpu6050_task, _rx_task, _motor_task, &_settings_manager);
-    _terminal_task = new TerminalTask(TERMINAL_TASK_NAME, TERMINAL_TASK_STACK_SIZE, TERMINAL_TASK_PRIORITY, TERMINAL_TASK_CORE, TERMINAL_TASK_DELAY_MS, &_scheduler, &_mpu6050_sensor, _rx_task, _motor_task, _pid_task, &_settings_manager);
+    _pid_task = new PidTask(PID_TASK_NAME, PID_TASK_STACK_SIZE, PID_TASK_PRIORITY, PID_TASK_CORE, PID_TASK_DELAY_MS, _imu_task, _rx_task, _motor_task, &_settings_manager);
+    _terminal_task = new TerminalTask(TERMINAL_TASK_NAME, TERMINAL_TASK_STACK_SIZE, TERMINAL_TASK_PRIORITY, TERMINAL_TASK_CORE, TERMINAL_TASK_DELAY_MS, &_scheduler, _imu_task, _rx_task, _motor_task, _pid_task, &_settings_manager);
 
     // Add tasks to scheduler
     _scheduler.addTask(_rx_task);
-    _scheduler.addTask(_mpu6050_task);
+    _scheduler.addTask(_imu_task);
     _scheduler.addTask(_motor_task);
     _scheduler.addTask(_pid_task);
     _scheduler.addTask(_terminal_task);
 
     for (uint8_t i = 0; i < _scheduler.getTaskCount(); i++)
-
     {
-
         _scheduler.getTask(i)->setup();
     }
 

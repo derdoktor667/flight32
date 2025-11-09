@@ -11,7 +11,7 @@
 #include <Arduino.h>
 #include "../scheduler/task_base.h"
 #include "../scheduler/scheduler.h" // Include for Scheduler class
-#include <ESP32_MPU6050.h>
+#include "imu_task.h"
 #include "rx_task.h"
 #include "motor_task.h"
 #include "pid_task.h"
@@ -25,7 +25,7 @@ class TerminalTask;
 enum class CommandCategory
 {
     SYSTEM,
-    MPU6050,
+    IMU,
     RX,
     MOTOR,
     PID,
@@ -52,7 +52,7 @@ struct CategoryInfo {
 class TerminalTask : public TaskBase
 {
 public:
-    TerminalTask(const char *name, uint32_t stackSize, UBaseType_t priority, BaseType_t coreID, uint32_t task_delay_ms, Scheduler *scheduler, ESP32_MPU6050 *mpu6050_sensor, RxTask *rx_task, MotorTask *motor_task, PidTask *pid_task, SettingsManager *settings_manager);
+    TerminalTask(const char *name, uint32_t stackSize, UBaseType_t priority, BaseType_t coreID, uint32_t task_delay_ms, Scheduler *scheduler, ImuTask *imu_task, RxTask *rx_task, MotorTask *motor_task, PidTask *pid_task, SettingsManager *settings_manager);
 
     void setup() override;
     void run() override;
@@ -61,7 +61,7 @@ public:
 
 private:
     Scheduler *_scheduler;
-    ESP32_MPU6050 *_mpu6050_sensor;
+    ImuTask *_imu_task;
     RxTask *_rx_task;
     MotorTask *_motor_task;
     PidTask *_pid_task;
@@ -70,7 +70,7 @@ private:
     String _input_buffer;
 
     // Helper functions
-    bool _check_mpu6050_sensor_available();
+    bool _check_imu_task_available();
     bool _check_rx_task_available();
     bool _check_motor_task_available();
     bool _check_pid_task_available();
@@ -83,9 +83,9 @@ private:
     CommandCategory _get_setting_category(const char *display_key); // New: Helper to get category from setting display key
 
     // New handler declarations for categorized commands
-    void _handle_mpu_data(String &args);
-    void _handle_mpu_config(String &args);
-    void _handle_mpu_calibrate(String &args);
+    void _handle_imu_data(String &args);
+    void _handle_imu_config(String &args);
+    void _handle_imu_calibrate(String &args);
     void _handle_rx_data(String &args);
     void _handle_rx_status(String &args);
     void _handle_rx_protocol(String &args); // New: Handles getting/setting RX protocol

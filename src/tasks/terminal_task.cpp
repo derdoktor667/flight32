@@ -23,9 +23,9 @@ const Command TerminalTask::_commands[] = {
     {"mem", &TerminalTask::_handle_mem, "Shows current memory usage.", CommandCategory::SYSTEM},
     {"reboot", &TerminalTask::_handle_reboot, "Reboots the ESP32.", CommandCategory::SYSTEM},
 
-    {"get mpu.data", &TerminalTask::_handle_mpu_data, "Displays the latest MPU6050 readings.", CommandCategory::MPU6050},
-    {"get mpu.config", &TerminalTask::_handle_mpu_config, "Shows the current MPU6050 settings.", CommandCategory::MPU6050},
-    {"set mpu.calibrate", &TerminalTask::_handle_mpu_calibrate, "Calibrates the MPU6050.", CommandCategory::MPU6050},
+    {"get imu.data", &TerminalTask::_handle_imu_data, "Displays the latest IMU readings.", CommandCategory::IMU},
+    {"get imu.config", &TerminalTask::_handle_imu_config, "Shows the current IMU settings.", CommandCategory::IMU},
+    {"set imu.calibrate", &TerminalTask::_handle_imu_calibrate, "Calibrates the IMU.", CommandCategory::IMU},
 
     {"get rx.data", &TerminalTask::_handle_rx_data, "Shows the latest RX channel data.", CommandCategory::RX},
     {"get rx.status", &TerminalTask::_handle_rx_status, "Shows the RX connection status.", CommandCategory::RX},
@@ -73,7 +73,7 @@ const int TerminalTask::_num_commands = sizeof(TerminalTask::_commands) / sizeof
 
 const CategoryInfo TerminalTask::_category_info[] = {
     {CommandCategory::SYSTEM, "system", "System commands and settings"},
-    {CommandCategory::MPU6050, "mpu", "MPU6050 sensor commands"},
+    {CommandCategory::IMU, "imu", "IMU sensor commands"},
     {CommandCategory::RX, "rx", "Receiver commands"},
     {CommandCategory::MOTOR, "motor", "Motor control commands"},
     {CommandCategory::PID, "pid", "PID controller commands"},
@@ -81,10 +81,10 @@ const CategoryInfo TerminalTask::_category_info[] = {
 };
 const int TerminalTask::_num_categories = sizeof(TerminalTask::_category_info) / sizeof(CategoryInfo);
 
-TerminalTask::TerminalTask(const char *name, uint32_t stackSize, UBaseType_t priority, BaseType_t coreID, uint32_t task_delay_ms, Scheduler *scheduler, ESP32_MPU6050 *mpu6050_sensor, RxTask *rx_task, MotorTask *motor_task, PidTask *pid_task, SettingsManager *settings_manager)
+TerminalTask::TerminalTask(const char *name, uint32_t stackSize, UBaseType_t priority, BaseType_t coreID, uint32_t task_delay_ms, Scheduler *scheduler, ImuTask *imu_task, RxTask *rx_task, MotorTask *motor_task, PidTask *pid_task, SettingsManager *settings_manager)
     : TaskBase(name, stackSize, priority, coreID, task_delay_ms),
       _scheduler(scheduler),
-      _mpu6050_sensor(mpu6050_sensor),
+      _imu_task(imu_task),
       _rx_task(rx_task),
       _motor_task(motor_task),
       _pid_task(pid_task),
@@ -271,8 +271,8 @@ const char *TerminalTask::_get_category_string(CommandCategory category)
     {
     case CommandCategory::SYSTEM:
         return "System";
-    case CommandCategory::MPU6050:
-        return "MPU6050 Sensor";
+    case CommandCategory::IMU:
+        return "IMU Sensor";
     case CommandCategory::RX:
         return "Receiver";
     case CommandCategory::MOTOR:
@@ -291,8 +291,8 @@ CommandCategory TerminalTask::_get_category_from_string(String &category_str)
 {
     if (category_str.equalsIgnoreCase("system"))
         return CommandCategory::SYSTEM;
-    if (category_str.equalsIgnoreCase("mpu6050") || category_str.equalsIgnoreCase("sensor"))
-        return CommandCategory::MPU6050;
+    if (category_str.equalsIgnoreCase("imu") || category_str.equalsIgnoreCase("sensor"))
+        return CommandCategory::IMU;
     if (category_str.equalsIgnoreCase("rx") || category_str.equalsIgnoreCase("receiver"))
         return CommandCategory::RX;
     if (category_str.equalsIgnoreCase("motor") || category_str.equalsIgnoreCase("motors"))
@@ -310,8 +310,8 @@ CommandCategory TerminalTask::_get_setting_category(const char *display_key)
     String key_str = String(display_key);
     if (key_str.startsWith("system."))
         return CommandCategory::SYSTEM;
-    if (key_str.startsWith("gyro.") || key_str.startsWith("mpu."))
-        return CommandCategory::MPU6050;
+    if (key_str.startsWith("gyro.") || key_str.startsWith("imu."))
+        return CommandCategory::IMU;
     if (key_str.startsWith("rx."))
         return CommandCategory::RX;
     if (key_str.startsWith("motor."))
@@ -465,52 +465,37 @@ void TerminalTask::_handle_reboot(String &args)
     ESP.restart();
 }
 
-void TerminalTask::_handle_mpu_data(String &args)
+void TerminalTask::_handle_imu_data(String &args)
 {
-    if (!TerminalTask::_check_mpu6050_sensor_available())
+    if (!TerminalTask::_check_imu_task_available())
         return;
 
+    const ImuData &data = _imu_task->getImuSensor().getData();
     com_send_log(TERMINAL_OUTPUT, "Acc: x=%.2f, y=%.2f, z=%.2f | Gyro: x=%.2f, y=%.2f, z=%.2f | Temp: %.2f C",
-                 _mpu6050_sensor->readings.accelerometer.x,
-                 _mpu6050_sensor->readings.accelerometer.y,
-                 _mpu6050_sensor->readings.accelerometer.z,
-                 _mpu6050_sensor->readings.gyroscope.x,
-                 _mpu6050_sensor->readings.gyroscope.y,
-                 _mpu6050_sensor->readings.gyroscope.z,
-                 _mpu6050_sensor->readings.temperature_celsius);
+                 data.accelX, data.accelY, data.accelZ,
+                 data.gyroX, data.gyroY, data.gyroZ,
+                 data.temp);
 }
 
-void TerminalTask::_handle_mpu_config(String &args)
+void TerminalTask::_handle_imu_config(String &args)
 {
-    if (!TerminalTask::_check_mpu6050_sensor_available())
+    if (!TerminalTask::_check_imu_task_available())
         return;
 
-    com_send_log(TERMINAL_OUTPUT, "MPU6050 Settings:");
-
-    // Calculate max length for labels
-    int max_label_len = 0;
-    const char* labels[] = {"Gyro Range:", "Accel Range:", "LPF Bandwidth:"};
-    for (int i = 0; i < sizeof(labels) / sizeof(labels[0]); ++i) {
-        int len = strlen(labels[i]);
-        if (len > max_label_len) {
-            max_label_len = len;
-        }
-    }
-    max_label_len += TERMINAL_COLUMN_BUFFER_WIDTH; // Add a small buffer
-
-    com_send_log(TERMINAL_OUTPUT, "  %-*s %d DPS", max_label_len, "Gyro Range:", _mpu6050_sensor->getGyroscopeRange());
-    com_send_log(TERMINAL_OUTPUT, "  %-*s %d G", max_label_len, "Accel Range:", _mpu6050_sensor->getAccelerometerRange());
-    com_send_log(TERMINAL_OUTPUT, "  %-*s %d Hz", max_label_len, "LPF Bandwidth:", _mpu6050_sensor->getLpfBandwidth());
+    com_send_log(TERMINAL_OUTPUT, "IMU Settings: (Note: Specific settings depend on the sensor type)");
+    // This is now generic. We can't know the specific settings of the sensor.
+    // We could add virtual functions to the ImuSensor interface to get this info.
+    // For now, we just print a generic message.
 }
 
-void TerminalTask::_handle_mpu_calibrate(String &args)
+void TerminalTask::_handle_imu_calibrate(String &args)
 {
-    if (!TerminalTask::_check_mpu6050_sensor_available())
+    if (!TerminalTask::_check_imu_task_available())
         return;
 
-    com_send_log(LOG_INFO, "Calibrating MPU6050 sensor...");
-    _mpu6050_sensor->calibrate();
-    com_send_log(LOG_INFO, "MPU6050 sensor calibration complete.");
+    com_send_log(LOG_INFO, "Calibrating IMU sensor...");
+    _imu_task->getImuSensor().calibrate();
+    com_send_log(LOG_INFO, "IMU sensor calibration complete.");
 }
 
 void TerminalTask::_handle_rx_data(String &args)
@@ -920,11 +905,11 @@ void TerminalTask::_handle_dump_settings(String &args)
 
 // --- Helper Functions ---
 
-bool TerminalTask::_check_mpu6050_sensor_available()
+bool TerminalTask::_check_imu_task_available()
 {
-    if (!_mpu6050_sensor)
+    if (!_imu_task)
     {
-        com_send_log(LOG_ERROR, "MPU6050 sensor not available.");
+        com_send_log(LOG_ERROR, "IMU task not available.");
         return false;
     }
     return true;

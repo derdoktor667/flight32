@@ -11,12 +11,12 @@
 #include "../rc_config.h"
 
 PidTask::PidTask(const char *name, uint32_t stack_size, UBaseType_t priority, BaseType_t core_id, uint32_t task_delay_ms,
-                 Mpu6050Task *mpu6050_task,
+                 ImuTask *imu_task,
                  RxTask *rx_task,
                  MotorTask *motor_task,
                  SettingsManager *settings_manager)
     : TaskBase(name, stack_size, priority, core_id, task_delay_ms),
-      _mpu6050_task(mpu6050_task),
+      _imu_task(imu_task),
       _rx_task(rx_task),
       _motor_task(motor_task),
       _settings_manager(settings_manager),
@@ -29,7 +29,7 @@ PidTask::PidTask(const char *name, uint32_t stack_size, UBaseType_t priority, Ba
 void PidTask::setup()
 {
     _load_gains();
-    com_send_log(LOG_INFO, "PidTask: Initialized.");
+
 }
 
 void PidTask::run()
@@ -48,9 +48,10 @@ void PidTask::run()
     float desired_yaw_rate = (constrained_yaw - RC_CHANNEL_CENTER) / RC_CHANNEL_RANGE_SYMMETRIC;
     float throttle = (constrained_throttle - RC_CHANNEL_MIN_RAW) / RC_CHANNEL_RANGE_THROTTLE;
 
-    float actual_roll_rate = _mpu6050_task->getMpu6050Sensor().readings.gyroscope.x;
-    float actual_pitch_rate = _mpu6050_task->getMpu6050Sensor().readings.gyroscope.y;
-    float actual_yaw_rate = _mpu6050_task->getMpu6050Sensor().readings.gyroscope.z;
+    const ImuData &imu_data = _imu_task->getImuSensor().getData();
+    float actual_roll_rate = imu_data.gyroX;
+    float actual_pitch_rate = imu_data.gyroY;
+    float actual_yaw_rate = imu_data.gyroZ;
 
     float dt = getTaskDelayMs() / MS_TO_SECONDS_FACTOR;
 
