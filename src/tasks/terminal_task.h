@@ -1,3 +1,11 @@
+/**
+ * @file terminal_task.h
+ * @brief Defines the TerminalTask class for handling command-line interface interactions.
+ * @author Wastl Kraus
+ * @date 2025-11-09
+ * @license MIT
+ */
+
 #pragma once
 
 #include <Arduino.h>

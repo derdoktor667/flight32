@@ -1,3 +1,11 @@
+/**
+ * @file task_base.h
+ * @brief Defines the abstract base class for FreeRTOS tasks in Flight32.
+ * @author Wastl Kraus
+ * @date 2025-11-09
+ * @license MIT
+ */
+
 #pragma once
 
 #include <Arduino.h>

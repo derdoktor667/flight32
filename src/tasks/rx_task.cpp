@@ -1,3 +1,11 @@
+/**
+ * @file rx_task.cpp
+ * @brief Implements the RxTask for handling RC receiver input.
+ * @author Wastl Kraus
+ * @date 2025-11-09
+ * @license MIT
+ */
+
 #include "rx_task.h"
 #include "../config.h"
 #include "../com_manager.h"

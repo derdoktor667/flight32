@@ -1,3 +1,11 @@
+/**
+ * @file task_base.cpp
+ * @brief Implements the base class for FreeRTOS tasks, providing common functionality.
+ * @author Wastl Kraus
+ * @date 2025-11-09
+ * @license MIT
+ */
+
 #include "task_base.h"
 
 void TaskBase::taskRunner()

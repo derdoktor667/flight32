@@ -1,3 +1,11 @@
+/**
+ * @file settings_manager.h
+ * @brief Manages persistent settings using ESP32's non-volatile storage (NVS).
+ * @author Wastl Kraus
+ * @date 2025-11-09
+ * @license MIT
+ */
+
 #pragma once
 
 #include <Preferences.h>

@@ -83,7 +83,7 @@ void FlightController::setup()
     uint8_t lpf_bandwidth_index = _settings_manager.getSettingValue(KEY_IMU_LPF_BANDWIDTH).toInt();
     LpfBandwidth lpf_bandwidth = get_lpf_bandwidth_from_index(lpf_bandwidth_index);
 
-    if (!_imu_sensor->begin(1000000, false, GYRO_RANGE_2000DPS, ACCEL_RANGE_16G, lpf_bandwidth))
+    if (!_imu_sensor->begin(MPU6050_I2C_CLOCK_SPEED, false, GYRO_RANGE_2000DPS, ACCEL_RANGE_16G, lpf_bandwidth))
     {
         // Error message is already printed in the sensor's begin() method
         // Handle error, maybe loop forever

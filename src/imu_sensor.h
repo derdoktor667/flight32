@@ -36,17 +36,16 @@ class ImuSensor
 public:
     virtual ~ImuSensor() = default;
 
-    // Initializes the sensor.
-    // Returns true if initialization was successful, false otherwise.
+    // Initializes the sensor. Returns true if successful.
         virtual bool begin(uint32_t i2cClockSpeed = 1000000, bool useDMP = false, GyroRange gyroRange = GYRO_RANGE_250DPS, AccelRange accelRange = ACCEL_RANGE_2G, LpfBandwidth lpf = LPF_256HZ_N_0MS) = 0;
 
-    // Calibrates the sensor (e.g., gyro).
+    // Calibrates the sensor.
     virtual void calibrate() = 0;
 
     // Reads the latest data from the sensor.
     virtual void read() = 0;
 
-    // Gets the most recently read sensor data.
+    // Gets the most recently read sensor data, protected by a mutex.
     ImuData getData() const {
         ImuData temp_data = {};
         if (xSemaphoreTake(_data_mutex, portMAX_DELAY) == pdTRUE) {

@@ -31,7 +31,6 @@ ImuMpu6050::ImuMpu6050() : _sensor()
 {
     _data_mutex = xSemaphoreCreateMutex();
     if (_data_mutex == NULL) {
-        // Handle error: Mutex creation failed
         com_send_log(LOG_ERROR, "Failed to create IMU data mutex");
     }
 }
@@ -46,7 +45,7 @@ ImuMpu6050::~ImuMpu6050()
 bool ImuMpu6050::begin(uint32_t i2cClockSpeed, bool useDMP, GyroRange gyroRange, AccelRange accelRange, LpfBandwidth lpf)
 {
     _useDMP = useDMP;
-    if (!_sensor.begin(gyroRange, accelRange, lpf, i2cClockSpeed, 0x70))
+    if (!_sensor.begin(gyroRange, accelRange, lpf, i2cClockSpeed, MPU6050_I2C_ADDRESS))
     {
         com_send_log(LOG_ERROR, "Failed to find MPU6050 chip");
         return false;
@@ -76,7 +75,7 @@ void ImuMpu6050::read()
 {
     if (_useDMP) {
         // Read DMP FIFO
-        uint8_t fifoBuffer[128]; // MPU6050_DMP_PACKET_SIZE is 28, so 128 is enough for multiple packets
+        uint8_t fifoBuffer[MPU6050_FIFO_BUFFER_SIZE]; // MPU6050_DMP_PACKET_SIZE is 28, so 128 is enough for multiple packets
         Quaternion q;
 
         if (_sensor.dmpPacketAvailable()) {

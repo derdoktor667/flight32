@@ -43,6 +43,8 @@ static constexpr uint8_t IMU_TASK_DELAY_MS = 10;
 static constexpr uint8_t MPU6050_I2C_SDA = 21;
 static constexpr uint8_t MPU6050_I2C_SCL = 22;
 static constexpr uint32_t MPU6050_I2C_CLOCK_SPEED = 400000;
+static constexpr uint8_t MPU6050_I2C_ADDRESS = 0x70;
+static constexpr uint8_t MPU6050_FIFO_BUFFER_SIZE = 128; // Size of the MPU6050 FIFO buffer
 
 // --- IMU Protocol Configuration ---
 enum class ImuType : uint8_t
@@ -88,6 +90,13 @@ enum class RcProtocolType : uint8_t
 
 static constexpr const char *KEY_RC_PROTOCOL_TYPE = "rc.protocol";
 static constexpr RcProtocolType DEFAULT_RC_PROTOCOL_TYPE = RcProtocolType::IBUS;
+
+// --- PPM Protocol Configuration ---
+static constexpr uint8_t PPM_MAX_CHANNELS = 8;
+static constexpr uint32_t PPM_FRAME_LENGTH_MIN = 18000; // microseconds (18ms)
+static constexpr uint8_t PPM_CONNECTION_TIMEOUT_FACTOR = 2; // Multiplier for PPM_FRAME_LENGTH_MIN
+static constexpr uint16_t PPM_MIN_PULSE_WIDTH = 1000; // microseconds
+static constexpr uint16_t PPM_MAX_PULSE_WIDTH = 2000; // microseconds
 
 
 

@@ -1,3 +1,11 @@
+/**
+ * @file rx_task.h
+ * @brief Defines the RxTask class for handling RC receiver input.
+ * @author Wastl Kraus
+ * @date 2025-11-09
+ * @license MIT
+ */
+
 #pragma once
 
 #include <Arduino.h>

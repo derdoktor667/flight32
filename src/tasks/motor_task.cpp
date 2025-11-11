@@ -152,7 +152,6 @@ void MotorTask::setThrottle(uint8_t motor_id, uint16_t throttle)
 }
 
 void MotorTask::startMotorTest(uint8_t motorNum, float throttle, uint32_t duration_ms) {
-    // TODO: Add check if flight controller is armed. If armed, do not start test.
     if (motorNum >= NUM_MOTORS) {
         com_send_log(LOG_ERROR, "MotorTest: Invalid motor number %d.", motorNum);
         return;
@@ -173,7 +172,6 @@ void MotorTask::startMotorTest(uint8_t motorNum, float throttle, uint32_t durati
 }
 
 void MotorTask::startContinuousMotorTest(uint8_t motorNum, float throttle) {
-    // TODO: Add check if flight controller is armed. If armed, do not start test.
     if (motorNum >= NUM_MOTORS) {
         com_send_log(LOG_ERROR, "MotorTest: Invalid motor number %d.", motorNum);
         return;

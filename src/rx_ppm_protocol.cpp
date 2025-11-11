@@ -1,3 +1,11 @@
+/**
+ * @file rx_ppm_protocol.cpp
+ * @brief Implements the PPM (Pulse Position Modulation) protocol for RC receiver input.
+ * @author Wastl Kraus
+ * @date 2025-11-09
+ * @license MIT
+ */
+
 #include "rx_ppm_protocol.h"
 #include "com_manager.h"
 #include "config.h"
@@ -6,7 +14,7 @@
 RxPpmProtocol* RxPpmProtocol::_instance = nullptr;
 
 RxPpmProtocol::RxPpmProtocol()
-    : _ppm_pin(0), _last_pulse_time(0), _current_channel(0), _new_data_available(false), _is_connected(false)
+    : _ppm_pin(DEFAULT_RX_PIN), _last_pulse_time(0), _current_channel(0), _new_data_available(false), _is_connected(false)
 {
     for (uint8_t i = 0; i < PPM_MAX_CHANNELS; ++i)
     {
