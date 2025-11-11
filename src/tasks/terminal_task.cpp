@@ -29,8 +29,9 @@ const Command TerminalTask::_commands[] = {
     {"quit", &TerminalTask::_handle_quit, "Exits the terminal session.", CommandCategory::SYSTEM},
 
     {"get imu.data", &TerminalTask::_handle_imu_data, "Displays the latest IMU readings.", CommandCategory::IMU},
-    {"get imu.config", &TerminalTask::_handle_imu_config, "Shows the current IMU settings.", CommandCategory::IMU},
     {"set imu.calibrate", &TerminalTask::_handle_imu_calibrate, "Calibrates the IMU.", CommandCategory::IMU},
+    {"get imu.lpf_bandwidth", &TerminalTask::_handle_imu_lpf_bandwidth, "Gets the current IMU LPF bandwidth.", CommandCategory::IMU},
+    {"set imu.lpf_bandwidth", &TerminalTask::_handle_imu_lpf_bandwidth, "Sets the IMU LPF bandwidth (e.g., 'set imu.lpf_bw LPF_42HZ_N_5MS').", CommandCategory::IMU},
 
     {"get rx.data", &TerminalTask::_handle_rx_data, "Shows the latest RX channel data.", CommandCategory::RX},
     {"get rx.status", &TerminalTask::_handle_rx_status, "Shows the RX connection status.", CommandCategory::RX},
@@ -486,14 +487,6 @@ void TerminalTask::_handle_imu_data(String &args)
                  data.temp);
 }
 
-void TerminalTask::_handle_imu_config(String &args)
-{
-    if (!TerminalTask::_check_imu_task_available())
-        return;
-
-    com_send_log(TERMINAL_OUTPUT, "IMU Settings: (Note: Specific settings depend on the sensor type)");
-}
-
 void TerminalTask::_handle_imu_calibrate(String &args)
 {
     if (!TerminalTask::_check_imu_task_available())
@@ -502,6 +495,38 @@ void TerminalTask::_handle_imu_calibrate(String &args)
     com_send_log(LOG_INFO, "Calibrating IMU sensor...");
     _imu_task->getImuSensor().calibrate();
     com_send_log(LOG_INFO, "IMU sensor calibration complete.");
+}
+
+void TerminalTask::_handle_imu_lpf_bandwidth(String &args) {
+    if (!TerminalTask::_check_imu_task_available()) return;
+
+    if (args.length() == 0) {
+        // Get current LPF bandwidth
+        String current_lpf_bandwidth_index_str = _settings_manager->getSettingValue(KEY_IMU_LPF_BANDWIDTH);
+        String current_lpf_bandwidth_str = _settings_manager->getSettingValueHumanReadable(KEY_IMU_LPF_BANDWIDTH);
+        com_send_log(TERMINAL_OUTPUT, "Current IMU LPF Bandwidth: %s (Index: %s)", current_lpf_bandwidth_str.c_str(), current_lpf_bandwidth_index_str.c_str());
+        com_send_log(TERMINAL_OUTPUT, "Available options:");
+        String options_str = _settings_manager->getSettingOptionsHumanReadable(KEY_IMU_LPF_BANDWIDTH);
+        int start_index = 0;
+        int end_index = options_str.indexOf(',');
+        while (end_index != -1) {
+            String option = options_str.substring(start_index, end_index);
+            option.trim();
+            com_send_log(TERMINAL_OUTPUT, "  - %s", option.c_str());
+            start_index = end_index + 1;
+            end_index = options_str.indexOf(',', start_index);
+        }
+        String last_option = options_str.substring(start_index);
+        last_option.trim();
+        com_send_log(TERMINAL_OUTPUT, "  - %s", last_option.c_str());
+    } else {
+        // Set LPF bandwidth
+        if (_settings_manager->setSettingValue(KEY_IMU_LPF_BANDWIDTH, args)) {
+            com_send_log(LOG_INFO, "IMU LPF Bandwidth set to %s. Reboot to apply changes.", _settings_manager->getSettingValueHumanReadable(KEY_IMU_LPF_BANDWIDTH).c_str());
+        } else {
+            com_send_log(LOG_ERROR, "Failed to set IMU LPF Bandwidth to %s. Invalid option.", args.c_str());
+        }
+    }
 }
 
 void TerminalTask::_handle_rx_data(String &args)

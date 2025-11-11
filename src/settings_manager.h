@@ -20,6 +20,7 @@ public:
     bool setSettingValue(const char *key, const String &value_str);
     const char *getSettingDescription(const char *key);
     String getSettingValueHumanReadable(const char *key);
+    String getSettingOptionsHumanReadable(const char *key);
     const char *getInternalKeyFromDisplayKey(const char *display_key);
 
     ImuAxisData getGyroOffsets();

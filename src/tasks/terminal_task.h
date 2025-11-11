@@ -78,8 +78,8 @@ private:
     CommandCategory _get_setting_category(const char *display_key);
 
     void _handle_imu_data(String &args);
-    void _handle_imu_config(String &args);
     void _handle_imu_calibrate(String &args);
+    void _handle_imu_lpf_bandwidth(String &args);
     void _handle_rx_data(String &args);
     void _handle_rx_status(String &args);
     void _handle_rx_protocol(String &args);

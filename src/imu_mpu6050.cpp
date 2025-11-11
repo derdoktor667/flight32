@@ -10,6 +10,22 @@
 #include "com_manager.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
+#include "settings_manager.h" // Include for SettingsManager
+
+LpfBandwidth get_lpf_bandwidth_from_index(uint8_t index)
+{
+    switch (index) // Assuming index directly maps to LpfBandwidth enum values
+    {
+    case 0: return LPF_256HZ_N_0MS;
+    case 1: return LPF_188HZ_N_2MS;
+    case 2: return LPF_98HZ_N_3MS;
+    case 3: return LPF_42HZ_N_5MS;
+    case 4: return LPF_20HZ_N_10MS;
+    case 5: return LPF_10HZ_N_13MS;
+    case 6: return LPF_5HZ_N_18MS;
+    default: return LPF_256HZ_N_0MS; // Default to highest bandwidth (least filtering)
+    }
+}
 
 ImuMpu6050::ImuMpu6050() : _sensor()
 {

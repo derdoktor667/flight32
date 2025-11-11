@@ -54,6 +54,15 @@ enum class ImuType : uint8_t
 static constexpr const char *KEY_IMU_TYPE = "imu.type";
 static constexpr ImuType DEFAULT_IMU_TYPE = ImuType::MPU6050;
 
+// --- IMU LPF Bandwidth Configuration ---
+static constexpr const char *KEY_IMU_LPF_BANDWIDTH = "imu.lpf_bw";
+static constexpr uint8_t DEFAULT_IMU_LPF_BANDWIDTH = 0; // Corresponds to LPF_256HZ_N_0MS
+static constexpr const char *IMU_LPF_BANDWIDTH_STRINGS[] = {
+    "LPF_256HZ_N_0MS", "LPF_188HZ_N_2MS", "LPF_98HZ_N_3MS",
+    "LPF_42HZ_N_5MS", "LPF_20HZ_N_10MS", "LPF_10HZ_N_13MS", "LPF_5HZ_N_18MS"
+};
+static constexpr uint8_t NUM_IMU_LPF_BANDWIDTHS = sizeof(IMU_LPF_BANDWIDTH_STRINGS) / sizeof(IMU_LPF_BANDWIDTH_STRINGS[0]);
+
 // --- IBUS Task Configuration ---
 static constexpr uint32_t RX_TASK_STACK_SIZE = 4096;
 static constexpr uint8_t RX_TASK_PRIORITY = 4;

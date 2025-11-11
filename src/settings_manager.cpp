@@ -14,6 +14,7 @@ const uint8_t SettingsManager::NUM_RC_PROTOCOLS = sizeof(SettingsManager::RC_PRO
 const SettingsManager::SettingMetadata SettingsManager::_settings_metadata[] = {
     {SettingsManager::KEY_SYSTEM_NAME, "system.name", "Configurable model name", SettingsManager::STRING, nullptr, 0, 0, 0.0f, SettingsManager::DEFAULT_SYSTEM_NAME},
     {SettingsManager::KEY_MPU_GYRO_RANGE, "gyro.resolution", "MPU6050 Gyroscope Range", SettingsManager::UINT8, SettingsManager::GYRO_RANGE_STRINGS, SettingsManager::NUM_GYRO_RANGES, DEFAULT_GYRO_RANGE, 0.0f, nullptr},
+    {KEY_IMU_LPF_BANDWIDTH, "imu.lpf_bw", "IMU Low-Pass Filter Bandwidth", SettingsManager::UINT8, IMU_LPF_BANDWIDTH_STRINGS, NUM_IMU_LPF_BANDWIDTHS, DEFAULT_IMU_LPF_BANDWIDTH, 0.0f, nullptr},
     {SettingsManager::KEY_MPU_GYRO_OFF_X, "mpu.g_off.x", "Gyroscope X-axis offset", SettingsManager::FLOAT, nullptr, 0, 0, 0.0f, nullptr},
     {SettingsManager::KEY_MPU_GYRO_OFF_Y, "mpu.g_off.y", "Gyroscope Y-axis offset", SettingsManager::FLOAT, nullptr, 0, 0, 0.0f, nullptr},
     {SettingsManager::KEY_MPU_GYRO_OFF_Z, "mpu.g_off.z", "Gyroscope Z-axis offset", SettingsManager::FLOAT, nullptr, 0, 0, 0.0f, nullptr},
@@ -268,6 +269,30 @@ String SettingsManager::getSettingValueHumanReadable(const char *key)
                 }
             }
             return getSettingValue(key);
+        }
+    }
+    return "";
+}
+
+String SettingsManager::getSettingOptionsHumanReadable(const char *key)
+{
+    for (int i = 0; i < _num_settings; ++i)
+    {
+        if (strcmp(_settings_metadata[i].key, key) == 0)
+        {
+            if (_settings_metadata[i].string_map != nullptr && _settings_metadata[i].string_map_size > 0)
+            {
+                String options_str = "";
+                for (uint8_t j = 0; j < _settings_metadata[i].string_map_size; ++j)
+                {
+                    options_str += _settings_metadata[i].string_map[j];
+                    if (j < _settings_metadata[i].string_map_size - 1)
+                    {
+                        options_str += ", ";
+                    }
+                }
+                return options_str;
+            }
         }
     }
     return "";
