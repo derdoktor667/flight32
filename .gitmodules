@@ -1,10 +1,13 @@
 [submodule "libraries/ESP32_MPU6050"]
 	path = libraries/ESP32_MPU6050
-	url = https://github.com/derdoktor667/ESP32_MPU6050.git
+	url = https://github.com/derdoktor667/ESP32_MPU6050
 	branch = dev
 [submodule "libraries/FlyskyIBUS"]
 	path = libraries/FlyskyIBUS
 	url = https://github.com/derdoktor667/FlyskyIBUS
+	branch = dev
 [submodule "libraries/DShotRMT"]
 	path = libraries/DShotRMT
 	url = https://github.com/derdoktor667/DShotRMT
+	branch = dev
+
