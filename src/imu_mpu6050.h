@@ -20,6 +20,11 @@ public:
     void calibrate() override;
     void read() override;
 
+    ImuAxisData getGyroscopeOffset() const override;
+    void setGyroscopeOffset(const ImuAxisData &offset) override;
+    ImuAxisData getAccelerometerOffset() const override;
+    void setAccelerometerOffset(const ImuAxisData &offset) override;
+
 private:
     ESP32_MPU6050 _sensor;
 };

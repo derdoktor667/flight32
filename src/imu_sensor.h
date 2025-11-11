@@ -18,6 +18,12 @@ struct ImuData
     float temp;
 };
 
+// A structure to hold 3-axis data
+struct ImuAxisData
+{
+    float x, y, z;
+};
+
 class ImuSensor
 {
 public:
@@ -35,6 +41,11 @@ public:
 
     // Gets the most recently read sensor data.
     const ImuData &getData() const { return _data; }
+
+    virtual ImuAxisData getGyroscopeOffset() const = 0;
+    virtual void setGyroscopeOffset(const ImuAxisData &offset) = 0;
+    virtual ImuAxisData getAccelerometerOffset() const = 0;
+    virtual void setAccelerometerOffset(const ImuAxisData &offset) = 0;
 
 protected:
     ImuData _data = {};

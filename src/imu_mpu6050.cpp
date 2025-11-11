@@ -15,7 +15,7 @@ ImuMpu6050::ImuMpu6050() : _sensor()
 
 bool ImuMpu6050::begin()
 {
-    if (!_sensor.begin((GyroRange)DEFAULT_GYRO_RANGE, AccelRange::ACCEL_RANGE_2G, LpfBandwidth::LPF_188HZ_N_2MS))
+    if (!_sensor.begin((GyroRange)DEFAULT_GYRO_RANGE, AccelRange::ACCEL_RANGE_2G, LpfBandwidth::LPF_188HZ_N_2MS, 0x68))
     {
         com_send_log(LOG_ERROR, "Failed to find MPU6050 chip");
         return false;
@@ -41,4 +41,26 @@ void ImuMpu6050::read()
     _data.gyroY = _sensor.readings.gyroscope.y;
     _data.gyroZ = _sensor.readings.gyroscope.z;
     _data.temp = _sensor.readings.temperature_celsius;
+}
+
+ImuAxisData ImuMpu6050::getGyroscopeOffset() const
+{
+    AxisData offset = _sensor.getGyroscopeOffset();
+    return {offset.x, offset.y, offset.z};
+}
+
+void ImuMpu6050::setGyroscopeOffset(const ImuAxisData &offset)
+{
+    _sensor.setGyroscopeOffset({offset.x, offset.y, offset.z});
+}
+
+ImuAxisData ImuMpu6050::getAccelerometerOffset() const
+{
+    AxisData offset = _sensor.getAccelerometerOffset();
+    return {offset.x, offset.y, offset.z};
+}
+
+void ImuMpu6050::setAccelerometerOffset(const ImuAxisData &offset)
+{
+    _sensor.setAccelerometerOffset({offset.x, offset.y, offset.z});
 }

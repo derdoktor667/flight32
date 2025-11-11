@@ -22,6 +22,12 @@ const SettingsManager::SettingMetadata SettingsManager::_settings_metadata[] = {
 
     // --- MPU6050 Settings ---
     {SettingsManager::KEY_MPU_GYRO_RANGE, "gyro.resolution", "MPU6050 Gyroscope Range", SettingsManager::UINT8, SettingsManager::GYRO_RANGE_STRINGS, SettingsManager::NUM_GYRO_RANGES, DEFAULT_GYRO_RANGE, 0.0f, nullptr},
+    {SettingsManager::KEY_MPU_GYRO_OFF_X, "mpu.g_off.x", "Gyroscope X-axis offset", SettingsManager::FLOAT, nullptr, 0, 0, 0.0f, nullptr},
+    {SettingsManager::KEY_MPU_GYRO_OFF_Y, "mpu.g_off.y", "Gyroscope Y-axis offset", SettingsManager::FLOAT, nullptr, 0, 0, 0.0f, nullptr},
+    {SettingsManager::KEY_MPU_GYRO_OFF_Z, "mpu.g_off.z", "Gyroscope Z-axis offset", SettingsManager::FLOAT, nullptr, 0, 0, 0.0f, nullptr},
+    {SettingsManager::KEY_MPU_ACCEL_OFF_X, "mpu.a_off.x", "Accelerometer X-axis offset", SettingsManager::FLOAT, nullptr, 0, 0, 0.0f, nullptr},
+    {SettingsManager::KEY_MPU_ACCEL_OFF_Y, "mpu.a_off.y", "Accelerometer Y-axis offset", SettingsManager::FLOAT, nullptr, 0, 0, 0.0f, nullptr},
+    {SettingsManager::KEY_MPU_ACCEL_OFF_Z, "mpu.a_off.z", "Accelerometer Z-axis offset", SettingsManager::FLOAT, nullptr, 0, 0, 0.0f, nullptr},
 
     // --- RC Protocol Settings ---
     {SettingsManager::KEY_RC_PROTOCOL_TYPE, "rc.protocol", "RC Receiver Protocol", SettingsManager::UINT8, RC_PROTOCOL_STRINGS, NUM_RC_PROTOCOLS, (uint8_t)DEFAULT_RC_PROTOCOL_TYPE, 0.0f, nullptr},
@@ -136,6 +142,36 @@ void SettingsManager::saveSettings()
 
     _preferences.putUShort(KEY_SCHEMA_VERSION, CURRENT_SCHEMA_VERSION);
     // Ensure the schema version is saved.
+}
+
+ImuAxisData SettingsManager::getGyroOffsets()
+{
+    return {
+        _preferences.getFloat(KEY_MPU_GYRO_OFF_X, 0.0f),
+        _preferences.getFloat(KEY_MPU_GYRO_OFF_Y, 0.0f),
+        _preferences.getFloat(KEY_MPU_GYRO_OFF_Z, 0.0f)};
+}
+
+void SettingsManager::setGyroOffsets(const ImuAxisData &offsets)
+{
+    _preferences.putFloat(KEY_MPU_GYRO_OFF_X, offsets.x);
+    _preferences.putFloat(KEY_MPU_GYRO_OFF_Y, offsets.y);
+    _preferences.putFloat(KEY_MPU_GYRO_OFF_Z, offsets.z);
+}
+
+ImuAxisData SettingsManager::getAccelOffsets()
+{
+    return {
+        _preferences.getFloat(KEY_MPU_ACCEL_OFF_X, 0.0f),
+        _preferences.getFloat(KEY_MPU_ACCEL_OFF_Y, 0.0f),
+        _preferences.getFloat(KEY_MPU_ACCEL_OFF_Z, 0.0f)};
+}
+
+void SettingsManager::setAccelOffsets(const ImuAxisData &offsets)
+{
+    _preferences.putFloat(KEY_MPU_ACCEL_OFF_X, offsets.x);
+    _preferences.putFloat(KEY_MPU_ACCEL_OFF_Y, offsets.y);
+    _preferences.putFloat(KEY_MPU_ACCEL_OFF_Z, offsets.z);
 }
 
 void SettingsManager::listSettings()

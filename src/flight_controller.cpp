@@ -86,7 +86,29 @@ void FlightController::setup()
         // Handle error, maybe loop forever
         return;
     }
-    _imu_sensor->calibrate();
+
+    // Load IMU offsets from settings
+    ImuAxisData gyro_offsets = _settings_manager.getGyroOffsets();
+    ImuAxisData accel_offsets = _settings_manager.getAccelOffsets();
+
+    // Check if offsets are valid (not all zero)
+    if (gyro_offsets.x == 0.0f && gyro_offsets.y == 0.0f && gyro_offsets.z == 0.0f &&
+        accel_offsets.x == 0.0f && accel_offsets.y == 0.0f && accel_offsets.z == 0.0f)
+    {
+        com_send_log(LOG_INFO, "IMU offsets not found in settings, starting calibration...");
+        _imu_sensor->calibrate();
+        // Save the new offsets
+        _settings_manager.setGyroOffsets(_imu_sensor->getGyroscopeOffset());
+        _settings_manager.setAccelOffsets(_imu_sensor->getAccelerometerOffset());
+        _settings_manager.saveSettings();
+        com_send_log(LOG_INFO, "IMU calibration complete and offsets saved.");
+    }
+    else
+    {
+        com_send_log(LOG_INFO, "Found IMU offsets in settings, applying them.");
+        _imu_sensor->setGyroscopeOffset(gyro_offsets);
+        _imu_sensor->setAccelerometerOffset(accel_offsets);
+    }
 
     // --- Task Creation ---
     _imu_task = new ImuTask(IMU_TASK_NAME, IMU_TASK_STACK_SIZE, IMU_TASK_PRIORITY, IMU_TASK_CORE, IMU_TASK_DELAY_MS, *_imu_sensor);

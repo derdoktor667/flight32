@@ -10,6 +10,7 @@
 
 #include <Preferences.h>
 #include <Arduino.h>
+#include "imu_sensor.h" // For ImuAxisData
 
 class SettingsManager
 {
@@ -29,6 +30,12 @@ public:
     const char *getSettingDescription(const char *key);
     String getSettingValueHumanReadable(const char *key);
     const char *getInternalKeyFromDisplayKey(const char *display_key);
+
+    // --- Offset Getters/Setters ---
+    ImuAxisData getGyroOffsets();
+    void setGyroOffsets(const ImuAxisData &offsets);
+    ImuAxisData getAccelOffsets();
+    void setAccelOffsets(const ImuAxisData &offsets);
 
     // --- NVS Keys (max 15 chars) ---
     static constexpr const char *KEY_SYSTEM_NAME = "system.name";
@@ -50,6 +57,14 @@ public:
     static constexpr const char *KEY_RC_CHANNEL_AUX2 = "rc.ch.aux2";
     static constexpr const char *KEY_RC_CHANNEL_AUX3 = "rc.ch.aux3";
     static constexpr const char *KEY_RC_CHANNEL_AUX4 = "rc.ch.aux4";
+
+    // --- IMU Offset Keys ---
+    static constexpr const char *KEY_MPU_GYRO_OFF_X = "mpu.g_off.x";
+    static constexpr const char *KEY_MPU_GYRO_OFF_Y = "mpu.g_off.y";
+    static constexpr const char *KEY_MPU_GYRO_OFF_Z = "mpu.g_off.z";
+    static constexpr const char *KEY_MPU_ACCEL_OFF_X = "mpu.a_off.x";
+    static constexpr const char *KEY_MPU_ACCEL_OFF_Y = "mpu.a_off.y";
+    static constexpr const char *KEY_MPU_ACCEL_OFF_Z = "mpu.a_off.z";
 
     // --- Gyroscope Range Mappings ---
     static const char *GYRO_RANGE_STRINGS[];
