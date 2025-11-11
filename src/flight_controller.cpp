@@ -80,7 +80,7 @@ void FlightController::setup()
         return;
     }
 
-    if (!_imu_sensor->begin())
+    if (!_imu_sensor->begin(1000000, false, GYRO_RANGE_2000DPS, ACCEL_RANGE_16G, LPF_256HZ_N_0MS))
     {
         // Error message is already printed in the sensor's begin() method
         // Handle error, maybe loop forever
@@ -90,22 +90,12 @@ void FlightController::setup()
     ImuAxisData gyro_offsets = _settings_manager.getGyroOffsets();
     ImuAxisData accel_offsets = _settings_manager.getAccelOffsets();
 
-    if (gyro_offsets.x == 0.0f && gyro_offsets.y == 0.0f && gyro_offsets.z == 0.0f &&
-        accel_offsets.x == 0.0f && accel_offsets.y == 0.0f && accel_offsets.z == 0.0f)
-    {
-        com_send_log(LOG_INFO, "IMU offsets not found in settings, starting calibration...");
-        _imu_sensor->calibrate();
-        _settings_manager.setGyroOffsets(_imu_sensor->getGyroscopeOffset());
-        _settings_manager.setAccelOffsets(_imu_sensor->getAccelerometerOffset());
-        _settings_manager.saveSettings();
-        com_send_log(LOG_INFO, "IMU calibration complete and offsets saved.");
-    }
-    else
-    {
-        com_send_log(LOG_INFO, "Found IMU offsets in settings, applying them.");
-        _imu_sensor->setGyroscopeOffset(gyro_offsets);
-        _imu_sensor->setAccelerometerOffset(accel_offsets);
-    }
+    com_send_log(LOG_INFO, "Starting IMU calibration...");
+    _imu_sensor->calibrate();
+    _settings_manager.setGyroOffsets(_imu_sensor->getGyroscopeOffset());
+    _settings_manager.setAccelOffsets(_imu_sensor->getAccelerometerOffset());
+    _settings_manager.saveSettings();
+    com_send_log(LOG_INFO, "IMU calibration complete and offsets saved.");
 
     _imu_task = new ImuTask(IMU_TASK_NAME, IMU_TASK_STACK_SIZE, IMU_TASK_PRIORITY, IMU_TASK_CORE, IMU_TASK_DELAY_MS, *_imu_sensor);
     _rx_task = new RxTask(RX_TASK_NAME, RX_TASK_STACK_SIZE, RX_TASK_PRIORITY, RX_TASK_CORE, RX_TASK_DELAY_MS, &_settings_manager);

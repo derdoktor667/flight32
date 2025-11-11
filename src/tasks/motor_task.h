@@ -28,6 +28,18 @@ public:
 
     ~MotorTask();
 
+public:
+    enum MotorTestState {
+        IDLE,
+        SPINNING_TIMED,
+        SPINNING_CONTINUOUS
+    };
+
+    void startMotorTest(uint8_t motorNum, float throttle, uint32_t duration_ms);
+    void startContinuousMotorTest(uint8_t motorNum, float throttle);
+    void stopMotorTest();
+    bool isInTestMode() const { return _motorTestState != IDLE; }
+
 private:
     DShotRMT *_dshot_drivers[NUM_MOTORS];
     uint16_t _motor_throttles[NUM_MOTORS];
@@ -38,4 +50,10 @@ private:
     float _pitch_command;
     float _roll_command;
     float _yaw_command;
+
+    MotorTestState _motorTestState;
+    uint8_t _testMotorNum;
+    float _testThrottle;
+    uint32_t _testDuration;
+    uint32_t _testStartTime;
 };

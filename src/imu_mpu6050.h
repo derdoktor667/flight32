@@ -17,7 +17,7 @@ class ImuMpu6050 : public ImuSensor
 public:
     ImuMpu6050();
     ~ImuMpu6050();
-    bool begin() override;
+        bool begin(uint32_t i2cClockSpeed = 1000000, bool useDMP = false, GyroRange gyroRange = GYRO_RANGE_250DPS, AccelRange accelRange = ACCEL_RANGE_2G, LpfBandwidth lpf = LPF_256HZ_N_0MS) override;
     void calibrate() override;
     void read() override;
 
@@ -25,7 +25,10 @@ public:
     void setGyroscopeOffset(const ImuAxisData &offset) override;
     ImuAxisData getAccelerometerOffset() const override;
     void setAccelerometerOffset(const ImuAxisData &offset) override;
+    ImuQuaternionData getQuaternion() const override;
 
 private:
+    bool _useDMP;
+    ImuQuaternionData _quaternion;
     ESP32_MPU6050 _sensor;
 };

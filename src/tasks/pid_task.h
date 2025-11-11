@@ -32,11 +32,15 @@ public:
     void setGains(PidAxis axis, PidGains gains);
     void resetToDefaults();
 
+public:
+    bool isArmed() const { return _isArmed; }
+
 private:
     ImuTask *_imu_task;
     RxTask *_rx_task;
     MotorTask *_motor_task;
     SettingsManager *_settings_manager;
+    bool _isArmed;
 
     PIDController _pid_roll;
     PIDController _pid_pitch;

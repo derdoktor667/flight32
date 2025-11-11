@@ -213,6 +213,9 @@ static constexpr float RC_CHANNEL_RANGE_THROTTLE = 1000.0f; // MAX - MIN
 static constexpr int16_t RC_CHANNEL_INDEX_OFFSET = 1;
 static constexpr int16_t INVALID_CHANNEL_VALUE = 0;
 
+// --- RC Arming Threshold ---
+static constexpr int16_t RC_CHANNEL_ARM_THRESHOLD = 1800;
+
 // --- Task Names ---
 static constexpr const char *COM_TASK_NAME = "com_task";
 static constexpr const char *IMU_TASK_NAME = "IMU / Sensor";

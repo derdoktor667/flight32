@@ -36,7 +36,12 @@ MotorTask::MotorTask(const char *name, uint32_t stack_size, UBaseType_t priority
       _throttle_command(0.0f),
       _pitch_command(0.0f),
       _roll_command(0.0f),
-      _yaw_command(0.0f)
+      _yaw_command(0.0f),
+      _motorTestState(IDLE),
+      _testMotorNum(0),
+      _testThrottle(0.0f),
+      _testDuration(0),
+      _testStartTime(0)
 {
     for (int i = 0; i < NUM_MOTORS; ++i)
     {
@@ -75,6 +80,29 @@ void MotorTask::run()
     if (!_dshot_drivers[FIRST_MOTOR_INDEX])
         return;
 
+    if (_motorTestState != IDLE) {
+        // Handle motor test mode
+        if (_motorTestState == SPINNING_TIMED && (millis() - _testStartTime >= _testDuration)) {
+            stopMotorTest(); // Time's up, stop the motor
+            return; // Exit run() after stopping
+        }
+
+        // Apply test throttle to the designated motor, others are off
+        for (int i = 0; i < NUM_MOTORS; ++i) {
+            if (_dshot_drivers[i]) {
+                if (i == _testMotorNum) {
+                    // Convert normalized throttle (0-1) to raw DShot throttle (MOTOR_MIN_THROTTLE_RAW to MOTOR_MAX_THROTTLE_RAW)
+                    uint16_t raw_throttle = (uint16_t)constrain(_testThrottle * (MOTOR_MAX_THROTTLE_RAW - MOTOR_MIN_THROTTLE_RAW) + MOTOR_MIN_THROTTLE_RAW, MOTOR_MIN_THROTTLE_RAW, MOTOR_MAX_THROTTLE_RAW);
+                    _dshot_drivers[i]->sendThrottle(raw_throttle);
+                } else {
+                    _dshot_drivers[i]->sendThrottle(0); // Other motors off
+                }
+            }
+        }
+        return; // Exit run() as we are in test mode
+    }
+
+    // Normal PID control logic
     if (_throttle_command < THROTTLE_DEADZONE_THRESHOLD)
     {
         for (int i = 0; i < NUM_MOTORS; ++i)
@@ -120,5 +148,61 @@ void MotorTask::setThrottle(uint8_t motor_id, uint16_t throttle)
     if (motor_id < NUM_MOTORS && _dshot_drivers[motor_id]) {
         _dshot_drivers[motor_id]->sendThrottle(throttle);
         _motor_throttles[motor_id] = throttle;
+    }
+}
+
+void MotorTask::startMotorTest(uint8_t motorNum, float throttle, uint32_t duration_ms) {
+    // TODO: Add check if flight controller is armed. If armed, do not start test.
+    if (motorNum >= NUM_MOTORS) {
+        com_send_log(LOG_ERROR, "MotorTest: Invalid motor number %d.", motorNum);
+        return;
+    }
+    if (throttle < 0.0f || throttle > 1.0f) { // Assuming throttle is normalized 0-1
+        com_send_log(LOG_ERROR, "MotorTest: Invalid throttle percentage %f. Must be between 0 and 1.", throttle);
+        return;
+    }
+
+    stopMotorTest(); // Stop any ongoing test first
+
+    _testMotorNum = motorNum;
+    _testThrottle = throttle;
+    _testDuration = duration_ms;
+    _testStartTime = millis();
+    _motorTestState = SPINNING_TIMED;
+    com_send_log(LOG_INFO, "MotorTest: Motor %d spinning at %.1f%% throttle for %lu ms.", motorNum + 1, throttle * 100.0f, duration_ms);
+}
+
+void MotorTask::startContinuousMotorTest(uint8_t motorNum, float throttle) {
+    // TODO: Add check if flight controller is armed. If armed, do not start test.
+    if (motorNum >= NUM_MOTORS) {
+        com_send_log(LOG_ERROR, "MotorTest: Invalid motor number %d.", motorNum);
+        return;
+    }
+    if (throttle < 0.0f || throttle > 1.0f) { // Assuming throttle is normalized 0-1
+        com_send_log(LOG_ERROR, "MotorTest: Invalid throttle percentage %f. Must be between 0 and 1.", throttle);
+        return;
+        }
+
+    stopMotorTest(); // Stop any ongoing test first
+
+    _testMotorNum = motorNum;
+    _testThrottle = throttle;
+    _motorTestState = SPINNING_CONTINUOUS;
+    com_send_log(LOG_INFO, "MotorTest: Motor %d spinning continuously at %.1f%% throttle. Send 'motor stop' to stop.", motorNum + 1, throttle * 100.0f);
+}
+
+void MotorTask::stopMotorTest() {
+    if (_motorTestState != IDLE) {
+        _motorTestState = IDLE;
+        _testMotorNum = 0;
+        _testThrottle = 0.0f;
+        _testDuration = 0;
+        _testStartTime = 0;
+        for (int i = 0; i < NUM_MOTORS; ++i) {
+            if (_dshot_drivers[i]) {
+                _dshot_drivers[i]->sendThrottle(0); // Stop all motors
+            }
+        }
+        com_send_log(LOG_INFO, "MotorTest: All motors stopped.");
     }
 }

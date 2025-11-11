@@ -1,6 +1,6 @@
 /**
  * @file flight32.ino
- * @brief Main entry point for the Flight32 firmware.
+ * @brief The Flight32 firmware.
  * @author Wastl Kraus
  * @date 2025-11-09
  * @license MIT

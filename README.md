@@ -25,6 +25,7 @@ Flight32 is a robust, extensible, and user-friendly firmware that turns any ESP3
 *   📊 **Real-time System Insights**: Tune and debug on the fly with a powerful, built-in terminal. Monitor CPU load, loop times, and memory usage to squeeze every drop of performance out of your hardware.
 *   🎛️ **Persistent On-the-Fly Tuning**: A full PID controller and complete channel mapping are easily adjustable via the terminal, with all settings saved persistently to non-volatile storage.
 *   📡 **Extensible Receiver & IMU Support**: Built with a generic task structure to easily support new receiver protocols (currently IBUS, PPM) and IMU sensors (currently MPU6050).
+*   🔧 **Configurable MPU6050**: Fine-tune your MPU6050 with configurable gyroscope range, accelerometer range, and low-pass filter settings, along with improved temperature accuracy.
 *   ⚙️ **DShot Motor Control**: Precise and efficient digital motor control using the ESP32's RMT peripheral.
 
 ## 🎬 Terminal in Action
@@ -35,13 +36,13 @@ Get immediate insight into the system's performance with the `tasks` command.
 [Flight32 ~]$ tasks
 
 Task Name        State      Prio   CPU %    Loop (us)  Avg (us)   Max (us)   Stack HWM (bytes)
--------------------------------------------------------------------------------------------------
-IMU / Sensor     Waiting    5      2.51     123        125        180        1844
-RX / Receiver    Waiting    4      1.88     89         90         145        2112
-PID Controller   Waiting    4      3.15     250        252        310        2876
-MOTORS / DShot   Waiting    3      0.95     45         46         98         1560
-CLI / Terminal   Running    1      0.50     22         24         75         3452
--------------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------------------------------------
+RX / Receiver    Waiting    4      0.06     1          0          7          3556
+IMU / Sensor     Waiting    5      1.29     351        354        488        2716
+MOTORS / DShot   Waiting    3      0.70     100        100        285        3112
+PID Controller   Waiting    4      10.76    1766       1744       1998       2516
+CLI / Terminal   Running    1      0.03     7          7          34         7216
+-------------------------------------------------------------------------------------------------------------------
 ```
 
 ## 🏁 Quick Start
@@ -49,7 +50,7 @@ CLI / Terminal   Running    1      0.50     22         24         75         345
 Get your drone in the air in just a few minutes.
 
 1.  **Install Board Support**: Make sure you have the **ESP32 board package** installed in your Arduino environment.
-2.  **Compile & Upload**: Open `flight32.ino` in the Arduino IDE, select your board and port, and hit upload.
+2.  **Compile & Upload**: Open `flight32.ino` in the Arduino IDE, select your board and port, and hit upload. The IMU will automatically calibrate on every boot.
 
 #### For Power Users (Arduino CLI)
 

@@ -11,6 +11,7 @@
 #include <cstdint>
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
+#include <ESP32_MPU6050.h>
 
 // A structure to hold IMU data
 struct ImuData
@@ -26,6 +27,10 @@ struct ImuAxisData
     float x, y, z;
 };
 
+struct ImuQuaternionData
+{
+    float w, x, y, z;
+};
 class ImuSensor
 {
 public:
@@ -33,7 +38,7 @@ public:
 
     // Initializes the sensor.
     // Returns true if initialization was successful, false otherwise.
-    virtual bool begin() = 0;
+        virtual bool begin(uint32_t i2cClockSpeed = 1000000, bool useDMP = false, GyroRange gyroRange = GYRO_RANGE_250DPS, AccelRange accelRange = ACCEL_RANGE_2G, LpfBandwidth lpf = LPF_256HZ_N_0MS) = 0;
 
     // Calibrates the sensor (e.g., gyro).
     virtual void calibrate() = 0;
@@ -55,6 +60,7 @@ public:
     virtual void setGyroscopeOffset(const ImuAxisData &offset) = 0;
     virtual ImuAxisData getAccelerometerOffset() const = 0;
     virtual void setAccelerometerOffset(const ImuAxisData &offset) = 0;
+    virtual ImuQuaternionData getQuaternion() const { return {0, 0, 0, 0}; };
 
 protected:
     ImuData _data = {};

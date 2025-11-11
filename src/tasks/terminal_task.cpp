@@ -26,6 +26,7 @@ const Command TerminalTask::_commands[] = {
     {"tasks", &TerminalTask::_handle_tasks, "Shows information about running tasks.", CommandCategory::SYSTEM},
     {"mem", &TerminalTask::_handle_mem, "Shows current memory usage.", CommandCategory::SYSTEM},
     {"reboot", &TerminalTask::_handle_reboot, "Reboots the ESP32.", CommandCategory::SYSTEM},
+    {"quit", &TerminalTask::_handle_quit, "Exits the terminal session.", CommandCategory::SYSTEM},
 
     {"get imu.data", &TerminalTask::_handle_imu_data, "Displays the latest IMU readings.", CommandCategory::IMU},
     {"get imu.config", &TerminalTask::_handle_imu_config, "Shows the current IMU settings.", CommandCategory::IMU},
@@ -59,7 +60,9 @@ const Command TerminalTask::_commands[] = {
     {"set rx.channel.aux3", &TerminalTask::_handle_rx_channel_mapping, "Sets the RX Auxiliary 3 channel index (1-based).", CommandCategory::RX},
     {"set rx.channel.aux4", &TerminalTask::_handle_rx_channel_mapping, "Sets the RX Auxiliary 4 channel index (1-based).", CommandCategory::RX},
 
-    {"set motor.throttle", &TerminalTask::_handle_motor_throttle, "Sets the throttle for a specific motor (e.g., 'set motor.throttle 0 1000').", CommandCategory::MOTOR},
+    {"set motor.throttle", &TerminalTask::_handle_motor_throttle, "Sets the throttle for a specific motor (e.g., 'set motor.throttle FL 1000').", CommandCategory::MOTOR},
+    {"motor test", &TerminalTask::_handle_motor_test, "Tests individual motors (e.g., 'motor test FL 20 5000' for motor FL at 20% for 5s).", CommandCategory::MOTOR},
+    {"motor stop", &TerminalTask::_handle_motor_stop, "Stops all motors from testing.", CommandCategory::MOTOR},
 
     {"get pid", &TerminalTask::_handle_pid_get, "Gets the current PID gains.", CommandCategory::PID},
     {"set pid", &TerminalTask::_handle_pid_set, "Sets a PID gain (e.g., 'set pid roll p 0.1').", CommandCategory::PID},
@@ -91,7 +94,8 @@ TerminalTask::TerminalTask(const char *name, uint32_t stackSize, UBaseType_t pri
       _rx_task(rx_task),
       _motor_task(motor_task),
       _pid_task(pid_task),
-      _settings_manager(settings_manager)
+      _settings_manager(settings_manager),
+      _should_quit(false)
 {
 }
 
@@ -102,7 +106,7 @@ void TerminalTask::setup()
 
 void TerminalTask::run()
 {
-    while (Serial.available() > 0)
+    while (!_should_quit && Serial.available() > 0)
     {
         char incoming_char = Serial.read();
         if (incoming_char == '\n' || incoming_char == '\r')
@@ -112,7 +116,9 @@ void TerminalTask::run()
                 TerminalTask::_parse_command(_input_buffer);
                 _input_buffer = "";
             }
-            TerminalTask::_show_prompt();
+            if (!_should_quit) { // Only show prompt if not quitting
+                TerminalTask::_show_prompt();
+            }
         }
         else if (isPrintable(incoming_char))
         {
@@ -234,12 +240,28 @@ void TerminalTask::_handle_help(String &args)
             max_command_name_len = strlen("Command");
         }
 
+        int max_description_len = strlen("Description"); // Start with header length
+        for (int i = 0; i < _num_commands; ++i)
+        {
+            if (_commands[i].category == requested_category)
+            {
+                int len = strlen(_commands[i].help);
+                if (len > max_description_len)
+                {
+                    max_description_len = len;
+                }
+            }
+        }
+
         com_send_log(TERMINAL_OUTPUT, "  %-*s %s", max_command_name_len, "Command", "Description");
         String separator = "  ";
         for (int i = 0; i < max_command_name_len; ++i) {
             separator += "-";
         }
-        separator += "--------------------------------------------------"; 
+        separator += " "; // Space between command and description separator
+        for (int i = 0; i < max_description_len; ++i) {
+            separator += "-";
+        }
         com_send_log(TERMINAL_OUTPUT, separator.c_str());
 
         for (int i = 0; i < _num_commands; ++i)
@@ -440,6 +462,16 @@ void TerminalTask::_handle_reboot(String &args)
     com_send_log(TERMINAL_OUTPUT, "");
 
     ESP.restart();
+}
+
+void TerminalTask::_handle_quit(String &args) {
+    com_send_log(TERMINAL_OUTPUT, "Saving settings and exiting...");
+    if (_motor_task && _motor_task->isInTestMode()) {
+        _motor_task->stopMotorTest();
+    }
+    _settings_manager->saveSettings(); // Save settings before quitting
+    com_send_log(TERMINAL_OUTPUT, "Goodbye!");
+    _should_quit = true;
 }
 
 void TerminalTask::_handle_imu_data(String &args)
@@ -661,19 +693,19 @@ void TerminalTask::_handle_motor_throttle(String &args)
     int space_index = args.indexOf(' ');
     if (space_index == -1)
     {
-        com_send_log(LOG_ERROR, "Usage: motor.throttle <motor_id> <throttle_value>");
+        com_send_log(LOG_ERROR, "Usage: motor.throttle <motor_name> <throttle_value>");
         return;
     }
 
-    String motor_id_str = args.substring(0, space_index);
+    String motor_name_str = args.substring(0, space_index);
     String throttle_str = args.substring(space_index + 1);
 
-    uint8_t motor_id = motor_id_str.toInt();
+    int8_t motor_id = _get_motor_id(motor_name_str);
     uint16_t throttle_value = throttle_str.toInt();
 
-    if (motor_id >= NUM_MOTORS)
+    if (motor_id == -1)
     {
-        com_send_log(LOG_ERROR, "Invalid motor ID: %d. Must be between 0 and %d.", motor_id, NUM_MOTORS - 1);
+        com_send_log(LOG_ERROR, "Invalid motor name: %s. Must be FL, FR, RL, or RR.", motor_name_str.c_str());
         return;
     }
 
@@ -684,7 +716,61 @@ void TerminalTask::_handle_motor_throttle(String &args)
     }
 
     _motor_task->setThrottle(motor_id, throttle_value);
-    com_send_log(TERMINAL_OUTPUT, "Motor %d throttle set to %d.", motor_id, throttle_value);
+    com_send_log(TERMINAL_OUTPUT, "Motor %s throttle set to %d.", _get_motor_name(motor_id), throttle_value);
+}
+
+void TerminalTask::_handle_motor_test(String &args) {
+    if (!TerminalTask::_check_motor_task_available()) return;
+    if (_pid_task && _pid_task->isArmed()) {
+        com_send_log(LOG_ERROR, "Cannot run motor test while armed. Disarm first.");
+        return;
+    }
+
+    int8_t motor_id = -1;
+    float throttle_percentage = -1.0f;
+    uint32_t duration_ms = 0; // 0 for continuous
+
+    // Parse arguments: <motor_name> <throttle_percentage> [duration_ms]
+    int first_space = args.indexOf(' ');
+    if (first_space == -1) {
+        com_send_log(LOG_ERROR, "Usage: motor test <motor_name> <throttle_percentage> [duration_ms]");
+        return;
+    }
+
+    String motor_name_str = args.substring(0, first_space);
+    motor_id = _get_motor_id(motor_name_str);
+    String remaining_args = args.substring(first_space + 1);
+
+    int second_space = remaining_args.indexOf(' ');
+    if (second_space == -1) { // No duration_ms provided, continuous spin
+        throttle_percentage = remaining_args.toFloat();
+    } else { // Duration_ms provided
+        throttle_percentage = remaining_args.substring(0, second_space).toFloat();
+        duration_ms = remaining_args.substring(second_space + 1).toInt();
+    }
+
+    if (motor_id == -1) {
+        com_send_log(LOG_ERROR, "Invalid motor name: %s. Must be FL, FR, RL, or RR.", motor_name_str.c_str());
+        return;
+    }
+    if (throttle_percentage < 0.0f || throttle_percentage > 100.0f) {
+        com_send_log(LOG_ERROR, "Invalid throttle percentage. Must be between 0 and 100.");
+        return;
+    }
+
+    // Convert percentage to normalized 0-1 float
+    float normalized_throttle = throttle_percentage / 100.0f;
+
+    if (duration_ms > 0) {
+        _motor_task->startMotorTest(motor_id, normalized_throttle, duration_ms);
+    } else {
+        _motor_task->startContinuousMotorTest(motor_id, normalized_throttle);
+    }
+}
+
+void TerminalTask::_handle_motor_stop(String &args) {
+    if (!TerminalTask::_check_motor_task_available()) return;
+    _motor_task->stopMotorTest();
 }
 
 void TerminalTask::_handle_get_setting(String &args)
@@ -882,6 +968,24 @@ const char *TerminalTask::_format_bytes(uint32_t bytes)
         snprintf(_byte_buffer, sizeof(_byte_buffer), "%.1f MB", (float)bytes / BYTES_IN_MB);
     }
     return _byte_buffer;
+}
+
+const char* TerminalTask::_get_motor_name(uint8_t motor_id) {
+    switch ((MotorIndex)motor_id) {
+        case MotorIndex::FL: return "FL";
+        case MotorIndex::FR: return "FR";
+        case MotorIndex::RL: return "RL";
+        case MotorIndex::RR: return "RR";
+        default: return "UNKNOWN";
+    }
+}
+
+int8_t TerminalTask::_get_motor_id(String &motor_name) {
+    if (motor_name.equalsIgnoreCase("FL")) return (int8_t)MotorIndex::FL;
+    if (motor_name.equalsIgnoreCase("FR")) return (int8_t)MotorIndex::FR;
+    if (motor_name.equalsIgnoreCase("RL")) return (int8_t)MotorIndex::RL;
+    if (motor_name.equalsIgnoreCase("RR")) return (int8_t)MotorIndex::RR;
+    return -1; // Invalid motor name
 }
 
 void TerminalTask::_parse_command(String &command_line)

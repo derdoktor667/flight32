@@ -63,8 +63,10 @@ private:
     SettingsManager *_settings_manager;
 
     String _input_buffer;
+    bool _should_quit;
 
     bool _check_imu_task_available();
+    void _handle_quit(String &args);
     bool _check_rx_task_available();
     bool _check_motor_task_available();
     bool _check_pid_task_available();
@@ -85,6 +87,8 @@ private:
     void _handle_rx_value_all(String &args);
     void _handle_rx_channel_mapping(String &args);
     void _handle_motor_throttle(String &args);
+    void _handle_motor_test(String &args);
+    void _handle_motor_stop(String &args);
     void _handle_pid_get(String &args);
     void _handle_pid_set(String &args);
     void _handle_pid_reset_defaults(String &args);
@@ -109,6 +113,8 @@ private:
 
     char _byte_buffer[BYTE_BUFFER_SIZE];
     const char *_format_bytes(uint32_t bytes);
+    const char *_get_motor_name(uint8_t motor_id);
+    int8_t _get_motor_id(String &motor_name);
 
     static const char *_get_task_state_string(eTaskState state);
 };

@@ -27,12 +27,23 @@ ImuMpu6050::~ImuMpu6050()
     }
 }
 
-bool ImuMpu6050::begin()
+bool ImuMpu6050::begin(uint32_t i2cClockSpeed, bool useDMP, GyroRange gyroRange, AccelRange accelRange, LpfBandwidth lpf)
 {
-    if (!_sensor.begin((GyroRange)DEFAULT_GYRO_RANGE, AccelRange::ACCEL_RANGE_2G, LpfBandwidth::LPF_188HZ_N_2MS, 0x70))
+    _useDMP = useDMP;
+    if (!_sensor.begin(gyroRange, accelRange, lpf, i2cClockSpeed, 0x70))
     {
         com_send_log(LOG_ERROR, "Failed to find MPU6050 chip");
         return false;
+    }
+
+    if (_useDMP) {
+        com_send_log(LOG_INFO, "Initializing MPU6050 DMP...");
+        uint8_t dmpStatus = _sensor.dmpInitialize();
+        if (dmpStatus != 0) {
+            com_send_log(LOG_ERROR, "Failed to initialize DMP. DMP Status: %d", dmpStatus);
+            return false;
+        }
+        com_send_log(LOG_INFO, "MPU6050 DMP initialized.");
     }
     com_send_log(LOG_INFO, "MPU6050 Found!");
     return true;
@@ -47,17 +58,39 @@ void ImuMpu6050::calibrate()
 
 void ImuMpu6050::read()
 {
-    _sensor.update();
+    if (_useDMP) {
+        // Read DMP FIFO
+        uint8_t fifoBuffer[128]; // MPU6050_DMP_PACKET_SIZE is 28, so 128 is enough for multiple packets
+        Quaternion q;
 
-    if (xSemaphoreTake(_data_mutex, portMAX_DELAY) == pdTRUE) {
-        _data.accelX = _sensor.readings.accelerometer.x;
-        _data.accelY = _sensor.readings.accelerometer.y;
-        _data.accelZ = _sensor.readings.accelerometer.z;
-        _data.gyroX = _sensor.readings.gyroscope.x;
-        _data.gyroY = _sensor.readings.gyroscope.y;
-        _data.gyroZ = _sensor.readings.gyroscope.z;
-        _data.temp = _sensor.readings.temperature_celsius;
-        xSemaphoreGive(_data_mutex);
+        if (_sensor.dmpPacketAvailable()) {
+            if (_sensor.dmpGetCurrentFIFOPacket(fifoBuffer) == 0) {
+                _sensor.dmpGetQuaternion(&q, fifoBuffer);
+
+                if (xSemaphoreTake(_data_mutex, portMAX_DELAY) == pdTRUE) {
+                    _quaternion.w = q.w;
+                    _quaternion.x = q.x;
+                    _quaternion.y = q.y;
+                    _quaternion.z = q.z;
+                    // For now, we are not populating accel/gyro/temp from DMP output directly into _data
+                    // If needed, dmpGetAccel and dmpGetGyro can be used here.
+                    xSemaphoreGive(_data_mutex);
+                }
+            }
+        }
+    } else {
+        _sensor.update();
+                                                                                                                                                                                 
+        if (xSemaphoreTake(_data_mutex, portMAX_DELAY) == pdTRUE) {                                                                                                                  
+            _data.accelX = _sensor.readings.accelerometer.x;                                                                                                                         
+            _data.accelY = _sensor.readings.accelerometer.y;                                                                                                                         
+            _data.accelZ = _sensor.readings.accelerometer.z;                                                                                                                         
+            _data.gyroX = _sensor.readings.gyroscope.x;                                                                                                                              
+            _data.gyroY = _sensor.readings.gyroscope.y;                                                                                                                              
+            _data.gyroZ = _sensor.readings.gyroscope.z;                                                                                                                              
+            _data.temp = _sensor.readings.temperature_celsius;                                                                                                                       
+            xSemaphoreGive(_data_mutex);                                                                                                                                             
+        }
     }
 }
 
@@ -81,4 +114,13 @@ ImuAxisData ImuMpu6050::getAccelerometerOffset() const
 void ImuMpu6050::setAccelerometerOffset(const ImuAxisData &offset)
 {
     _sensor.setAccelerometerOffset({offset.x, offset.y, offset.z});
+}
+
+ImuQuaternionData ImuMpu6050::getQuaternion() const {
+    ImuQuaternionData temp_quat = {0, 0, 0, 0};
+    if (xSemaphoreTake(_data_mutex, portMAX_DELAY) == pdTRUE) {
+        temp_quat = _quaternion;
+        xSemaphoreGive(_data_mutex);
+    }
+    return temp_quat;
 }

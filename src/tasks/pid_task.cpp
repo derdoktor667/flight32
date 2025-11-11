@@ -22,7 +22,8 @@ PidTask::PidTask(const char *name, uint32_t stack_size, UBaseType_t priority, Ba
       _settings_manager(settings_manager),
       _pid_roll(DEFAULT_PID_ROLL_P, DEFAULT_PID_ROLL_I, DEFAULT_PID_ROLL_D),
       _pid_pitch(DEFAULT_PID_PITCH_P, DEFAULT_PID_PITCH_I, DEFAULT_PID_PITCH_D),
-      _pid_yaw(DEFAULT_PID_YAW_P, DEFAULT_PID_YAW_I, DEFAULT_PID_YAW_D)
+      _pid_yaw(DEFAULT_PID_YAW_P, DEFAULT_PID_YAW_I, DEFAULT_PID_YAW_D),
+      _isArmed(false)
 {
 }
 
@@ -38,6 +39,9 @@ void PidTask::run()
     int constrained_pitch = constrain(_rx_task->getChannel(_settings_manager->getSettingValue(SettingsManager::KEY_RC_CHANNEL_PITCH).toInt()), RC_CHANNEL_MIN_RAW, RC_CHANNEL_MAX_RAW);
     int constrained_yaw = constrain(_rx_task->getChannel(_settings_manager->getSettingValue(SettingsManager::KEY_RC_CHANNEL_YAW).toInt()), RC_CHANNEL_MIN_RAW, RC_CHANNEL_MAX_RAW);
     int constrained_throttle = constrain(_rx_task->getChannel(_settings_manager->getSettingValue(SettingsManager::KEY_RC_CHANNEL_THRO).toInt()), RC_CHANNEL_MIN_RAW, RC_CHANNEL_MAX_RAW);
+    int arm_channel_value = _rx_task->getChannel(_settings_manager->getSettingValue(SettingsManager::KEY_RC_CHANNEL_ARM).toInt());
+
+    _isArmed = (arm_channel_value > RC_CHANNEL_ARM_THRESHOLD);
 
     float desired_roll_rate = (constrained_roll - RC_CHANNEL_CENTER) / RC_CHANNEL_RANGE_SYMMETRIC;
     float desired_pitch_rate = (constrained_pitch - RC_CHANNEL_CENTER) / RC_CHANNEL_RANGE_SYMMETRIC;
