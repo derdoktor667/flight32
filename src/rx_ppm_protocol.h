@@ -9,20 +9,20 @@
 #pragma once
 
 #include "rx_protocol.h"
-#include <Arduino.h> // For pin functions
+#include <Arduino.h>
 
 // Configuration for PPM
-static constexpr uint8_t PPM_MAX_CHANNELS = 8; // Max channels to read
-static constexpr uint16_t PPM_MIN_PULSE_WIDTH = 700; // us
-static constexpr uint16_t PPM_MAX_PULSE_WIDTH = 2300; // us
-static constexpr uint16_t PPM_FRAME_LENGTH_MIN = 3000; // us (min time between frames)
-static constexpr uint8_t PPM_CONNECTION_TIMEOUT_FACTOR = 2; // Multiplier for PPM_FRAME_LENGTH_MIN to determine connection timeout
+static constexpr uint8_t PPM_MAX_CHANNELS = 8;
+static constexpr uint16_t PPM_MIN_PULSE_WIDTH = 700;
+static constexpr uint16_t PPM_MAX_PULSE_WIDTH = 2300;
+static constexpr uint16_t PPM_FRAME_LENGTH_MIN = 3000;
+static constexpr uint8_t PPM_CONNECTION_TIMEOUT_FACTOR = 2;
 
 class RxPpmProtocol : public RxProtocol
 {
 public:
     RxPpmProtocol();
-    void begin(uint8_t uart_num, uint8_t rx_pin, uint8_t tx_pin, uint32_t baud_rate) override; // uart_num, tx_pin, baud_rate are ignored for PPM
+    void begin(uint8_t uart_num, uint8_t rx_pin, uint8_t tx_pin, uint32_t baud_rate) override;
     bool readChannels() override;
     int16_t getChannelValue(uint8_t channel) override;
     bool isConnected() override;
@@ -38,6 +38,5 @@ private:
     volatile bool _new_data_available;
     volatile bool _is_connected;
 
-    // Private static instance for ISR
     static RxPpmProtocol* _instance;
 };

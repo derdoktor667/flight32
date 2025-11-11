@@ -1,11 +1,3 @@
-/**
- * @file terminal_task.cpp
- * @brief Implements the interactive command-line terminal for Flight32.
- * @author Wastl Kraus
- * @date 2025-11-09
- * @license MIT
- */
-
 #include "terminal_task.h"
 #include "../firmware.h"
 #include "../config.h"
@@ -126,7 +118,7 @@ void TerminalTask::run()
         {
             _input_buffer += incoming_char;
         }
-        else if (incoming_char == ASCII_BACKSPACE) // Backspace
+        else if (incoming_char == ASCII_BACKSPACE)
         {
             if (_input_buffer.length() > 0)
             {
@@ -136,7 +128,6 @@ void TerminalTask::run()
     }
 }
 
-//
 void TerminalTask::_handle_help(String &args)
 {
     com_send_log(TERMINAL_OUTPUT, "");
@@ -443,7 +434,6 @@ void TerminalTask::_handle_reboot(String &args)
     com_send_log(TERMINAL_OUTPUT, "");
     com_send_log(TERMINAL_OUTPUT, "Rebooting...");
 
-    // ...short break before restarting
     delayMicroseconds(ONE_SECOND_MICROSECONDS);
 
     com_send_log(TERMINAL_OUTPUT, "");
@@ -470,9 +460,6 @@ void TerminalTask::_handle_imu_config(String &args)
         return;
 
     com_send_log(TERMINAL_OUTPUT, "IMU Settings: (Note: Specific settings depend on the sensor type)");
-    // This is now generic. We can't know the specific settings of the sensor.
-    // We could add virtual functions to the ImuSensor interface to get this info.
-    // For now, we just print a generic message.
 }
 
 void TerminalTask::_handle_imu_calibrate(String &args)
@@ -495,7 +482,7 @@ void TerminalTask::_handle_rx_data(String &args)
     int max_ch_len = 0;
     for (int i = 0; i < TERMINAL_RX_DATA_DISPLAY_CHANNELS; ++i)
     {
-        String ch_str = "CH" + String(i + 1);
+        String ch_str = "CH" + String(i + RC_CHANNEL_INDEX_OFFSET);
         if (ch_str.length() > max_ch_len) {
             max_ch_len = ch_str.length();
         }
@@ -512,7 +499,7 @@ void TerminalTask::_handle_rx_data(String &args)
 
     for (int i = 0; i < TERMINAL_RX_DATA_DISPLAY_CHANNELS; ++i)
     {
-        String ch_str = "CH" + String(i + 1);
+        String ch_str = "CH" + String(i + RC_CHANNEL_INDEX_OFFSET);
         com_send_log(TERMINAL_OUTPUT, "  %-*s %d", max_ch_len, ch_str.c_str(), _rx_task->getChannel(i));
     }
     com_send_log(TERMINAL_OUTPUT, separator.c_str());
@@ -552,9 +539,8 @@ void TerminalTask::_handle_rx_value_single(String &args)
     if (!TerminalTask::_check_rx_task_available())
         return;
 
-    // Extract the channel name from the command (e.g., "roll" from "get rx.value.roll")
     int last_dot_index = args.lastIndexOf('.');
-    String channel_name = args.substring(last_dot_index + 1);
+    String channel_name = args.substring(last_dot_index + RC_CHANNEL_INDEX_OFFSET);
 
     const char *key = nullptr;
     for (const auto &mapping : _channel_map)
@@ -575,10 +561,9 @@ void TerminalTask::_handle_rx_value_single(String &args)
     int channel_index = _settings_manager->getSettingValue(key).toInt();
     int16_t value = _rx_task->getChannel(channel_index);
     
-    // "RX Flight Mode (CH14)" is likely the longest.
     const int fixed_desc_width = TERMINAL_RX_SINGLE_DESC_WIDTH;
 
-    String desc_str = "RX " + channel_name + " (CH" + String(channel_index + 1) + ")";
+    String desc_str = "RX " + channel_name + " (CH" + String(channel_index + RC_CHANNEL_INDEX_OFFSET) + ")";
     com_send_log(TERMINAL_OUTPUT, "  %-*s %d", fixed_desc_width, desc_str.c_str(), value);
 }
 
@@ -589,35 +574,31 @@ void TerminalTask::_handle_rx_value_all(String &args)
 
     com_send_log(TERMINAL_OUTPUT, "All Mapped RX Channels:");
 
-    // Calculate max length for the descriptive part (e.g., "Roll (CHX)")
     int max_desc_len = 0;
     for (const auto &mapping : _channel_map)
     {
-        int channel_index_1_based = _settings_manager->getSettingValue(mapping.key).toInt() + 1;
-        // Format: "Name (CHX)"
+        int channel_index_1_based = _settings_manager->getSettingValue(mapping.key).toInt() + RC_CHANNEL_INDEX_OFFSET;
         String desc_str = String(mapping.name) + " (CH" + String(channel_index_1_based) + ")";
         if (desc_str.length() > max_desc_len)
         {
             max_desc_len = desc_str.length();
         }
     }
-    max_desc_len += TERMINAL_COLUMN_BUFFER_WIDTH; // Add a small buffer
+    max_desc_len += TERMINAL_COLUMN_BUFFER_WIDTH;
 
-    // Print header
     com_send_log(TERMINAL_OUTPUT, "  %-*s %s", max_desc_len, "Channel", "Value");
     String separator = "  ";
     for (int i = 0; i < max_desc_len; ++i)
     {
         separator += "-";
     }
-    separator += "--------------------"; // Fixed length for value part
+    separator += "--------------------";
     com_send_log(TERMINAL_OUTPUT, separator.c_str());
 
-    // Print all mapped channels
     for (const auto &mapping : _channel_map)
     {
         int channel_index_0_based = _settings_manager->getSettingValue(mapping.key).toInt();
-        int channel_index_1_based = channel_index_0_based + 1;
+        int channel_index_1_based = channel_index_0_based + RC_CHANNEL_INDEX_OFFSET;
         int16_t value = _rx_task->getChannel(channel_index_0_based);
         String desc_str = String(mapping.name) + " (CH" + String(channel_index_1_based) + ")";
         com_send_log(TERMINAL_OUTPUT, "  %-*s %d", max_desc_len, desc_str.c_str(), value);
@@ -627,7 +608,6 @@ void TerminalTask::_handle_rx_value_all(String &args)
 
 void TerminalTask::_handle_rx_channel_mapping(String &args)
 {
-    // Expected format: <channel_name> <channel_index_1_based>
     int space_index = args.indexOf(' ');
     if (space_index == -1)
     {
@@ -636,17 +616,16 @@ void TerminalTask::_handle_rx_channel_mapping(String &args)
     }
 
     String channel_name_arg = args.substring(0, space_index);
-    String index_str = args.substring(space_index + 1);
+    String index_str = args.substring(space_index + RC_CHANNEL_INDEX_OFFSET);
     int channel_index_1_based = index_str.toInt();
 
-    if (channel_index_1_based < TERMINAL_MIN_CHANNEL_INDEX || channel_index_1_based > TERMINAL_MAX_CHANNEL_INDEX) // Assuming max 14 channels
+    if (channel_index_1_based < TERMINAL_MIN_CHANNEL_INDEX || channel_index_1_based > TERMINAL_MAX_CHANNEL_INDEX)
     {
         com_send_log(LOG_ERROR, "Invalid channel index: %d. Must be between %d and %d.", channel_index_1_based, TERMINAL_MIN_CHANNEL_INDEX, TERMINAL_MAX_CHANNEL_INDEX);
         return;
     }
 
-    // Convert 1-based to 0-based for internal use
-    int channel_index_0_based = channel_index_1_based - 1;
+    int channel_index_0_based = channel_index_1_based - RC_CHANNEL_INDEX_OFFSET;
 
     const char *key = nullptr;
     for (const auto &mapping : _channel_map)
@@ -679,7 +658,6 @@ void TerminalTask::_handle_motor_throttle(String &args)
     if (!TerminalTask::_check_motor_task_available())
         return;
 
-    // Parse arguments: <motor_id> <throttle_value>
     int space_index = args.indexOf(' ');
     if (space_index == -1)
     {
@@ -840,8 +818,6 @@ void TerminalTask::_handle_dump_settings(String &args)
     com_send_log(TERMINAL_OUTPUT, "\n# End of Dump");
 }
 
-// --- Helper Functions ---
-
 bool TerminalTask::_check_imu_task_available()
 {
     if (!_imu_task)
@@ -956,9 +932,8 @@ void TerminalTask::_handle_pid_get(String &args)
     if (!TerminalTask::_check_pid_task_available())
         return;
 
-    com_send_log(TERMINAL_OUTPUT, "PID Gains (scaled by 100):");
+    com_send_log(TERMINAL_OUTPUT, "PID Gains (scaled by %d):", (int)PID_SCALE_FACTOR);
 
-    // Calculate max length for labels
     int max_label_len = 0;
     const char* labels[] = {"Roll:", "Pitch:", "Yaw:"};
     for (int i = 0; i < sizeof(labels) / sizeof(labels[0]); ++i) {
@@ -967,15 +942,14 @@ void TerminalTask::_handle_pid_get(String &args)
             max_label_len = len;
         }
     }
-    max_label_len += TERMINAL_COLUMN_BUFFER_WIDTH; // Add a small buffer
+    max_label_len += TERMINAL_COLUMN_BUFFER_WIDTH;
 
-    // Print header
     com_send_log(TERMINAL_OUTPUT, "  %-*s %s", max_label_len, "Axis", "Gains (P, I, D)");
     String separator = "  ";
     for (int i = 0; i < max_label_len; ++i) {
         separator += "-";
     }
-    separator += "-------------------------"; // Fixed length for "Gains (P, I, D)" part
+    separator += "-------------------------";
     com_send_log(TERMINAL_OUTPUT, separator.c_str());
 
     com_send_log(TERMINAL_OUTPUT, "  %-*s P=%d, I=%d, D=%d", max_label_len, "Roll:",
@@ -998,17 +972,16 @@ void TerminalTask::_handle_pid_set(String &args)
     if (!TerminalTask::_check_pid_task_available())
         return;
 
-    // Parse arguments: <axis> <p|i|d> <value>
     int first_space = args.indexOf(' ');
     if (first_space == -1)
     {
-        com_send_log(LOG_ERROR, "Usage: set pid <axis> <p|i|d> <value> (value is scaled by 100)");
+        com_send_log(LOG_ERROR, "Usage: set pid <axis> <p|i|d> <value> (value is scaled by %d)", (int)PID_SCALE_FACTOR);
         return;
     }
     int second_space = args.indexOf(' ', first_space + 1);
     if (second_space == -1)
     {
-        com_send_log(LOG_ERROR, "Usage: set pid <axis> <p|i|d> <value> (value is scaled by 100)");
+        com_send_log(LOG_ERROR, "Usage: set pid <axis> <p|i|d> <value> (value is scaled by %d)", (int)PID_SCALE_FACTOR);
         return;
     }
 
@@ -1036,7 +1009,6 @@ void TerminalTask::_handle_pid_set(String &args)
     }
 
     PidGains gains = _pid_task->getGains(axis);
-    // Parse as integer and scale down to float
     int int_value = value_str.toInt();
     float value = (float)int_value / PID_SCALE_FACTOR;
 

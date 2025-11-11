@@ -1,13 +1,6 @@
-/**
- * @file rx_ppm_protocol.cpp
- * @brief PPM implementation of the RxProtocol interface.
- * @author Wastl Kraus
- * @date 2025-11-09
- * @license MIT
- */
-
 #include "rx_ppm_protocol.h"
-#include "com_manager.h" // For logging
+#include "com_manager.h"
+#include "config.h"
 
 // Initialize static member
 RxPpmProtocol* RxPpmProtocol::_instance = nullptr;
@@ -17,14 +10,14 @@ RxPpmProtocol::RxPpmProtocol()
 {
     for (uint8_t i = 0; i < PPM_MAX_CHANNELS; ++i)
     {
-        _channel_values[i] = 0; // Initialize with a default value
+        _channel_values[i] = RC_CHANNEL_CENTER;
     }
-    _instance = this; // Set the static instance
+    _instance = this;
 }
 
 void RxPpmProtocol::begin(uint8_t uart_num, uint8_t rx_pin, uint8_t tx_pin, uint32_t baud_rate)
 {
-    _ppm_pin = rx_pin; // For PPM, rx_pin is the signal pin
+    _ppm_pin = rx_pin;
     pinMode(_ppm_pin, INPUT);
     attachInterrupt(digitalPinToInterrupt(_ppm_pin), RxPpmProtocol::ppmISR, CHANGE);
     com_send_log(LOG_INFO, "PPM Protocol: Initializing on pin %d", _ppm_pin);
@@ -35,10 +28,10 @@ bool RxPpmProtocol::readChannels()
     if (_new_data_available)
     {
         _new_data_available = false;
-        _is_connected = true; // Assume connected if new data is available
+        _is_connected = true;
         return true;
     }
-    _is_connected = (micros() - _last_pulse_time < (PPM_FRAME_LENGTH_MIN * PPM_CONNECTION_TIMEOUT_FACTOR)); // Check for recent pulses
+    _is_connected = (micros() - _last_pulse_time < (PPM_FRAME_LENGTH_MIN * PPM_CONNECTION_TIMEOUT_FACTOR));
     return false;
 }
 
@@ -48,7 +41,7 @@ int16_t RxPpmProtocol::getChannelValue(uint8_t channel)
     {
         return _channel_values[channel];
     }
-    return 0; // Invalid channel
+    return INVALID_CHANNEL_VALUE;
 }
 
 bool RxPpmProtocol::isConnected()
@@ -56,7 +49,6 @@ bool RxPpmProtocol::isConnected()
     return _is_connected;
 }
 
-// Static ISR handler
 void IRAM_ATTR RxPpmProtocol::ppmISR()
 {
     if (_instance == nullptr) return;
@@ -65,11 +57,11 @@ void IRAM_ATTR RxPpmProtocol::ppmISR()
     uint32_t pulse_width = current_time - _instance->_last_pulse_time;
     _instance->_last_pulse_time = current_time;
 
-    if (pulse_width > PPM_FRAME_LENGTH_MIN) // Start of a new PPM frame (sync pulse)
+    if (pulse_width > PPM_FRAME_LENGTH_MIN)
     {
         _instance->_current_channel = 0;
     }
-    else if (_instance->_current_channel < PPM_MAX_CHANNELS) // Channel pulse
+    else if (_instance->_current_channel < PPM_MAX_CHANNELS)
     {
         if (pulse_width >= PPM_MIN_PULSE_WIDTH && pulse_width <= PPM_MAX_PULSE_WIDTH)
         {

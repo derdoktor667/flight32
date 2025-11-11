@@ -1,16 +1,8 @@
-/**
- * @file settings_manager.h
- * @brief Manages persistent settings for the Flight32 firmware using NVS.
- * @author Wastl Kraus
- * @date 2025-11-09
- * @license MIT
- */
-
 #pragma once
 
 #include <Preferences.h>
 #include <Arduino.h>
-#include "imu_sensor.h" // For ImuAxisData
+#include "imu_sensor.h"
 
 class SettingsManager
 {
@@ -24,20 +16,17 @@ public:
     void listSettings();
     void dumpSettings();
 
-    // --- Getter and Setter Methods ---
     String getSettingValue(const char *key);
     bool setSettingValue(const char *key, const String &value_str);
     const char *getSettingDescription(const char *key);
     String getSettingValueHumanReadable(const char *key);
     const char *getInternalKeyFromDisplayKey(const char *display_key);
 
-    // --- Offset Getters/Setters ---
     ImuAxisData getGyroOffsets();
     void setGyroOffsets(const ImuAxisData &offsets);
     ImuAxisData getAccelOffsets();
     void setAccelOffsets(const ImuAxisData &offsets);
 
-    // --- NVS Keys (max 15 chars) ---
     static constexpr const char *KEY_SYSTEM_NAME = "system.name";
     static constexpr const char *DEFAULT_SYSTEM_NAME = "Flight32";
     static constexpr const char *KEY_MPU_GYRO_RANGE = "mpu.g_range";
@@ -46,7 +35,6 @@ public:
     static constexpr const char *KEY_RC_PROTOCOL_TYPE = "rc.protocol";
     static constexpr const char *KEY_RX_PIN = "rx.pin";
 
-    // --- RC Channel Mapping Keys ---
     static constexpr const char *KEY_RC_CHANNEL_ROLL = "rc.ch.roll";
     static constexpr const char *KEY_RC_CHANNEL_PITCH = "rc.ch.pitch";
     static constexpr const char *KEY_RC_CHANNEL_THRO = "rc.ch.thro";
@@ -58,7 +46,6 @@ public:
     static constexpr const char *KEY_RC_CHANNEL_AUX3 = "rc.ch.aux3";
     static constexpr const char *KEY_RC_CHANNEL_AUX4 = "rc.ch.aux4";
 
-    // --- IMU Offset Keys ---
     static constexpr const char *KEY_MPU_GYRO_OFF_X = "mpu.g_off.x";
     static constexpr const char *KEY_MPU_GYRO_OFF_Y = "mpu.g_off.y";
     static constexpr const char *KEY_MPU_GYRO_OFF_Z = "mpu.g_off.z";
@@ -66,11 +53,12 @@ public:
     static constexpr const char *KEY_MPU_ACCEL_OFF_Y = "mpu.a_off.y";
     static constexpr const char *KEY_MPU_ACCEL_OFF_Z = "mpu.a_off.z";
 
-    // --- Gyroscope Range Mappings ---
     static const char *GYRO_RANGE_STRINGS[];
     static const uint8_t NUM_GYRO_RANGES;
 
-    // --- Settings Metadata (Made public for terminal access) ---
+    static const char *RC_PROTOCOL_STRINGS[];
+    static const uint8_t NUM_RC_PROTOCOLS;
+
     enum SettingType
     {
         UINT8,

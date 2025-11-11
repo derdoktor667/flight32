@@ -31,6 +31,7 @@ static constexpr uint8_t TERMINAL_TASK_DELAY_MS = 50;
 static constexpr uint32_t COM_TASK_STACK_SIZE = 4096;
 static constexpr uint8_t COM_TASK_PRIORITY = 2;
 static constexpr uint8_t COM_QUEUE_LENGTH = 20;
+static constexpr uint8_t COM_FLUSH_QUEUE_LENGTH = 1;
 static constexpr uint16_t COM_MESSAGE_MAX_LENGTH = 256;
 static constexpr uint32_t COM_TASK_STARTUP_DELAY_MS = 10;
 
@@ -59,6 +60,7 @@ static constexpr uint8_t RX_TASK_PRIORITY = 4;
 static constexpr int8_t RX_TASK_CORE = 1;
 static constexpr uint8_t RX_TASK_DELAY_MS = 20;
 static constexpr uint8_t IBUS_UART_NUM = 2;
+static constexpr HardwareSerial &IBUS_SERIAL_PORT = Serial2;
 static constexpr uint8_t IBUS_RX_PIN = 16;
 static constexpr uint8_t IBUS_TX_PIN = 17;
 static constexpr uint32_t IBUS_BAUD_RATE = 115200;
@@ -86,14 +88,33 @@ static constexpr uint8_t MOTOR_TASK_PRIORITY = 3;
 static constexpr int8_t MOTOR_TASK_CORE = 1;
 static constexpr uint8_t MOTOR_TASK_DELAY_MS = 10;
 static constexpr uint8_t NUM_MOTORS = 4;
-static constexpr uint8_t MOTOR_PIN_FR = 25;              // Front Right
-static constexpr uint8_t MOTOR_PIN_RL = 26;              // Rear Left
-static constexpr uint8_t MOTOR_PIN_FL = 33;              // Front Left
-static constexpr uint8_t MOTOR_PIN_RR = 27;              // Rear Right
-static constexpr dshot_mode_t DSHOT_PROTOCOL = DSHOT300; // DSHOT150, DSHOT300, DSHOT600, DSHOT1200
+static constexpr uint8_t MOTOR_PIN_FR = 25;
+static constexpr uint8_t MOTOR_PIN_RL = 26;
+static constexpr uint8_t MOTOR_PIN_FL = 33;
+static constexpr uint8_t MOTOR_PIN_RR = 27;
+static constexpr dshot_mode_t DSHOT_PROTOCOL = DSHOT300;
 static const int MOTOR_PINS_ARRAY[NUM_MOTORS] = {MOTOR_PIN_RR, MOTOR_PIN_FR, MOTOR_PIN_RL, MOTOR_PIN_FL};
 static constexpr uint16_t MOTOR_MIN_THROTTLE_RAW = 48;
 static constexpr uint16_t MOTOR_MAX_THROTTLE_RAW = 2047;
+static constexpr uint16_t THROTTLE_DEADZONE_THRESHOLD = 100; // Raw RC value below which motors are disarmed/stopped
+
+enum class DshotProtocolIndex : uint8_t
+{
+    DSHOT150 = 0,
+    DSHOT300 = 1,
+    DSHOT600 = 2,
+    DSHOT1200 = 3
+};
+
+enum class MotorIndex : uint8_t
+{
+    RR = 0, // Rear Right
+    FR = 1, // Front Right
+    RL = 2, // Rear Left
+    FL = 3  // Front Left
+};
+
+static constexpr uint8_t FIRST_MOTOR_INDEX = 0;
 
 // --- PID Task Configuration ---
 static constexpr uint32_t PID_TASK_STACK_SIZE = 4096;
@@ -134,6 +155,7 @@ static constexpr uint8_t NUM_DSHOT_PROTOCOLS = sizeof(DSHOT_PROTOCOL_STRINGS) / 
 static constexpr const char *SETTINGS_NAMESPACE = "flight32";
 static constexpr uint16_t CURRENT_SCHEMA_VERSION = 2;
 static constexpr const char *KEY_SCHEMA_VERSION = "schema_ver";
+static constexpr uint16_t DEFAULT_SCHEMA_VERSION = 0;
 static constexpr uint8_t DEFAULT_GYRO_RANGE = 2; // Corresponds to 1000_DPS in GYRO_RANGE_STRINGS
 
 // --- Sensor ---
@@ -147,6 +169,10 @@ static constexpr uint32_t BYTES_IN_MB = (1024 * 1024);
 static constexpr uint8_t ASCII_BACKSPACE = 127;
 static constexpr int8_t INVALID_SETTING_VALUE = -1;
 static constexpr uint8_t UINT8_MAX_VALUE = 255;
+static constexpr uint8_t BYTE_BUFFER_SIZE = 15;
+
+// --- Time Constants ---
+static constexpr float MS_TO_SECONDS_FACTOR = 1000.0f;
 
 // --- Terminal Formatting Constants ---
 static constexpr uint8_t TASK_NAME_COLUMN_WIDTH = 16;
@@ -157,6 +183,7 @@ static constexpr uint8_t TASK_LOOP_COLUMN_WIDTH = 10;
 static constexpr uint8_t TASK_AVG_LOOP_COLUMN_WIDTH = 10;
 static constexpr uint8_t TASK_MAX_LOOP_COLUMN_WIDTH = 10;
 static constexpr uint8_t TASK_STACK_HWM_COLUMN_WIDTH = 17;
+static constexpr uint8_t TERMINAL_DISPLAY_KEY_BUFFER = 2;
 
 // New constants for terminal output formatting and channel indexing
 static constexpr uint8_t TERMINAL_MIN_CHANNEL_INDEX = 1;
@@ -183,9 +210,8 @@ static constexpr int16_t RC_CHANNEL_MAX_RAW = 2000;
 static constexpr int16_t RC_CHANNEL_CENTER = 1500;
 static constexpr float RC_CHANNEL_RANGE_SYMMETRIC = 500.0f; // (MAX - MIN) / 2
 static constexpr float RC_CHANNEL_RANGE_THROTTLE = 1000.0f; // MAX - MIN
-
-static constexpr float THROTTLE_DEADZONE_THRESHOLD = 0.01f;
-static constexpr float MS_TO_SECONDS_FACTOR = 1000.0f;
+static constexpr int16_t RC_CHANNEL_INDEX_OFFSET = 1;
+static constexpr int16_t INVALID_CHANNEL_VALUE = 0;
 
 // --- Task Names ---
 static constexpr const char *COM_TASK_NAME = "com_task";

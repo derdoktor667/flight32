@@ -1,15 +1,7 @@
-/**
- * @file task_base.h
- * @brief Defines the base class for FreeRTOS tasks in Flight32.
- * @author Wastl Kraus
- * @date 2025-11-09
- * @license MIT
- */
-
 #pragma once
 
 #include <Arduino.h>
-#include "freertos/FreeRTOS.h" // Required for TaskHandle_t
+#include "freertos/FreeRTOS.h"
 
 class TaskBase
 {
@@ -17,7 +9,6 @@ public:
     virtual void setup() = 0;
     virtual void run() = 0;
 
-    // --- Getters ---
     const char *getName() const { return _task_name; }
     uint32_t getStackSize() const { return _stack_size; }
     UBaseType_t getPriority() const { return _priority; }
@@ -28,10 +19,8 @@ public:
     uint32_t getMaxLoopTime() const { return _max_loop_time_us; }
     uint32_t getTaskDelayMs() const { return _task_delay_ms; }
 
-    // --- Public Methods ---
     void taskRunner();
 
-    // Public so the scheduler can set it after task creation
     TaskHandle_t _handle = NULL;
 
 protected:
@@ -43,17 +32,15 @@ protected:
           _task_delay_ms(task_delay_ms) {}
 
 private:
-    // Task properties
     const char *_task_name;
     uint32_t _stack_size;
     UBaseType_t _priority;
     BaseType_t _core_id;
     uint32_t _task_delay_ms;
 
-    // Loop metrics
     uint32_t _loop_time_us = 0;
     uint32_t _avg_loop_time_us = 0;
     uint32_t _max_loop_time_us = 0;
-    uint64_t _total_loop_time_us = 0; // Use 64-bit to prevent overflow
+    uint64_t _total_loop_time_us = 0;
     uint32_t _loop_count = 0;
 };

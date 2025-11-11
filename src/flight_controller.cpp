@@ -15,14 +15,14 @@
 #include "settings_manager.h"
 #include <Arduino.h>
 #include "tasks/imu_task.h"
-#include "imu_mpu6050.h" // Include the concrete MPU6050 wrapper
+#include "imu_mpu6050.h"
 #include "tasks/motor_task.h"
 #include "tasks/rx_task.h"
 #include <Wire.h>
 
 FlightController::~FlightController()
 {
-    delete _imu_sensor; // Delete the sensor object
+    delete _imu_sensor;
     delete _imu_task;
     delete _rx_task;
     delete _terminal_task;
@@ -34,7 +34,6 @@ void FlightController::setup()
 {
     Serial.begin(SERIAL_BAUD_RATE);
 
-    // Create the IO manager task
     xTaskCreate(
         com_task,
         COM_TASK_NAME,
@@ -53,10 +52,8 @@ void FlightController::setup()
 
     _settings_manager.begin();
 
-    // --- IMU Initialization ---
-    delay(SENSOR_POWER_UP_DELAY_MS); // Add a small delay to allow the sensor to power up
+    delay(SENSOR_POWER_UP_DELAY_MS);
 
-    // Read the configured IMU type from settings
     String imu_type_str = _settings_manager.getSettingValue(KEY_IMU_TYPE);
     ImuType imu_type;
     if (imu_type_str.length() == 0)
@@ -87,17 +84,14 @@ void FlightController::setup()
         return;
     }
 
-    // Load IMU offsets from settings
     ImuAxisData gyro_offsets = _settings_manager.getGyroOffsets();
     ImuAxisData accel_offsets = _settings_manager.getAccelOffsets();
 
-    // Check if offsets are valid (not all zero)
     if (gyro_offsets.x == 0.0f && gyro_offsets.y == 0.0f && gyro_offsets.z == 0.0f &&
         accel_offsets.x == 0.0f && accel_offsets.y == 0.0f && accel_offsets.z == 0.0f)
     {
         com_send_log(LOG_INFO, "IMU offsets not found in settings, starting calibration...");
         _imu_sensor->calibrate();
-        // Save the new offsets
         _settings_manager.setGyroOffsets(_imu_sensor->getGyroscopeOffset());
         _settings_manager.setAccelOffsets(_imu_sensor->getAccelerometerOffset());
         _settings_manager.saveSettings();
@@ -110,14 +104,12 @@ void FlightController::setup()
         _imu_sensor->setAccelerometerOffset(accel_offsets);
     }
 
-    // --- Task Creation ---
     _imu_task = new ImuTask(IMU_TASK_NAME, IMU_TASK_STACK_SIZE, IMU_TASK_PRIORITY, IMU_TASK_CORE, IMU_TASK_DELAY_MS, *_imu_sensor);
     _rx_task = new RxTask(RX_TASK_NAME, RX_TASK_STACK_SIZE, RX_TASK_PRIORITY, RX_TASK_CORE, RX_TASK_DELAY_MS, &_settings_manager);
     _motor_task = new MotorTask(MOTOR_TASK_NAME, MOTOR_TASK_STACK_SIZE, MOTOR_TASK_PRIORITY, MOTOR_TASK_CORE, MOTOR_TASK_DELAY_MS, MOTOR_PINS_ARRAY, &_settings_manager);
     _pid_task = new PidTask(PID_TASK_NAME, PID_TASK_STACK_SIZE, PID_TASK_PRIORITY, PID_TASK_CORE, PID_TASK_DELAY_MS, _imu_task, _rx_task, _motor_task, &_settings_manager);
     _terminal_task = new TerminalTask(TERMINAL_TASK_NAME, TERMINAL_TASK_STACK_SIZE, TERMINAL_TASK_PRIORITY, TERMINAL_TASK_CORE, TERMINAL_TASK_DELAY_MS, &_scheduler, _imu_task, _rx_task, _motor_task, _pid_task, &_settings_manager);
 
-    // Add tasks to scheduler
     _scheduler.addTask(_rx_task);
     _scheduler.addTask(_imu_task);
     _scheduler.addTask(_motor_task);

@@ -21,7 +21,6 @@
 
 #include "settings_manager.h"
 
-// --- Flight Controller Class ---
 class FlightController
 {
 public:

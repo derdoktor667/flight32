@@ -1,16 +1,8 @@
-/**
- * @file rx_task.cpp
- * @brief Implements the generic RX receiver task for various protocols.
- * @author Wastl Kraus
- * @date 2025-11-09
- * @license MIT
- */
-
 #include "rx_task.h"
 #include "../config.h"
 #include "../com_manager.h"
-#include "../rx_ibus_protocol.h" // Include for IBUS
-#include "../rx_ppm_protocol.h" // Include for PPM
+#include "../rx_ibus_protocol.h"
+#include "../rx_ppm_protocol.h"
 
 RxTask::RxTask(const char *name, uint32_t stackSize, UBaseType_t priority, BaseType_t coreID, uint32_t task_delay_ms, SettingsManager *settings_manager)
     : TaskBase(name, stackSize, priority, coreID, task_delay_ms), _rx_protocol(nullptr), _settings_manager(settings_manager) {}
@@ -67,9 +59,8 @@ void RxTask::setup()
             com_send_log(LOG_INFO, "RxTask: Initializing IBUS on UART%d, RX:%d, TX:%d, Baud:%d", uart_num_to_use, rx_pin_to_use, tx_pin_to_use, baud_rate_to_use);
             break;
         case RcProtocolType::PPM:
-            rx_pin_to_use = _settings_manager->getSettingValue(KEY_RX_PIN).toInt(); // Use generic RX pin for PPM
+            rx_pin_to_use = _settings_manager->getSettingValue(KEY_RX_PIN).toInt();
             com_send_log(LOG_INFO, "RxTask: Initializing PPM on pin %d", rx_pin_to_use);
-            // For PPM, uart_num, tx_pin, and baud_rate are ignored by RxPpmProtocol::begin()
             break;
         default:
             com_send_log(LOG_ERROR, "RxTask: Unknown protocol type for pin configuration!");
@@ -89,7 +80,6 @@ void RxTask::run()
 {
     if (_rx_protocol && _rx_protocol->readChannels())
     {
-        // No action needed here, channels are read internally by the protocol
     }
 }
 
@@ -99,5 +89,5 @@ int16_t RxTask::getChannel(const uint8_t channel_nr) const
     {
         return _rx_protocol->getChannelValue(channel_nr);
     }
-    return 0; // Return 0 or a default value if no protocol is set
+    return INVALID_CHANNEL_VALUE;
 }

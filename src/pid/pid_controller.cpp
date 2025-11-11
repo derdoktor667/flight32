@@ -1,11 +1,3 @@
-/**
- * @file pid_controller.cpp
- * @brief Implements a PID controller for flight stabilization.
- * @author Wastl Kraus
- * @date 2025-11-09
- * @license MIT
- */
-
 #include "pid_controller.h"
 
 PIDController::PIDController(float kp, float ki, float kd)
@@ -23,26 +15,21 @@ float PIDController::update(float setpoint, float process_value, float dt)
 {
     if (dt <= 0.0f)
     {
-        return 0.0f; // Avoid division by zero or weird behavior
+        return 0.0f;
     }
 
     float error = setpoint - process_value;
 
-    // Proportional term
     float p_term = _kp * error;
 
-    // Integral term
     _integral += error * dt;
     float i_term = _ki * _integral;
 
-    // Derivative term
     float derivative = (error - _previous_error) / dt;
     float d_term = _kd * derivative;
 
-    // Update previous error for next iteration
     _previous_error = error;
 
-    // Calculate total output
     float output = p_term + i_term + d_term;
 
     return output;

@@ -19,7 +19,6 @@ public:
     bool addTask(TaskBase *task);
     void start();
 
-    // --- Getters for task introspection ---
     uint8_t getTaskCount() const { return _task_count; }
     TaskBase *getTask(uint8_t index) const { return _tasks[index]; }
 

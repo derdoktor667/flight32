@@ -9,7 +9,6 @@
 
 #include <cstdint>
 
-// Enum for PID axes
 enum class PidAxis
 {
     ROLL,
@@ -17,7 +16,6 @@ enum class PidAxis
     YAW
 };
 
-// Struct to hold PID gains
 struct PidGains
 {
     float p;
@@ -30,13 +28,10 @@ class PIDController
 public:
     PIDController(float kp, float ki, float kd);
 
-    // Calculates the control output
     float update(float setpoint, float process_value, float dt);
 
-    // Resets the controller's internal state
     void reset();
 
-    // Getters and setters for gains
     void setKp(float kp);
     void setKi(float ki);
     void setKd(float kd);
@@ -48,10 +43,10 @@ public:
     PidGains getGains() const;
 
 private:
-    float _kp; // Proportional gain
-    float _ki; // Integral gain
-    float _kd; // Derivative gain
+    float _kp;
+    float _ki;
+    float _kd;
 
-    float _integral;       // Integral accumulator
-    float _previous_error; // For derivative calculation
+    float _integral;
+    float _previous_error;
 };

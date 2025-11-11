@@ -14,7 +14,6 @@ ImuTask::ImuTask(const char *name, uint32_t stack_size, UBaseType_t priority, Ba
 
 void ImuTask::setup()
 {
-    // Nothing to do here, IMU is initialized in FlightController
 }
 
 void ImuTask::run()

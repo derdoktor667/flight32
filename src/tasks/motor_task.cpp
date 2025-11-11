@@ -9,18 +9,19 @@
 #include "motor_task.h"
 #include "../com_manager.h"
 #include "../settings_manager.h"
+#include "../config.h" // For THROTTLE_DEADZONE_THRESHOLD, MOTOR_MIN_THROTTLE_RAW, MOTOR_MAX_THROTTLE_RAW
 
 dshot_mode_t get_dshot_mode_from_index(uint8_t index)
 {
-    switch (index)
+    switch ((DshotProtocolIndex)index)
     {
-    case 0:
+    case DshotProtocolIndex::DSHOT150:
         return DSHOT150;
-    case 1:
+    case DshotProtocolIndex::DSHOT300:
         return DSHOT300;
-    case 2:
+    case DshotProtocolIndex::DSHOT600:
         return DSHOT600;
-    case 3:
+    case DshotProtocolIndex::DSHOT1200:
         return DSHOT1200;
     default:
         return DSHOT300;
@@ -71,7 +72,7 @@ void MotorTask::setup()
 
 void MotorTask::run()
 {
-    if (!_dshot_drivers[0])
+    if (!_dshot_drivers[FIRST_MOTOR_INDEX])
         return;
 
     if (_throttle_command < THROTTLE_DEADZONE_THRESHOLD)
@@ -83,18 +84,18 @@ void MotorTask::run()
     }
     else
     {
-        float m_rr = _throttle_command - _pitch_command + _roll_command - _yaw_command; // Motor 1 (Rear Right)
-        float m_fr = _throttle_command - _pitch_command - _roll_command + _yaw_command; // Motor 2 (Front Right)
-        float m_rl = _throttle_command + _pitch_command + _roll_command + _yaw_command; // Motor 3 (Rear Left)
-        float m_fl = _throttle_command + _pitch_command - _roll_command - _yaw_command; // Motor 4 (Front Left)
+        float m_rr = _throttle_command - _pitch_command + _roll_command - _yaw_command;
+        float m_fr = _throttle_command - _pitch_command - _roll_command + _yaw_command;
+        float m_rl = _throttle_command + _pitch_command + _roll_command + _yaw_command;
+        float m_fl = _throttle_command + _pitch_command - _roll_command - _yaw_command;
 
         const float min_throttle = MOTOR_MIN_THROTTLE_RAW;
         const float max_throttle = MOTOR_MAX_THROTTLE_RAW;
 
-        _motor_throttles[0] = constrain(m_rr * (max_throttle - min_throttle) + min_throttle, min_throttle, max_throttle);
-        _motor_throttles[1] = constrain(m_fr * (max_throttle - min_throttle) + min_throttle, min_throttle, max_throttle);
-        _motor_throttles[2] = constrain(m_rl * (max_throttle - min_throttle) + min_throttle, min_throttle, max_throttle);
-        _motor_throttles[3] = constrain(m_fl * (max_throttle - min_throttle) + min_throttle, min_throttle, max_throttle);
+        _motor_throttles[(uint8_t)MotorIndex::RR] = constrain(m_rr * (max_throttle - min_throttle) + min_throttle, min_throttle, max_throttle);
+        _motor_throttles[(uint8_t)MotorIndex::FR] = constrain(m_fr * (max_throttle - min_throttle) + min_throttle, min_throttle, max_throttle);
+        _motor_throttles[(uint8_t)MotorIndex::RL] = constrain(m_rl * (max_throttle - min_throttle) + min_throttle, min_throttle, max_throttle);
+        _motor_throttles[(uint8_t)MotorIndex::FL] = constrain(m_fl * (max_throttle - min_throttle) + min_throttle, min_throttle, max_throttle);
     }
 
     for (int i = 0; i < NUM_MOTORS; ++i)
@@ -117,8 +118,7 @@ void MotorTask::update(float throttle, float pitch, float roll, float yaw)
 void MotorTask::setThrottle(uint8_t motor_id, uint16_t throttle)
 {
     if (motor_id < NUM_MOTORS && _dshot_drivers[motor_id]) {
-        // It bypasses the mixer and sends a command directly to the motor.
         _dshot_drivers[motor_id]->sendThrottle(throttle);
-        _motor_throttles[motor_id] = throttle; // Also update the state for consistency
+        _motor_throttles[motor_id] = throttle;
     }
 }

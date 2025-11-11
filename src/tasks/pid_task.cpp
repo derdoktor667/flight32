@@ -1,14 +1,14 @@
-/**
- * @file pid_task.cpp
- * @brief Implements the PID calculation task.
- * @author Wastl Kraus
- * @date 2025-11-09
- * @license MIT
- */
-
 #include "pid_task.h"
+#include "../imu_sensor.h"
+#include "../rx_protocol.h"
+#include "../settings_manager.h"
+#include "../config.h"
 #include "../com_manager.h"
-#include "../rc_config.h"
+#include "motor_task.h"
+#include "imu_task.h"
+
+#include <Arduino.h> // For constrain()
+#include <stdint.h>  // For uint32_t
 
 PidTask::PidTask(const char *name, uint32_t stack_size, UBaseType_t priority, BaseType_t core_id, uint32_t task_delay_ms,
                  ImuTask *imu_task,
@@ -20,9 +20,9 @@ PidTask::PidTask(const char *name, uint32_t stack_size, UBaseType_t priority, Ba
       _rx_task(rx_task),
       _motor_task(motor_task),
       _settings_manager(settings_manager),
-      _pid_roll(0, 0, 0),
-      _pid_pitch(0, 0, 0),
-      _pid_yaw(0, 0, 0)
+      _pid_roll(DEFAULT_PID_ROLL_P, DEFAULT_PID_ROLL_I, DEFAULT_PID_ROLL_D),
+      _pid_pitch(DEFAULT_PID_PITCH_P, DEFAULT_PID_PITCH_I, DEFAULT_PID_PITCH_D),
+      _pid_yaw(DEFAULT_PID_YAW_P, DEFAULT_PID_YAW_I, DEFAULT_PID_YAW_D)
 {
 }
 
@@ -34,10 +34,6 @@ void PidTask::setup()
 
 void PidTask::run()
 {
-    // Get the desired setpoints from the receiver
-    // Raw RC values can vary. For internal calculations, we constrain them
-    // to the standard RC_CHANNEL_MIN_RAW - RC_CHANNEL_MAX_RAW range to ensure stable flight control.
-    // The terminal will still display the raw, unconstrained values for user calibration.
     int constrained_roll = constrain(_rx_task->getChannel(_settings_manager->getSettingValue(SettingsManager::KEY_RC_CHANNEL_ROLL).toInt()), RC_CHANNEL_MIN_RAW, RC_CHANNEL_MAX_RAW);
     int constrained_pitch = constrain(_rx_task->getChannel(_settings_manager->getSettingValue(SettingsManager::KEY_RC_CHANNEL_PITCH).toInt()), RC_CHANNEL_MIN_RAW, RC_CHANNEL_MAX_RAW);
     int constrained_yaw = constrain(_rx_task->getChannel(_settings_manager->getSettingValue(SettingsManager::KEY_RC_CHANNEL_YAW).toInt()), RC_CHANNEL_MIN_RAW, RC_CHANNEL_MAX_RAW);
@@ -55,12 +51,10 @@ void PidTask::run()
 
     float dt = getTaskDelayMs() / MS_TO_SECONDS_FACTOR;
 
-    // Calculate PID outputs
     float roll_output = _pid_roll.update(desired_roll_rate, actual_roll_rate, dt);
     float pitch_output = _pid_pitch.update(desired_pitch_rate, actual_pitch_rate, dt);
     float yaw_output = _pid_yaw.update(desired_yaw_rate, actual_yaw_rate, dt);
 
-    // Update the motor task with the new commands
     _motor_task->update(throttle, pitch_output, roll_output, yaw_output);
 }
 
@@ -75,7 +69,7 @@ PidGains PidTask::getGains(PidAxis axis)
     case PidAxis::YAW:
         return _pid_yaw.getGains();
     default:
-        return {0.0f, 0.0f, 0.0f}; // Should not happen
+        return {0.0f, 0.0f, 0.0f};
     }
 }
 
@@ -139,7 +133,7 @@ void PidTask::_set_and_save_gains(PidAxis axis, PidGains gains)
         d_key = KEY_PID_YAW_D;
         break;
     default:
-        return; // Should not happen
+        return;
     }
 
     _settings_manager->setSettingValue(p_key, String(gains.p));

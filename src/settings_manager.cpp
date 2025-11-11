@@ -1,26 +1,18 @@
-/**
- * @file settings_manager.cpp
- * @brief Manages persistent settings for the Flight32 firmware using NVS.
- * @author Wastl Kraus
- * @date 2025-11-09
- * @license MIT
- */
-
 #include "settings_manager.h"
 #include "com_manager.h"
 #include "config.h"
 
+#include <cstdint> // For uint8_t, uint16_t
+#include <cstring> // For strlen, strcmp
+
 const char *SettingsManager::GYRO_RANGE_STRINGS[] = {"250_DPS", "500_DPS", "1000_DPS", "2000_DPS"};
 const uint8_t SettingsManager::NUM_GYRO_RANGES = sizeof(SettingsManager::GYRO_RANGE_STRINGS) / sizeof(SettingsManager::GYRO_RANGE_STRINGS[0]);
 
-const char *RC_PROTOCOL_STRINGS[] = {"IBUS", "PPM"};
-static constexpr uint8_t NUM_RC_PROTOCOLS = sizeof(RC_PROTOCOL_STRINGS) / sizeof(RC_PROTOCOL_STRINGS[0]);
+const char *SettingsManager::RC_PROTOCOL_STRINGS[] = {"IBUS", "PPM"};
+const uint8_t SettingsManager::NUM_RC_PROTOCOLS = sizeof(SettingsManager::RC_PROTOCOL_STRINGS) / sizeof(SettingsManager::RC_PROTOCOL_STRINGS[0]);
 
 const SettingsManager::SettingMetadata SettingsManager::_settings_metadata[] = {
-    // --- System Settings ---
     {SettingsManager::KEY_SYSTEM_NAME, "system.name", "Configurable model name", SettingsManager::STRING, nullptr, 0, 0, 0.0f, SettingsManager::DEFAULT_SYSTEM_NAME},
-
-    // --- MPU6050 Settings ---
     {SettingsManager::KEY_MPU_GYRO_RANGE, "gyro.resolution", "MPU6050 Gyroscope Range", SettingsManager::UINT8, SettingsManager::GYRO_RANGE_STRINGS, SettingsManager::NUM_GYRO_RANGES, DEFAULT_GYRO_RANGE, 0.0f, nullptr},
     {SettingsManager::KEY_MPU_GYRO_OFF_X, "mpu.g_off.x", "Gyroscope X-axis offset", SettingsManager::FLOAT, nullptr, 0, 0, 0.0f, nullptr},
     {SettingsManager::KEY_MPU_GYRO_OFF_Y, "mpu.g_off.y", "Gyroscope Y-axis offset", SettingsManager::FLOAT, nullptr, 0, 0, 0.0f, nullptr},
@@ -28,12 +20,8 @@ const SettingsManager::SettingMetadata SettingsManager::_settings_metadata[] = {
     {SettingsManager::KEY_MPU_ACCEL_OFF_X, "mpu.a_off.x", "Accelerometer X-axis offset", SettingsManager::FLOAT, nullptr, 0, 0, 0.0f, nullptr},
     {SettingsManager::KEY_MPU_ACCEL_OFF_Y, "mpu.a_off.y", "Accelerometer Y-axis offset", SettingsManager::FLOAT, nullptr, 0, 0, 0.0f, nullptr},
     {SettingsManager::KEY_MPU_ACCEL_OFF_Z, "mpu.a_off.z", "Accelerometer Z-axis offset", SettingsManager::FLOAT, nullptr, 0, 0, 0.0f, nullptr},
-
-    // --- RC Protocol Settings ---
     {SettingsManager::KEY_RC_PROTOCOL_TYPE, "rc.protocol", "RC Receiver Protocol", SettingsManager::UINT8, RC_PROTOCOL_STRINGS, NUM_RC_PROTOCOLS, (uint8_t)DEFAULT_RC_PROTOCOL_TYPE, 0.0f, nullptr},
     {SettingsManager::KEY_RX_PIN, "rx.pin", "Generic RX Input Pin (GPIO)", SettingsManager::UINT8, nullptr, 0, DEFAULT_RX_PIN, 0.0f, nullptr},
-
-    // --- RC Channel Mappings ---
     {SettingsManager::KEY_RC_CHANNEL_ROLL, "rc.channel.roll", "RC Roll Channel Index", SettingsManager::UINT8, nullptr, 0, 1, 0.0f, nullptr},
     {SettingsManager::KEY_RC_CHANNEL_PITCH, "rc.channel.pitch", "RC Pitch Channel Index", SettingsManager::UINT8, nullptr, 0, 0, 0.0f, nullptr},
     {SettingsManager::KEY_RC_CHANNEL_THRO, "rc.channel.thro", "RC Throttle Channel Index", SettingsManager::UINT8, nullptr, 0, 2, 0.0f, nullptr},
@@ -44,11 +32,7 @@ const SettingsManager::SettingMetadata SettingsManager::_settings_metadata[] = {
     {SettingsManager::KEY_RC_CHANNEL_AUX2, "rc.channel.aux2", "RC Auxiliary Channel 2 Index", SettingsManager::UINT8, nullptr, 0, 7, 0.0f, nullptr},
     {SettingsManager::KEY_RC_CHANNEL_AUX3, "rc.channel.aux3", "RC Auxiliary Channel 3 Index", SettingsManager::UINT8, nullptr, 0, 8, 0.0f, nullptr},
     {SettingsManager::KEY_RC_CHANNEL_AUX4, "rc.channel.aux4", "RC Auxiliary Channel 4 Index", SettingsManager::UINT8, nullptr, 0, 9, 0.0f, nullptr},
-
-    // --- Motor Settings ---
     {SettingsManager::KEY_MOTOR_PROTOCOL, "motor.protocol", "DShot Motor Protocol", SettingsManager::UINT8, DSHOT_PROTOCOL_STRINGS, NUM_DSHOT_PROTOCOLS, DEFAULT_MOTOR_PROTOCOL, 0.0f, nullptr},
-
-    // --- PID Gain Settings ---
     {KEY_PID_ROLL_P, "pid.roll.p", "PID Roll Proportional Gain", SettingsManager::FLOAT, nullptr, 0, 0, DEFAULT_PID_ROLL_P, nullptr},
     {KEY_PID_ROLL_I, "pid.roll.i", "PID Roll Integral Gain", SettingsManager::FLOAT, nullptr, 0, 0, DEFAULT_PID_ROLL_I, nullptr},
     {KEY_PID_ROLL_D, "pid.roll.d", "PID Roll Derivative Gain", SettingsManager::FLOAT, nullptr, 0, 0, DEFAULT_PID_ROLL_D, nullptr},
@@ -77,8 +61,7 @@ void SettingsManager::loadOrInitSettings()
     if (!_is_begun)
         return;
 
-    uint16_t saved_version = _preferences.getUShort(KEY_SCHEMA_VERSION, 0);
-
+    uint16_t saved_version = _preferences.getUShort(KEY_SCHEMA_VERSION, DEFAULT_SCHEMA_VERSION);
 
     if (saved_version != CURRENT_SCHEMA_VERSION)
     {
@@ -104,7 +87,6 @@ void SettingsManager::factoryReset()
 void SettingsManager::_write_defaults()
 {
     com_send_log(LOG_INFO, "SettingsManager: _write_defaults()");
-    // Set default values for all settings based on metadata
     for (int i = 0; i < _num_settings; ++i)
     {
         const char *key = _settings_metadata[i].key;
@@ -141,7 +123,6 @@ void SettingsManager::saveSettings()
         return;
 
     _preferences.putUShort(KEY_SCHEMA_VERSION, CURRENT_SCHEMA_VERSION);
-    // Ensure the schema version is saved.
 }
 
 ImuAxisData SettingsManager::getGyroOffsets()
@@ -178,7 +159,6 @@ void SettingsManager::listSettings()
 {
     com_send_log(TERMINAL_OUTPUT, "\n--- Available Settings ---");
 
-    // Calculate max display_key length
     int max_display_key_len = 0;
     for (int i = 0; i < _num_settings; ++i)
     {
@@ -188,15 +168,14 @@ void SettingsManager::listSettings()
             max_display_key_len = len;
         }
     }
-    max_display_key_len += 2; // Add a small buffer
+    max_display_key_len += TERMINAL_DISPLAY_KEY_BUFFER;
 
-    // Print header
     com_send_log(TERMINAL_OUTPUT, "  %-*s %s", max_display_key_len, "Setting", "Description");
     String separator = "  ";
     for (int i = 0; i < max_display_key_len; ++i) {
         separator += "-";
     }
-    separator += "--------------------------------------------------"; // Fixed length for description part
+    separator += "--------------------------------------------------";
     com_send_log(TERMINAL_OUTPUT, separator.c_str());
 
     for (int i = 0; i < _num_settings; i++)
@@ -238,7 +217,7 @@ String SettingsManager::getSettingValue(const char *key)
             }
         }
     }
-    return ""; // Setting not found
+    return "";
 }
 
 String SettingsManager::getSettingValueHumanReadable(const char *key)
@@ -269,7 +248,7 @@ String SettingsManager::getSettingValueHumanReadable(const char *key)
             {
                 if (_settings_metadata[i].type == UINT8)
                 {
-                    return String(getSettingValue(key).toInt() + 1); // Convert to 1-based
+                    return String(getSettingValue(key).toInt() + RC_CHANNEL_INDEX_OFFSET); // Convert to 1-based
                 }
             }
             // Special handling for PID keys: display as scaled integers
@@ -288,10 +267,10 @@ String SettingsManager::getSettingValueHumanReadable(const char *key)
                     return String((int)(getSettingValue(key).toFloat() * PID_SCALE_FACTOR));
                 }
             }
-            return getSettingValue(key); // Fallback to raw value if no string map or out of bounds
+            return getSettingValue(key);
         }
     }
-    return ""; // Setting not found
+    return "";
 }
 
 bool SettingsManager::setSettingValue(const char *key, const String &value_str)
@@ -305,7 +284,6 @@ bool SettingsManager::setSettingValue(const char *key, const String &value_str)
             case UINT8:
             {
                 int parsed_value = INVALID_SETTING_VALUE;
-                // Try to match human-readable string first
                 if (_settings_metadata[i].string_map != nullptr && _settings_metadata[i].string_map_size > 0)
                 {
                     for (uint8_t j = 0; j < _settings_metadata[i].string_map_size; ++j)
@@ -318,7 +296,6 @@ bool SettingsManager::setSettingValue(const char *key, const String &value_str)
                     }
                 }
 
-                // If no human-readable match, try to parse as integer
                 if (parsed_value == INVALID_SETTING_VALUE)
                 {
                     parsed_value = value_str.toInt();
@@ -329,7 +306,7 @@ bool SettingsManager::setSettingValue(const char *key, const String &value_str)
                     _preferences.putUChar(key, (uint8_t)parsed_value);
                     return true;
                 }
-                return false; // Value out of range
+                return false;
             }
             case INT32:
             {
@@ -349,7 +326,7 @@ bool SettingsManager::setSettingValue(const char *key, const String &value_str)
             }
         }
     }
-    return false; // Setting not found
+    return false;
 }
 
 const char *SettingsManager::getSettingDescription(const char *key)
@@ -373,5 +350,5 @@ const char *SettingsManager::getInternalKeyFromDisplayKey(const char *display_ke
             return _settings_metadata[i].key;
         }
     }
-    return nullptr; // Not found
+    return nullptr;
 }
