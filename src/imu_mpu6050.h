@@ -16,6 +16,7 @@ class ImuMpu6050 : public ImuSensor
 {
 public:
     ImuMpu6050();
+    ~ImuMpu6050();
     bool begin() override;
     void calibrate() override;
     void read() override;

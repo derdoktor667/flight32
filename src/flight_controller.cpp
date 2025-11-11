@@ -32,6 +32,9 @@ FlightController::~FlightController()
 
 void FlightController::setup()
 {
+    Wire.begin();
+    Wire.setClock(1000000); // Set I2C clock to 1MHz (Fast Mode Plus)
+
     Serial.begin(SERIAL_BAUD_RATE);
 
     xTaskCreate(

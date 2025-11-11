@@ -9,6 +9,8 @@
 #pragma once
 
 #include <cstdint>
+#include "freertos/FreeRTOS.h"
+#include "freertos/semphr.h"
 
 // A structure to hold IMU data
 struct ImuData
@@ -40,7 +42,14 @@ public:
     virtual void read() = 0;
 
     // Gets the most recently read sensor data.
-    const ImuData &getData() const { return _data; }
+    ImuData getData() const {
+        ImuData temp_data = {};
+        if (xSemaphoreTake(_data_mutex, portMAX_DELAY) == pdTRUE) {
+            temp_data = _data;
+            xSemaphoreGive(_data_mutex);
+        }
+        return temp_data;
+    }
 
     virtual ImuAxisData getGyroscopeOffset() const = 0;
     virtual void setGyroscopeOffset(const ImuAxisData &offset) = 0;
@@ -49,4 +58,5 @@ public:
 
 protected:
     ImuData _data = {};
+    SemaphoreHandle_t _data_mutex;
 };
