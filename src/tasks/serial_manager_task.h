@@ -24,6 +24,10 @@
 #define MSP_GET_SETTING 9
 #define MSP_SET_SETTING 10
 #define MSP_PID 11
+#define MSP_RAW_IMU 102
+#define MSP_MOTOR 104
+#define MSP_RC 105
+#define MSP_ATTITUDE 108
 #define MSP_SET_PID 202
 #define MSP_EEPROM_WRITE 200
 #define MSP_RESET_SETTINGS 201
@@ -47,7 +51,8 @@ private:
     Terminal *_terminal; // Instance of the new Terminal class
 
     // Serial Protocol State
-    enum class SerialMode {
+    enum class SerialMode
+    {
         TERMINAL,
         MSP
     };
@@ -56,7 +61,8 @@ private:
     static constexpr unsigned long MSP_TIMEOUT_MS = 2000; // Switch back to terminal after 2 seconds of no MSP activity
 
     // MSP Mode Variables
-    enum class MspState {
+    enum class MspState
+    {
         IDLE,
         HEADER_START,
         HEADER_M,
@@ -99,4 +105,8 @@ private:
     void _handle_msp_set_setting();
     void _handle_msp_pid_get();
     void _handle_msp_pid_set();
+    void _handle_msp_raw_imu();
+    void _handle_msp_attitude();
+    void _handle_msp_rc();
+    void _handle_msp_motor();
 };

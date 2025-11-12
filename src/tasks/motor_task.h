@@ -25,11 +25,13 @@ public:
 
     void update(float throttle, float pitch, float roll, float yaw);
     void setThrottle(uint8_t motor_id, uint16_t throttle);
+    uint16_t getMotorOutput(uint8_t motor_id) const;
 
     ~MotorTask();
 
 public:
-    enum MotorTestState {
+    enum MotorTestState
+    {
         IDLE,
         SPINNING_TIMED,
         SPINNING_CONTINUOUS

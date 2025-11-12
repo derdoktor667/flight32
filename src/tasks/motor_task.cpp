@@ -80,21 +80,28 @@ void MotorTask::run()
     if (!_dshot_drivers[FIRST_MOTOR_INDEX])
         return;
 
-    if (_motorTestState != IDLE) {
+    if (_motorTestState != IDLE)
+    {
         // Handle motor test mode
-        if (_motorTestState == SPINNING_TIMED && (millis() - _testStartTime >= _testDuration)) {
+        if (_motorTestState == SPINNING_TIMED && (millis() - _testStartTime >= _testDuration))
+        {
             stopMotorTest(); // Time's up, stop the motor
-            return; // Exit run() after stopping
+            return;          // Exit run() after stopping
         }
 
         // Apply test throttle to the designated motor, others are off
-        for (int i = 0; i < NUM_MOTORS; ++i) {
-            if (_dshot_drivers[i]) {
-                if (i == _testMotorNum) {
+        for (int i = 0; i < NUM_MOTORS; ++i)
+        {
+            if (_dshot_drivers[i])
+            {
+                if (i == _testMotorNum)
+                {
                     // Convert normalized throttle (0-1) to raw DShot throttle (MOTOR_MIN_THROTTLE_RAW to MOTOR_MAX_THROTTLE_RAW)
                     uint16_t raw_throttle = (uint16_t)constrain(_testThrottle * (MOTOR_MAX_THROTTLE_RAW - MOTOR_MIN_THROTTLE_RAW) + MOTOR_MIN_THROTTLE_RAW, MOTOR_MIN_THROTTLE_RAW, MOTOR_MAX_THROTTLE_RAW);
                     _dshot_drivers[i]->sendThrottle(raw_throttle);
-                } else {
+                }
+                else
+                {
                     _dshot_drivers[i]->sendThrottle(0); // Other motors off
                 }
             }
@@ -145,18 +152,22 @@ void MotorTask::update(float throttle, float pitch, float roll, float yaw)
 
 void MotorTask::setThrottle(uint8_t motor_id, uint16_t throttle)
 {
-    if (motor_id < NUM_MOTORS && _dshot_drivers[motor_id]) {
+    if (motor_id < NUM_MOTORS && _dshot_drivers[motor_id])
+    {
         _dshot_drivers[motor_id]->sendThrottle(throttle);
         _motor_throttles[motor_id] = throttle;
     }
 }
 
-void MotorTask::startMotorTest(uint8_t motorNum, float throttle, uint32_t duration_ms) {
-    if (motorNum >= NUM_MOTORS) {
+void MotorTask::startMotorTest(uint8_t motorNum, float throttle, uint32_t duration_ms)
+{
+    if (motorNum >= NUM_MOTORS)
+    {
         com_send_log(LOG_ERROR, "MotorTest: Invalid motor number %d.", motorNum);
         return;
     }
-    if (!_is_valid_throttle_percentage(throttle)) {
+    if (!_is_valid_throttle_percentage(throttle))
+    {
         return;
     }
 
@@ -170,12 +181,15 @@ void MotorTask::startMotorTest(uint8_t motorNum, float throttle, uint32_t durati
     com_send_log(LOG_INFO, "MotorTest: Motor %d spinning at %.1f%% throttle for %lu ms.", motorNum + 1, throttle * 100.0f, duration_ms);
 }
 
-void MotorTask::startContinuousMotorTest(uint8_t motorNum, float throttle) {
-    if (motorNum >= NUM_MOTORS) {
+void MotorTask::startContinuousMotorTest(uint8_t motorNum, float throttle)
+{
+    if (motorNum >= NUM_MOTORS)
+    {
         com_send_log(LOG_ERROR, "MotorTest: Invalid motor number %d.", motorNum);
         return;
     }
-    if (!_is_valid_throttle_percentage(throttle)) {
+    if (!_is_valid_throttle_percentage(throttle))
+    {
         return;
     }
 
@@ -187,15 +201,19 @@ void MotorTask::startContinuousMotorTest(uint8_t motorNum, float throttle) {
     com_send_log(LOG_INFO, "MotorTest: Motor %d spinning continuously at %.1f%% throttle. Send 'motor stop' to stop.", motorNum + 1, throttle * 100.0f);
 }
 
-void MotorTask::stopMotorTest() {
-    if (_motorTestState != IDLE) {
+void MotorTask::stopMotorTest()
+{
+    if (_motorTestState != IDLE)
+    {
         _motorTestState = IDLE;
         _testMotorNum = 0;
         _testThrottle = 0.0f;
         _testDuration = 0;
         _testStartTime = 0;
-        for (int i = 0; i < NUM_MOTORS; ++i) {
-            if (_dshot_drivers[i]) {
+        for (int i = 0; i < NUM_MOTORS; ++i)
+        {
+            if (_dshot_drivers[i])
+            {
                 _dshot_drivers[i]->sendThrottle(0); // Stop all motors
             }
         }
@@ -203,10 +221,21 @@ void MotorTask::stopMotorTest() {
     }
 }
 
-bool MotorTask::_is_valid_throttle_percentage(float throttle) {
-    if (throttle < 0.0f || throttle > 1.0f) {
+bool MotorTask::_is_valid_throttle_percentage(float throttle)
+{
+    if (throttle < 0.0f || throttle > 1.0f)
+    {
         com_send_log(LOG_ERROR, "MotorTest: Invalid throttle percentage %f. Must be between 0 and 1.", throttle);
         return false;
     }
     return true;
+}
+
+uint16_t MotorTask::getMotorOutput(uint8_t motor_id) const
+{
+    if (motor_id < NUM_MOTORS)
+    {
+        return _motor_throttles[motor_id];
+    }
+    return 0; // Return 0 for invalid motor_id
 }
