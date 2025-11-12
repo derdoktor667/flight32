@@ -20,12 +20,12 @@ static constexpr uint32_t SCHEDULER_TASK_STACK_SIZE = 4096;
 static constexpr uint8_t SCHEDULER_TASK_PRIORITY = 2;
 static constexpr int8_t SCHEDULER_TASK_CORE = 0;
 
-// --- Terminal Task Configuration ---
-static constexpr uint32_t TERMINAL_TASK_STACK_SIZE = 8192;
-static constexpr uint8_t TERMINAL_TASK_PRIORITY = 1;
-static constexpr int8_t TERMINAL_TASK_CORE = 0;
+// --- Serial Manager Task Configuration ---
+static constexpr uint32_t SERIAL_MANAGER_TASK_STACK_SIZE = 8192;
+static constexpr uint8_t SERIAL_MANAGER_TASK_PRIORITY = 1;
+static constexpr int8_t SERIAL_MANAGER_TASK_CORE = 0;
+static constexpr uint8_t SERIAL_MANAGER_TASK_DELAY_MS = 10;
 static constexpr uint16_t TERMINAL_INPUT_BUFFER_SIZE = 128;
-static constexpr uint8_t TERMINAL_TASK_DELAY_MS = 50;
 
 // --- Com Task Configuration ---
 static constexpr uint32_t COM_TASK_STACK_SIZE = 4096;
@@ -241,7 +241,7 @@ static constexpr const char *RX_TASK_NAME = "RX / Receiver"; // New generic RX t
 static constexpr const char *IBUS_TASK_NAME = "RX / IBUS";
 static constexpr const char *MOTOR_TASK_NAME = "MOTORS / DShot";
 static constexpr const char *PID_TASK_NAME = "PID Controller";
-static constexpr const char *TERMINAL_TASK_NAME = "CLI / Terminal";
+static constexpr const char *SERIAL_MANAGER_TASK_NAME = "Serial Manager";
 static constexpr const char *IDLE_TASK_NAME_0 = "IDLE0";
 static constexpr const char *IDLE_TASK_NAME_1 = "IDLE1";
 static constexpr const char *TIMER_SERVICE_TASK_NAME = "Tmr Svc";

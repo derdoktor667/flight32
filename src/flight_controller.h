@@ -15,7 +15,7 @@
 #include "tasks/rx_task.h"
 #include "rx_protocol.h"
 #include "rx_ibus_protocol.h"
-#include "tasks/terminal_task.h"
+#include "tasks/serial_manager_task.h" // New SerialManagerTask
 #include "tasks/motor_task.h"
 #include "tasks/pid_task.h"
 
@@ -34,7 +34,7 @@ private:
     ImuSensor *_imu_sensor = nullptr;
     ImuTask *_imu_task = nullptr;
     RxTask *_rx_task = nullptr;
-    TerminalTask *_terminal_task = nullptr;
+    SerialManagerTask *_serial_manager_task = nullptr; // New SerialManagerTask
     MotorTask *_motor_task = nullptr;
     PidTask *_pid_task = nullptr;
 };

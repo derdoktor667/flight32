@@ -8,7 +8,7 @@
 
 #include "flight_controller.h"
 #include "scheduler/scheduler.h"
-#include "tasks/terminal_task.h"
+#include "tasks/serial_manager_task.h" // New SerialManagerTask
 #include "com_manager.h"
 #include "config.h"
 #include "firmware.h"
@@ -25,7 +25,7 @@ FlightController::~FlightController()
     delete _imu_sensor;
     delete _imu_task;
     delete _rx_task;
-    delete _terminal_task;
+    delete _serial_manager_task; // New SerialManagerTask
     delete _motor_task;
     delete _pid_task;
 }
@@ -104,13 +104,14 @@ void FlightController::setup()
     _rx_task = new RxTask(RX_TASK_NAME, RX_TASK_STACK_SIZE, RX_TASK_PRIORITY, RX_TASK_CORE, RX_TASK_DELAY_MS, &_settings_manager);
     _motor_task = new MotorTask(MOTOR_TASK_NAME, MOTOR_TASK_STACK_SIZE, MOTOR_TASK_PRIORITY, MOTOR_TASK_CORE, MOTOR_TASK_DELAY_MS, MOTOR_PINS_ARRAY, &_settings_manager);
     _pid_task = new PidTask(PID_TASK_NAME, PID_TASK_STACK_SIZE, PID_TASK_PRIORITY, PID_TASK_CORE, PID_TASK_DELAY_MS, _imu_task, _rx_task, _motor_task, &_settings_manager);
-    _terminal_task = new TerminalTask(TERMINAL_TASK_NAME, TERMINAL_TASK_STACK_SIZE, TERMINAL_TASK_PRIORITY, TERMINAL_TASK_CORE, TERMINAL_TASK_DELAY_MS, &_scheduler, _imu_task, _rx_task, _motor_task, _pid_task, &_settings_manager);
 
     _scheduler.addTask(_rx_task);
     _scheduler.addTask(_imu_task);
     _scheduler.addTask(_motor_task);
     _scheduler.addTask(_pid_task);
-    _scheduler.addTask(_terminal_task);
+
+    _serial_manager_task = new SerialManagerTask(SERIAL_MANAGER_TASK_NAME, SERIAL_MANAGER_TASK_STACK_SIZE, SERIAL_MANAGER_TASK_PRIORITY, SERIAL_MANAGER_TASK_CORE, SERIAL_MANAGER_TASK_DELAY_MS, &_scheduler, _imu_task, _rx_task, _motor_task, _pid_task, &_settings_manager);
+    _scheduler.addTask(_serial_manager_task);
 
     for (uint8_t i = 0; i < _scheduler.getTaskCount(); i++)
     {
@@ -118,10 +119,8 @@ void FlightController::setup()
     }
 
     com_send_log(LOG_INFO, "Welcome, type 'help' for a list of commands.");
-
     com_flush_output();
-
-    _terminal_task->_show_prompt();
+    _serial_manager_task->showPrompt(); // Call showPrompt on the new SerialManagerTask
 
     _scheduler.start();
 }
