@@ -173,7 +173,8 @@ void SettingsManager::listSettings()
 
     com_send_log(TERMINAL_OUTPUT, "  %-*s %s", max_display_key_len, "Setting", "Description");
     String separator = "  ";
-    for (int i = 0; i < max_display_key_len; ++i) {
+    for (int i = 0; i < max_display_key_len; ++i)
+    {
         separator += "-";
     }
     separator += "--------------------------------------------------";

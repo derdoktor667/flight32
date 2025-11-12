@@ -61,8 +61,7 @@ static constexpr const char *KEY_IMU_LPF_BANDWIDTH = "imu.lpf_bw";
 static constexpr uint8_t DEFAULT_IMU_LPF_BANDWIDTH = 0; // Corresponds to LPF_256HZ_N_0MS
 static constexpr const char *IMU_LPF_BANDWIDTH_STRINGS[] = {
     "LPF_256HZ_N_0MS", "LPF_188HZ_N_2MS", "LPF_98HZ_N_3MS",
-    "LPF_42HZ_N_5MS", "LPF_20HZ_N_10MS", "LPF_10HZ_N_13MS", "LPF_5HZ_N_18MS"
-};
+    "LPF_42HZ_N_5MS", "LPF_20HZ_N_10MS", "LPF_10HZ_N_13MS", "LPF_5HZ_N_18MS"};
 static constexpr uint8_t NUM_IMU_LPF_BANDWIDTHS = sizeof(IMU_LPF_BANDWIDTH_STRINGS) / sizeof(IMU_LPF_BANDWIDTH_STRINGS[0]);
 
 // --- IBUS Task Configuration ---
@@ -93,12 +92,10 @@ static constexpr RcProtocolType DEFAULT_RC_PROTOCOL_TYPE = RcProtocolType::IBUS;
 
 // --- PPM Protocol Configuration ---
 static constexpr uint8_t PPM_MAX_CHANNELS = 8;
-static constexpr uint32_t PPM_FRAME_LENGTH_MIN = 18000; // microseconds (18ms)
+static constexpr uint32_t PPM_FRAME_LENGTH_MIN = 18000;     // microseconds (18ms)
 static constexpr uint8_t PPM_CONNECTION_TIMEOUT_FACTOR = 2; // Multiplier for PPM_FRAME_LENGTH_MIN
-static constexpr uint16_t PPM_MIN_PULSE_WIDTH = 1000; // microseconds
-static constexpr uint16_t PPM_MAX_PULSE_WIDTH = 2000; // microseconds
-
-
+static constexpr uint16_t PPM_MIN_PULSE_WIDTH = 1000;       // microseconds
+static constexpr uint16_t PPM_MAX_PULSE_WIDTH = 2000;       // microseconds
 
 // --- Motor Task Configuration ---
 static constexpr uint32_t MOTOR_TASK_STACK_SIZE = 4096;
@@ -196,6 +193,7 @@ static constexpr float MS_TO_SECONDS_FACTOR = 1000.0f;
 static constexpr uint8_t MSP_PROTOCOL_VERSION = 0;
 static constexpr uint8_t MSP_API_VERSION_MAJOR = 1;
 static constexpr uint8_t MSP_API_VERSION_MINOR = 0;
+static constexpr unsigned long MSP_TIMEOUT_MS = 10000;
 
 // --- Flight Controller Version Constants ---
 static constexpr uint8_t FC_VERSION_MAJOR = 0;

@@ -34,5 +34,5 @@ private:
     volatile bool _new_data_available;
     volatile bool _is_connected;
 
-    static RxPpmProtocol* _instance;
+    static RxPpmProtocol *_instance;
 };

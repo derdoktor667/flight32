@@ -110,7 +110,8 @@ void Terminal::handleInput(char incoming_char)
             _parse_command(_input_buffer);
             _input_buffer = "";
         }
-        if (!_should_quit) { // Only show prompt if not quitting
+        if (!_should_quit)
+        { // Only show prompt if not quitting
             showPrompt();
         }
     }
@@ -233,21 +234,33 @@ CommandCategory Terminal::_get_setting_category(const char *display_key)
     return CommandCategory::SETTINGS;
 }
 
-const char* Terminal::_get_motor_name(uint8_t motor_id) {
-    switch ((MotorIndex)motor_id) {
-        case MotorIndex::FL: return "FL";
-        case MotorIndex::FR: return "FR";
-        case MotorIndex::RL: return "RL";
-        case MotorIndex::RR: return "RR";
-        default: return "UNKNOWN";
+const char *Terminal::_get_motor_name(uint8_t motor_id)
+{
+    switch ((MotorIndex)motor_id)
+    {
+    case MotorIndex::FL:
+        return "FL";
+    case MotorIndex::FR:
+        return "FR";
+    case MotorIndex::RL:
+        return "RL";
+    case MotorIndex::RR:
+        return "RR";
+    default:
+        return "UNKNOWN";
     }
 }
 
-int8_t Terminal::_get_motor_id(String &motor_name) {
-    if (motor_name.equalsIgnoreCase("FL")) return (int8_t)MotorIndex::FL;
-    if (motor_name.equalsIgnoreCase("FR")) return (int8_t)MotorIndex::FR;
-    if (motor_name.equalsIgnoreCase("RL")) return (int8_t)MotorIndex::RL;
-    if (motor_name.equalsIgnoreCase("RR")) return (int8_t)MotorIndex::RR;
+int8_t Terminal::_get_motor_id(String &motor_name)
+{
+    if (motor_name.equalsIgnoreCase("FL"))
+        return (int8_t)MotorIndex::FL;
+    if (motor_name.equalsIgnoreCase("FR"))
+        return (int8_t)MotorIndex::FR;
+    if (motor_name.equalsIgnoreCase("RL"))
+        return (int8_t)MotorIndex::RL;
+    if (motor_name.equalsIgnoreCase("RR"))
+        return (int8_t)MotorIndex::RR;
     return -1; // Invalid motor name
 }
 
@@ -285,19 +298,20 @@ void Terminal::_handle_help(String &args)
         com_send_log(TERMINAL_OUTPUT, "Core Commands:");
 
         int max_core_cmd_len = 0;
-        const char* core_commands[] = {"status", "tasks", "mem", "reboot", "factory_reset"};
-        const char* core_commands_desc[] = {
+        const char *core_commands[] = {"status", "tasks", "mem", "reboot", "factory_reset"};
+        const char *core_commands_desc[] = {
             "Shows firmware information.",
             "Shows information about running tasks.",
             "Shows current memory usage.",
             "Reboots the ESP32.",
-            "Resets all settings to their default values."
-        };
+            "Resets all settings to their default values."};
         int num_core_commands = sizeof(core_commands) / sizeof(core_commands[0]);
 
-        for (int i = 0; i < num_core_commands; ++i) {
+        for (int i = 0; i < num_core_commands; ++i)
+        {
             int len = strlen(core_commands[i]);
-            if (len > max_core_cmd_len) {
+            if (len > max_core_cmd_len)
+            {
                 max_core_cmd_len = len;
             }
         }
@@ -305,7 +319,8 @@ void Terminal::_handle_help(String &args)
 
         com_send_log(TERMINAL_OUTPUT, "  %-*s %s", max_core_cmd_len, "Command", "Description");
         String core_separator = "  ";
-        for (int i = 0; i < max_core_cmd_len; ++i) {
+        for (int i = 0; i < max_core_cmd_len; ++i)
+        {
             core_separator += "-";
         }
         core_separator += "--------------------------------------------------";
@@ -333,7 +348,8 @@ void Terminal::_handle_help(String &args)
 
         com_send_log(TERMINAL_OUTPUT, "  %-*s %s", max_category_prefix_len, "Category", "Description");
         String category_separator = "  ";
-        for (int i = 0; i < max_category_prefix_len; ++i) {
+        for (int i = 0; i < max_category_prefix_len; ++i)
+        {
             category_separator += "-";
         }
         category_separator += "--------------------------------------------------";
@@ -372,8 +388,9 @@ void Terminal::_handle_help(String &args)
             }
         }
 
-        max_command_name_len += TERMINAL_COLUMN_BUFFER_WIDTH; 
-        if (max_command_name_len < strlen("Command")) { 
+        max_command_name_len += TERMINAL_COLUMN_BUFFER_WIDTH;
+        if (max_command_name_len < strlen("Command"))
+        {
             max_command_name_len = strlen("Command");
         }
 
@@ -392,11 +409,13 @@ void Terminal::_handle_help(String &args)
 
         com_send_log(TERMINAL_OUTPUT, "  %-*s %s", max_command_name_len, "Command", "Description");
         String separator = "  ";
-        for (int i = 0; i < max_command_name_len; ++i) {
+        for (int i = 0; i < max_command_name_len; ++i)
+        {
             separator += "-";
         }
         separator += " "; // Space between command and description separator
-        for (int i = 0; i < max_description_len; ++i) {
+        for (int i = 0; i < max_description_len; ++i)
+        {
             separator += "-";
         }
         com_send_log(TERMINAL_OUTPUT, separator.c_str());
@@ -501,10 +520,12 @@ void Terminal::_handle_mem(String &args)
     com_send_log(TERMINAL_OUTPUT, "Memory (Heap):");
 
     int max_label_len = 0;
-    const char* labels[] = {"Total:", "Free:", "Min Free:"};
-    for (int i = 0; i < sizeof(labels) / sizeof(labels[0]); ++i) {
+    const char *labels[] = {"Total:", "Free:", "Min Free:"};
+    for (int i = 0; i < sizeof(labels) / sizeof(labels[0]); ++i)
+    {
         int len = strlen(labels[i]);
-        if (len > max_label_len) {
+        if (len > max_label_len)
+        {
             max_label_len = len;
         }
     }
@@ -528,9 +549,11 @@ void Terminal::_handle_reboot(String &args)
     ESP.restart();
 }
 
-void Terminal::_handle_quit(String &args) {
+void Terminal::_handle_quit(String &args)
+{
     com_send_log(TERMINAL_OUTPUT, "Saving settings and exiting...");
-    if (_motor_task && _motor_task->isInTestMode()) {
+    if (_motor_task && _motor_task->isInTestMode())
+    {
         _motor_task->stopMotorTest();
     }
     _settings_manager->saveSettings(); // Save settings before quitting
@@ -566,13 +589,16 @@ void Terminal::_handle_imu_calibrate(String &args)
     com_send_log(LOG_INFO, "IMU sensor calibration complete.");
 }
 
-void Terminal::_handle_imu_lpf_bandwidth(String &args) {
-    if (!_imu_task) {
+void Terminal::_handle_imu_lpf_bandwidth(String &args)
+{
+    if (!_imu_task)
+    {
         com_send_log(LOG_ERROR, "IMU task not available.");
         return;
     }
 
-    if (args.length() == 0) {
+    if (args.length() == 0)
+    {
         // Get current LPF bandwidth
         String current_lpf_bandwidth_index_str = _settings_manager->getSettingValue(KEY_IMU_LPF_BANDWIDTH);
         String current_lpf_bandwidth_str = _settings_manager->getSettingValueHumanReadable(KEY_IMU_LPF_BANDWIDTH);
@@ -581,7 +607,8 @@ void Terminal::_handle_imu_lpf_bandwidth(String &args) {
         String options_str = _settings_manager->getSettingOptionsHumanReadable(KEY_IMU_LPF_BANDWIDTH);
         int start_index = 0;
         int end_index = options_str.indexOf(',');
-        while (end_index != -1) {
+        while (end_index != -1)
+        {
             String option = options_str.substring(start_index, end_index);
             option.trim();
             com_send_log(TERMINAL_OUTPUT, "  - %s", option.c_str());
@@ -591,11 +618,16 @@ void Terminal::_handle_imu_lpf_bandwidth(String &args) {
         String last_option = options_str.substring(start_index);
         last_option.trim();
         com_send_log(TERMINAL_OUTPUT, "  - %s", last_option.c_str());
-    } else {
+    }
+    else
+    {
         // Set LPF bandwidth
-        if (_settings_manager->setSettingValue(KEY_IMU_LPF_BANDWIDTH, args)) {
+        if (_settings_manager->setSettingValue(KEY_IMU_LPF_BANDWIDTH, args))
+        {
             com_send_log(LOG_INFO, "IMU LPF Bandwidth set to %s. Reboot to apply changes.", _settings_manager->getSettingValueHumanReadable(KEY_IMU_LPF_BANDWIDTH).c_str());
-        } else {
+        }
+        else
+        {
             com_send_log(LOG_ERROR, "Failed to set IMU LPF Bandwidth to %s. Invalid option.", args.c_str());
         }
     }
@@ -615,7 +647,8 @@ void Terminal::_handle_rx_data(String &args)
     for (int i = 0; i < TERMINAL_RX_DATA_DISPLAY_CHANNELS; ++i)
     {
         String ch_str = "CH" + String(i + RC_CHANNEL_INDEX_OFFSET);
-        if (ch_str.length() > max_ch_len) {
+        if (ch_str.length() > max_ch_len)
+        {
             max_ch_len = ch_str.length();
         }
     }
@@ -623,7 +656,8 @@ void Terminal::_handle_rx_data(String &args)
 
     com_send_log(TERMINAL_OUTPUT, "  %-*s %s", max_ch_len, "Channel", "Value");
     String separator = "  ";
-    for (int i = 0; i < max_ch_len; ++i) {
+    for (int i = 0; i < max_ch_len; ++i)
+    {
         separator += "-";
     }
     separator += "--------------------";
@@ -658,7 +692,8 @@ void Terminal::_handle_rx_protocol(String &args)
     }
     else
     {
-        if (_settings_manager->setSettingValue(KEY_RC_PROTOCOL_TYPE, args)) {
+        if (_settings_manager->setSettingValue(KEY_RC_PROTOCOL_TYPE, args))
+        {
             com_send_log(LOG_INFO, "RC Protocol set to %s. Reboot to apply changes.", _settings_manager->getSettingValueHumanReadable(KEY_RC_PROTOCOL_TYPE).c_str());
         }
         else
@@ -697,7 +732,7 @@ void Terminal::_handle_rx_value_single(String &args)
 
     int channel_index = _settings_manager->getSettingValue(key).toInt();
     int16_t value = _rx_task->getChannel(channel_index);
-    
+
     const int fixed_desc_width = TERMINAL_RX_SINGLE_DESC_WIDTH;
 
     String desc_str = "RX " + channel_name + " (CH" + String(channel_index + RC_CHANNEL_INDEX_OFFSET) + ")";
@@ -783,7 +818,8 @@ void Terminal::_handle_rx_channel_mapping(String &args)
         return;
     }
 
-    if (_settings_manager->setSettingValue(key, String(channel_index_0_based))) {
+    if (_settings_manager->setSettingValue(key, String(channel_index_0_based)))
+    {
         com_send_log(LOG_INFO, "RX channel '%s' mapped to physical channel %d. Reboot to apply changes.", channel_name_arg.c_str(), channel_index_1_based);
     }
     else
@@ -829,12 +865,15 @@ void Terminal::_handle_motor_throttle(String &args)
     com_send_log(TERMINAL_OUTPUT, "Motor %s throttle set to %d.", _get_motor_name(motor_id), throttle_value);
 }
 
-void Terminal::_handle_motor_test(String &args) {
-    if (!_motor_task) {
+void Terminal::_handle_motor_test(String &args)
+{
+    if (!_motor_task)
+    {
         com_send_log(LOG_ERROR, "Motor task not available.");
         return;
     }
-    if (_pid_task && _pid_task->isArmed()) {
+    if (_pid_task && _pid_task->isArmed())
+    {
         com_send_log(LOG_ERROR, "Cannot run motor test while armed. Disarm first.");
         return;
     }
@@ -845,7 +884,8 @@ void Terminal::_handle_motor_test(String &args) {
 
     // Parse arguments: <motor_name> <throttle_percentage> [duration_ms]
     int first_space = args.indexOf(' ');
-    if (first_space == -1) {
+    if (first_space == -1)
+    {
         com_send_log(LOG_ERROR, "Usage: motor test <motor_name> <throttle_percentage> [duration_ms]");
         return;
     }
@@ -855,18 +895,23 @@ void Terminal::_handle_motor_test(String &args) {
     String remaining_args = args.substring(first_space + 1);
 
     int second_space = remaining_args.indexOf(' ');
-    if (second_space == -1) { // No duration_ms provided, continuous spin
+    if (second_space == -1)
+    { // No duration_ms provided, continuous spin
         throttle_percentage = remaining_args.toFloat();
-    } else { // Duration_ms provided
+    }
+    else
+    { // Duration_ms provided
         throttle_percentage = remaining_args.substring(0, second_space).toFloat();
         duration_ms = remaining_args.substring(second_space + 1).toInt();
     }
 
-    if (motor_id == -1) {
+    if (motor_id == -1)
+    {
         com_send_log(LOG_ERROR, "Invalid motor name: %s. Must be FL, FR, RL, or RR.", motor_name_str.c_str());
         return;
     }
-    if (throttle_percentage < 0.0f || throttle_percentage > 100.0f) {
+    if (throttle_percentage < 0.0f || throttle_percentage > 100.0f)
+    {
         com_send_log(LOG_ERROR, "Invalid throttle percentage. Must be between 0 and 100.");
         return;
     }
@@ -874,15 +919,20 @@ void Terminal::_handle_motor_test(String &args) {
     // Convert percentage to normalized 0-1 float
     float normalized_throttle = throttle_percentage / 100.0f;
 
-    if (duration_ms > 0) {
+    if (duration_ms > 0)
+    {
         _motor_task->startMotorTest(motor_id, normalized_throttle, duration_ms);
-    } else {
+    }
+    else
+    {
         _motor_task->startContinuousMotorTest(motor_id, normalized_throttle);
     }
 }
 
-void Terminal::_handle_motor_stop(String &args) {
-    if (!_motor_task) {
+void Terminal::_handle_motor_stop(String &args)
+{
+    if (!_motor_task)
+    {
         com_send_log(LOG_ERROR, "Motor task not available.");
         return;
     }
@@ -939,7 +989,8 @@ void Terminal::_handle_set_setting(String &args)
         return;
     }
 
-    if (_settings_manager->setSettingValue(internal_key, value_str)) {
+    if (_settings_manager->setSettingValue(internal_key, value_str))
+    {
         com_send_log(LOG_INFO, "Set %s to %s", display_key.c_str(), _settings_manager->getSettingValueHumanReadable(internal_key).c_str());
     }
     else
@@ -1030,10 +1081,12 @@ void Terminal::_handle_pid_get(String &args)
     com_send_log(TERMINAL_OUTPUT, "PID Gains (scaled by %d):", (int)PID_SCALE_FACTOR);
 
     int max_label_len = 0;
-    const char* labels[] = {"Roll:", "Pitch:", "Yaw:"};
-    for (int i = 0; i < sizeof(labels) / sizeof(labels[0]); ++i) {
+    const char *labels[] = {"Roll:", "Pitch:", "Yaw:"};
+    for (int i = 0; i < sizeof(labels) / sizeof(labels[0]); ++i)
+    {
         int len = strlen(labels[i]);
-        if (len > max_label_len) {
+        if (len > max_label_len)
+        {
             max_label_len = len;
         }
     }
@@ -1041,7 +1094,8 @@ void Terminal::_handle_pid_get(String &args)
 
     com_send_log(TERMINAL_OUTPUT, "  %-*s %s", max_label_len, "Axis", "Gains (P, I, D)");
     String separator = "  ";
-    for (int i = 0; i < max_label_len; ++i) {
+    for (int i = 0; i < max_label_len; ++i)
+    {
         separator += "-";
     }
     separator += "-------------------------";

@@ -38,7 +38,7 @@ public:
     virtual ~ImuSensor() = default;
 
     // Initializes the sensor. Returns true if successful.
-        virtual bool begin(uint32_t i2cClockSpeed = MPU6050_I2C_CLOCK_SPEED, bool useDMP = false, GyroRange gyroRange = GYRO_RANGE_250DPS, AccelRange accelRange = ACCEL_RANGE_2G, LpfBandwidth lpf = LPF_256HZ_N_0MS) = 0;
+    virtual bool begin(uint32_t i2cClockSpeed = MPU6050_I2C_CLOCK_SPEED, bool useDMP = false, GyroRange gyroRange = GYRO_RANGE_250DPS, AccelRange accelRange = ACCEL_RANGE_2G, LpfBandwidth lpf = LPF_256HZ_N_0MS) = 0;
 
     // Calibrates the sensor.
     virtual void calibrate() = 0;
@@ -47,9 +47,11 @@ public:
     virtual void read() = 0;
 
     // Gets the most recently read sensor data, protected by a mutex.
-    ImuData getData() const {
+    ImuData getData() const
+    {
         ImuData temp_data = {};
-        if (xSemaphoreTake(_data_mutex, portMAX_DELAY) == pdTRUE) {
+        if (xSemaphoreTake(_data_mutex, portMAX_DELAY) == pdTRUE)
+        {
             temp_data = _data;
             xSemaphoreGive(_data_mutex);
         }

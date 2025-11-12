@@ -8,8 +8,9 @@
 
 #include "serial_manager_task.h"
 #include "../firmware.h"
-#include <cmath>      // For atan2, asin, copysign
-#include "imu_task.h" // To access ImuTask methods
+#include <cmath>
+#include <math.h>
+#include "imu_task.h"
 
 // Helper function to convert quaternion to Euler angles (roll, pitch, yaw)
 // Angles are in degrees

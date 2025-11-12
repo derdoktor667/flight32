@@ -5,14 +5,13 @@
  * @date 2025-11-09
  * @license MIT
  */
+
 #pragma once
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
 #include <cstdarg>
 #include "config.h"
-
-
 
 typedef enum
 {

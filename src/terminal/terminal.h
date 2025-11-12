@@ -42,15 +42,17 @@ struct Command
     CommandCategory category;
 };
 
-struct CategoryInfo {
+struct CategoryInfo
+{
     CommandCategory category;
-    const char* prefix;
-    const char* description;
+    const char *prefix;
+    const char *description;
 };
 
-struct ChannelMapping {
-    const char* name;
-    const char* key;
+struct ChannelMapping
+{
+    const char *name;
+    const char *key;
 };
 
 class Terminal

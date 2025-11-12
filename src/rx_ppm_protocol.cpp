@@ -11,7 +11,7 @@
 #include "config.h"
 
 // Initialize static member
-RxPpmProtocol* RxPpmProtocol::_instance = nullptr;
+RxPpmProtocol *RxPpmProtocol::_instance = nullptr;
 
 RxPpmProtocol::RxPpmProtocol()
     : _ppm_pin(DEFAULT_RX_PIN), _last_pulse_time(0), _current_channel(0), _new_data_available(false), _is_connected(false)
@@ -59,7 +59,8 @@ bool RxPpmProtocol::isConnected()
 
 void IRAM_ATTR RxPpmProtocol::ppmISR()
 {
-    if (_instance == nullptr) return;
+    if (_instance == nullptr)
+        return;
 
     uint32_t current_time = micros();
     uint32_t pulse_width = current_time - _instance->_last_pulse_time;
@@ -75,7 +76,8 @@ void IRAM_ATTR RxPpmProtocol::ppmISR()
         {
             _instance->_channel_values[_instance->_current_channel] = pulse_width;
             _instance->_current_channel++;
-            if (_instance->_current_channel >= PPM_MAX_CHANNELS) {
+            if (_instance->_current_channel >= PPM_MAX_CHANNELS)
+            {
                 _instance->_new_data_available = true;
             }
         }

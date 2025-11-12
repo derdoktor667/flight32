@@ -160,6 +160,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         switch (commandID) {
             case MSP_RAW_IMU:
+                console.log('RAW_IMU Payload:', payload);
                 if (payload.length === 18) {
                     accelXSpan.textContent = new Int16Array(payload.slice(0, 2).buffer)[0];
                     accelYSpan.textContent = new Int16Array(payload.slice(2, 4).buffer)[0];
@@ -171,6 +172,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 break;
             case MSP_ATTITUDE:
+                console.log('ATTITUDE Payload:', payload);
                 if (payload.length === 6) {
                     rollSpan.textContent = (new Int16Array(payload.slice(0, 2).buffer)[0] / 10.0).toFixed(1);
                     pitchSpan.textContent = (new Int16Array(payload.slice(2, 4).buffer)[0] / 10.0).toFixed(1);
@@ -178,6 +180,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 break;
             case MSP_RC:
+                console.log('RC Payload:', payload);
                 if (payload.length === 16) {
                     for (let i = 0; i < 8; i++) {
                         rcSpans[i].textContent = new Int16Array(payload.slice(i * 2, (i * 2) + 2).buffer)[0];
@@ -185,6 +188,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 break;
             case MSP_MOTOR:
+                console.log('MOTOR Payload:', payload);
                 if (payload.length === 8) {
                     for (let i = 0; i < 4; i++) {
                         motorSpans[i].textContent = new Uint16Array(payload.slice(i * 2, (i * 2) + 2).buffer)[0];
@@ -288,6 +292,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                     if (value) {
                         for (const char of value) {
+                            console.log('Raw incoming byte:', char); // Log every incoming byte
                             parseMspChar(char);
                         }
                     }
