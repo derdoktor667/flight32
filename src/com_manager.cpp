@@ -84,3 +84,22 @@ void com_flush_output()
     xQueueSend(com_queue, &msg, portMAX_DELAY);
     xQueueReceive(com_flush_signal_queue, &dummy, portMAX_DELAY);
 }
+
+char _com_byte_buffer[BYTE_BUFFER_SIZE]; // Declare a buffer for com_format_bytes
+
+const char *com_format_bytes(uint32_t bytes)
+{
+    if (bytes < BYTES_IN_KB)
+    {
+        snprintf(_com_byte_buffer, sizeof(_com_byte_buffer), "%lu B", bytes);
+    }
+    else if (bytes < BYTES_IN_MB)
+    {
+        snprintf(_com_byte_buffer, sizeof(_com_byte_buffer), "%.1f KB", (float)bytes / BYTES_IN_KB);
+    }
+    else
+    {
+        snprintf(_com_byte_buffer, sizeof(_com_byte_buffer), "%.1f MB", (float)bytes / BYTES_IN_MB);
+    }
+    return _com_byte_buffer;
+}

@@ -1,0 +1,144 @@
+# This GitHub Actions workflow is designed to ensure code quality and
+# successful compilation for the flight32 ESP32 Arduino project.
+# It runs on every push to any branch.
+
+name: flight32 Build & Quality Check
+
+# Set permissions for the GitHub token.
+# 'contents: read' is required to checkout the repository.
+permissions:
+  contents: read
+
+# Define the trigger for the workflow.
+# It runs on any push to any branch.
+on:
+  push:
+    branches: [ '*' ]
+
+# Concurrency control ensures that only the latest commit for a branch
+# runs, canceling any workflows already in progress for the same branch.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ============================================================================
+  # Prepare Environment & Cache
+  # This job installs the Arduino core and libraries and saves them to a cache
+  # for later jobs to use.
+  # ============================================================================
+  prepare-cache:
+    name: Prepare Cache (Linux)
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Setup Arduino CLI
+        uses: arduino/setup-arduino-cli@v2
+
+      - name: Restore Arduino Core & Libraries Cache
+        uses: actions/cache@v4
+        id: cache-arduino
+        with:
+          path: |
+            ~/.arduino15/packages
+            ~/.arduino15/cache
+            ~/Arduino/libraries
+          key: linux-arduino-esp32-flight32-v1
+
+      - name: Install Dependencies
+        if: steps.cache-arduino.outputs.cache-hit != 'true'
+        shell: bash
+        run: |
+          arduino-cli core update-index --additional-urls https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
+          arduino-cli core install esp32:esp32
+          arduino-cli lib install "ArduinoJson"
+          mkdir -p "$HOME/Arduino/libraries"
+          git clone --depth=1 https://github.com/ESP32Async/ESPAsyncWebServer "$HOME/Arduino/libraries/ESPAsyncWebServer"
+          git clone --depth=1 https://github.com/ESP32Async/AsyncTCP "$HOME/Arduino/libraries/AsyncTCP"
+          # Initialize submodules and copy any Arduino libraries found within repo/submodules
+          git submodule update --init --recursive
+          # Find directories that contain library.properties (typische Arduino-Libraries) and copy them
+          find "$GITHUB_WORKSPACE" -type f -name 'library.properties' -print0 | \
+            xargs -0 -n1 dirname | sort -u | while read -r libdir; do
+              echo "Installing library from $libdir"
+              cp -R "$libdir" "$HOME/Arduino/libraries/$(basename "$libdir")"
+            done
+
+  # ============================================================================
+  # Compilation Test
+  # This job compiles all example sketches.
+  # ============================================================================
+  compile-sketches:
+    name: Compile Examples (Linux)
+    needs: prepare-cache
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup Arduino CLI
+        uses: arduino/setup-arduino-cli@v2
+
+      - name: Restore Arduino Core & Libraries Cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.arduino15/packages
+            ~/.arduino15/cache
+            ~/Arduino/libraries
+          key: linux-arduino-esp32-flight32-v1
+      
+      - name: Find and compile project sketches (root .ino) and install submodule libs
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$HOME/Arduino/libraries"
+          # Ensure submodules present
+          git submodule update --init --recursive
+          # Copy any Arduino libraries (library.properties) found in the repo or submodules
+          find "$GITHUB_WORKSPACE" -type f -name 'library.properties' -print0 | \
+            xargs -0 -n1 dirname | sort -u | while read -r libdir; do
+              echo "Installing library from $libdir"
+              cp -R "$libdir" "$HOME/Arduino/libraries/$(basename "$libdir")"
+            done
+          # Find .ino files in repository root (depth 1) and compile them
+          SKETCHES=$(find "$GITHUB_WORKSPACE" -maxdepth 1 -type f -name '*.ino' -print)
+          if [ -z "$SKETCHES" ]; then
+            echo "No .ino sketches found in project root — skipping compilation"
+            exit 0
+          fi
+          for SK in $SKETCHES; do
+            echo "------ Compiling $SK ------"
+            arduino-cli compile --fqbn esp32:esp32:esp32 --libraries "$HOME/Arduino/libraries" "$SK"
+          done
+
+  # ============================================================================
+  # Build Status Report
+  # This job runs last and provides a summary of the build status.
+  # ============================================================================
+  build-summary:
+    name: Build Summary
+    runs-on: ubuntu-latest
+    if: always() # This ensures the job runs even if previous jobs fail
+    needs:
+      - compile-sketches
+      
+    steps:
+      - name: Create Build Summary
+        run: |
+          echo "# 🔧 flight32 Build Report" >> $GITHUB_STEP_SUMMARY
+          echo "| Check | Status | Details |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|--------|---------|" >> $GITHUB_STEP_SUMMARY
+          if [[ "${{ needs.compile-sketches.result }}" == "success" ]]; then
+            echo "| 🔨 Compilation | ✅ Passed | Sketch(es) compiled successfully |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| 🔨 Compilation | ❌ Failed | One or more sketches failed to compile |" >> $GITHUB_STEP_SUMMARY
+          fi

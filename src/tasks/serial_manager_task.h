@@ -1,11 +1,3 @@
-/**
- * @file serial_manager_task.h
- * @brief Manages serial communication, handling both CLI terminal and MSP protocol with automatic switching.
- * @author Your Name
- * @date 2025-11-12
- * @license MIT
- */
-
 #pragma once
 
 #include <Arduino.h>
@@ -18,43 +10,9 @@
 #include "rx_task.h"
 #include "motor_task.h"
 #include "pid_task.h"
+#include "../terminal/terminal.h" // Include the new Terminal class
 
-// Terminal Command Categories (re-defined here as they are no longer in terminal_task.h)
-enum class CommandCategory
-{
-    SYSTEM,
-    IMU,
-    RX,
-    MOTOR,
-    PID,
-    SETTINGS,
-    UNKNOWN
-};
-
-// Forward declaration of SerialManagerTask for Command struct
-class SerialManagerTask;
-
-// Command struct definition (needs to be outside the class for static member array)
-struct Command
-{
-    const char *name;
-    void (SerialManagerTask::*handler)(String &);
-    const char *help;
-    CommandCategory category;
-};
-
-struct CategoryInfo {
-    CommandCategory category;
-    const char* prefix;
-    const char* description;
-};
-
-struct ChannelMapping {
-    const char* name;
-    const char* key;
-};
-
-// MSP Commands (re-defined here as they are no longer in msp_task.h)
+// MSP Commands
 #define MSP_API_VERSION 1
 #define MSP_FC_VARIANT 2
 #define MSP_FC_VERSION 3
@@ -86,6 +44,7 @@ private:
     MotorTask *_motor_task;
     PidTask *_pid_task;
     SettingsManager *_settings_manager;
+    Terminal *_terminal; // Instance of the new Terminal class
 
     // Serial Protocol State
     enum class SerialMode {
@@ -95,10 +54,6 @@ private:
     SerialMode _current_mode = SerialMode::TERMINAL;
     unsigned long _last_msp_activity_ms = 0;
     static constexpr unsigned long MSP_TIMEOUT_MS = 2000; // Switch back to terminal after 2 seconds of no MSP activity
-
-    // Terminal Mode Variables
-    String _terminal_input_buffer;
-    bool _terminal_should_quit = false;
 
     // MSP Mode Variables
     enum class MspState {
@@ -118,54 +73,11 @@ private:
     uint8_t _msp_payload_index = 0;
 
     // Common Helpers
-    const char *_format_bytes(uint32_t bytes);
-    char _byte_buffer[BYTE_BUFFER_SIZE]; // For _format_bytes
+    // const char *_format_bytes(uint32_t bytes); // Moved to com_manager.h
+    // char _byte_buffer[BYTE_BUFFER_SIZE]; // Moved to com_manager.cpp
 
     // Terminal Mode Functions
     void _handle_terminal_input(char incoming_char);
-    void _parse_terminal_command(String &command);
-    const char *_get_category_string(CommandCategory category);
-    CommandCategory _get_category_from_string(String &category_str);
-    CommandCategory _get_setting_category(const char *display_key);
-    const char *_get_motor_name(uint8_t motor_id);
-    int8_t _get_motor_id(String &motor_name);
-    static const char *_get_task_state_string(eTaskState state);
-
-    // Terminal Command Handlers
-    void _handle_help(String &args);
-    void _handle_status(String &args);
-    void _handle_tasks(String &args);
-    void _handle_mem(String &args);
-    void _handle_reboot(String &args);
-    void _handle_quit(String &args);
-    void _handle_imu_data(String &args);
-    void _handle_imu_calibrate(String &args);
-    void _handle_imu_lpf_bandwidth(String &args);
-    void _handle_rx_data(String &args);
-    void _handle_rx_status(String &args);
-    void _handle_rx_protocol(String &args);
-    void _handle_rx_value_single(String &args);
-    void _handle_rx_value_all(String &args);
-    void _handle_rx_channel_mapping(String &args);
-    void _handle_motor_throttle(String &args);
-    void _handle_motor_test(String &args);
-    void _handle_motor_stop(String &args);
-    void _handle_pid_get(String &args);
-    void _handle_pid_set(String &args);
-    void _handle_pid_reset_defaults(String &args);
-    void _handle_get_setting(String &args);
-    void _handle_set_setting(String &args);
-    void _handle_save_settings(String &args);
-    void _handle_factory_reset(String &args);
-    void _handle_list_settings(String &args);
-    void _handle_dump_settings(String &args);
-
-    static const Command _terminal_commands[];
-    static const int _num_terminal_commands;
-    static const CategoryInfo _terminal_category_info[];
-    static const int _num_terminal_categories;
-    static const ChannelMapping _terminal_channel_map[];
-    static const int _num_terminal_channel_mappings;
 
     // MSP Mode Functions
     void _parse_msp_char(uint8_t c);

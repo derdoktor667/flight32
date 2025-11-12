@@ -41,3 +41,4 @@ void com_task(void *pvParameters);
 void com_send_log(com_message_type_t type, const char *format, ...);
 void com_send_prompt(const char *prompt);
 void com_flush_output();
+const char *com_format_bytes(uint32_t bytes);
