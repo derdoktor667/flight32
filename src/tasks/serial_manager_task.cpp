@@ -166,47 +166,6 @@ void SerialManagerTask::showPrompt()
     com_send_prompt(prompt.c_str());
 }
 
-// --- Common Helpers ---
-bool SerialManagerTask::_check_imu_task_available()
-{
-    if (!_imu_task)
-    {
-        com_send_log(LOG_ERROR, "IMU task not available.");
-        return false;
-    }
-    return true;
-}
-
-bool SerialManagerTask::_check_rx_task_available()
-{
-    if (!_rx_task)
-    {
-        com_send_log(LOG_ERROR, "RX task not available.");
-        return false;
-    }
-    return true;
-}
-
-bool SerialManagerTask::_check_motor_task_available()
-{
-    if (!_motor_task)
-    {
-        com_send_log(LOG_ERROR, "Motor task not available.");
-        return false;
-    }
-    return true;
-}
-
-bool SerialManagerTask::_check_pid_task_available()
-{
-    if (!_pid_task)
-    {
-        com_send_log(LOG_ERROR, "PID task not available.");
-        return false;
-    }
-    return true;
-}
-
 const char *SerialManagerTask::_format_bytes(uint32_t bytes)
 {
     if (bytes < BYTES_IN_KB)
@@ -224,7 +183,7 @@ const char *SerialManagerTask::_format_bytes(uint32_t bytes)
     return _byte_buffer;
 }
 
-// --- Terminal Mode Functions ---
+// Terminal Mode Functions
 void SerialManagerTask::_handle_terminal_input(char incoming_char)
 {
     if (incoming_char == '\n' || incoming_char == '\r')
@@ -385,7 +344,7 @@ const char *SerialManagerTask::_get_task_state_string(eTaskState state)
     }
 }
 
-// --- Terminal Command Handlers ---
+// Terminal Command Handlers
 void SerialManagerTask::_handle_help(String &args)
 {
     com_send_log(TERMINAL_OUTPUT, "");
@@ -655,8 +614,11 @@ void SerialManagerTask::_handle_quit(String &args) {
 
 void SerialManagerTask::_handle_imu_data(String &args)
 {
-    if (!SerialManagerTask::_check_imu_task_available())
+    if (!_imu_task)
+    {
+        com_send_log(LOG_ERROR, "IMU task not available.");
         return;
+    }
 
     const ImuData &data = _imu_task->getImuSensor().getData();
     com_send_log(TERMINAL_OUTPUT, "Acc: x=%.2f, y=%.2f, z=%.2f | Gyro: x=%.2f, y=%.2f, z=%.2f | Temp: %.2f C",
@@ -667,8 +629,11 @@ void SerialManagerTask::_handle_imu_data(String &args)
 
 void SerialManagerTask::_handle_imu_calibrate(String &args)
 {
-    if (!SerialManagerTask::_check_imu_task_available())
+    if (!_imu_task)
+    {
+        com_send_log(LOG_ERROR, "IMU task not available.");
         return;
+    }
 
     com_send_log(LOG_INFO, "Calibrating IMU sensor...");
     _imu_task->getImuSensor().calibrate();
@@ -709,8 +674,11 @@ void SerialManagerTask::_handle_imu_lpf_bandwidth(String &args) {
 
 void SerialManagerTask::_handle_rx_data(String &args)
 {
-    if (!SerialManagerTask::_check_rx_task_available())
+    if (!_rx_task)
+    {
+        com_send_log(LOG_ERROR, "RX task not available.");
         return;
+    }
 
     com_send_log(TERMINAL_OUTPUT, "RX Channels:");
 
@@ -742,8 +710,11 @@ void SerialManagerTask::_handle_rx_data(String &args)
 
 void SerialManagerTask::_handle_rx_status(String &args)
 {
-    if (!SerialManagerTask::_check_rx_task_available())
+    if (!_rx_task)
+    {
+        com_send_log(LOG_ERROR, "RX task not available.");
         return;
+    }
 
     com_send_log(TERMINAL_OUTPUT, "RX Status: Task Available");
 }
@@ -771,8 +742,11 @@ void SerialManagerTask::_handle_rx_protocol(String &args)
 
 void SerialManagerTask::_handle_rx_value_single(String &args)
 {
-    if (!SerialManagerTask::_check_rx_task_available())
+    if (!_rx_task)
+    {
+        com_send_log(LOG_ERROR, "RX task not available.");
         return;
+    }
 
     int last_dot_index = args.lastIndexOf('.');
     String channel_name = args.substring(last_dot_index + RC_CHANNEL_INDEX_OFFSET);
@@ -804,8 +778,11 @@ void SerialManagerTask::_handle_rx_value_single(String &args)
 
 void SerialManagerTask::_handle_rx_value_all(String &args)
 {
-    if (!SerialManagerTask::_check_rx_task_available())
+    if (!_rx_task)
+    {
+        com_send_log(LOG_ERROR, "RX task not available.");
         return;
+    }
 
     com_send_log(TERMINAL_OUTPUT, "All Mapped RX Channels:");
 
@@ -890,8 +867,11 @@ void SerialManagerTask::_handle_rx_channel_mapping(String &args)
 
 void SerialManagerTask::_handle_motor_throttle(String &args)
 {
-    if (!SerialManagerTask::_check_motor_task_available())
+    if (!_motor_task)
+    {
+        com_send_log(LOG_ERROR, "Motor task not available.");
         return;
+    }
 
     int space_index = args.indexOf(' ');
     if (space_index == -1)
@@ -923,7 +903,10 @@ void SerialManagerTask::_handle_motor_throttle(String &args)
 }
 
 void SerialManagerTask::_handle_motor_test(String &args) {
-    if (!SerialManagerTask::_check_motor_task_available()) return;
+    if (!_motor_task) {
+        com_send_log(LOG_ERROR, "Motor task not available.");
+        return;
+    }
     if (_pid_task && _pid_task->isArmed()) {
         com_send_log(LOG_ERROR, "Cannot run motor test while armed. Disarm first.");
         return;
@@ -972,7 +955,10 @@ void SerialManagerTask::_handle_motor_test(String &args) {
 }
 
 void SerialManagerTask::_handle_motor_stop(String &args) {
-    if (!SerialManagerTask::_check_motor_task_available()) return;
+    if (!_motor_task) {
+        com_send_log(LOG_ERROR, "Motor task not available.");
+        return;
+    }
     _motor_task->stopMotorTest();
 }
 
@@ -1109,8 +1095,11 @@ void SerialManagerTask::_handle_dump_settings(String &args)
 
 void SerialManagerTask::_handle_pid_get(String &args)
 {
-    if (!SerialManagerTask::_check_pid_task_available())
+    if (!_pid_task)
+    {
+        com_send_log(LOG_ERROR, "PID task not available.");
         return;
+    }
 
     com_send_log(TERMINAL_OUTPUT, "PID Gains (scaled by %d):", (int)PID_SCALE_FACTOR);
 
@@ -1149,8 +1138,11 @@ void SerialManagerTask::_handle_pid_get(String &args)
 
 void SerialManagerTask::_handle_pid_set(String &args)
 {
-    if (!SerialManagerTask::_check_pid_task_available())
+    if (!_pid_task)
+    {
+        com_send_log(LOG_ERROR, "PID task not available.");
         return;
+    }
 
     int first_space = args.indexOf(' ');
     if (first_space == -1)
@@ -1216,8 +1208,11 @@ void SerialManagerTask::_handle_pid_set(String &args)
 
 void SerialManagerTask::_handle_pid_reset_defaults(String &args)
 {
-    if (!SerialManagerTask::_check_pid_task_available())
+    if (!_pid_task)
+    {
+        com_send_log(LOG_ERROR, "PID task not available.");
         return;
+    }
 
     if (args.equalsIgnoreCase("confirm"))
     {
@@ -1230,7 +1225,7 @@ void SerialManagerTask::_handle_pid_reset_defaults(String &args)
     }
 }
 
-// --- MSP Mode Functions ---
+// MSP Mode Functions
 void SerialManagerTask::_parse_msp_char(uint8_t c)
 {
     switch (_msp_state)
@@ -1345,13 +1340,13 @@ void SerialManagerTask::_send_msp_response(uint8_t cmd, uint8_t *payload, uint8_
     Serial.write(crc);
 }
 
-// --- MSP Command Handlers ---
+// MSP Command Handlers
 void SerialManagerTask::_handle_msp_api_version()
 {
     uint8_t payload[3];
-    payload[0] = 0; // MSP_PROTOCOL_VERSION
-    payload[1] = 1; // API_VERSION_MAJOR
-    payload[2] = 0; // API_VERSION_MINOR
+    payload[0] = MSP_PROTOCOL_VERSION;
+    payload[1] = MSP_API_VERSION_MAJOR;
+    payload[2] = MSP_API_VERSION_MINOR;
     _send_msp_response(MSP_API_VERSION, payload, 3);
 }
 
@@ -1363,7 +1358,7 @@ void SerialManagerTask::_handle_msp_fc_variant()
 
 void SerialManagerTask::_handle_msp_fc_version()
 {
-    uint8_t payload[3] = {0, 0, 1}; // MAJOR, MINOR, PATCH
+    uint8_t payload[3] = {FC_VERSION_MAJOR, FC_VERSION_MINOR, FC_VERSION_PATCH};
     _send_msp_response(MSP_FC_VERSION, payload, 3);
 }
 
@@ -1514,12 +1509,13 @@ void SerialManagerTask::_handle_msp_set_setting() {
 
 void SerialManagerTask::_handle_msp_pid_get()
 {
-    if (!SerialManagerTask::_check_pid_task_available()) {
-        _send_msp_response(MSP_PID, nullptr, 0); // Error or not available
+    if (!_pid_task) {
+        // No log here, MSP clients don't read logs. Just send empty response.
+        _send_msp_response(MSP_PID, nullptr, 0); 
         return;
     }
 
-    uint8_t payload[9]; // 3 axes * 3 gains (P,I,D) = 9 bytes
+    uint8_t payload[MSP_PID_PAYLOAD_SIZE]; // 3 axes * 3 gains (P,I,D) = 9 bytes
     int i = 0;
 
     PidGains roll_gains = _pid_task->getGains(PidAxis::ROLL);
@@ -1542,7 +1538,7 @@ void SerialManagerTask::_handle_msp_pid_get()
 
 void SerialManagerTask::_handle_msp_pid_set()
 {
-    if (!SerialManagerTask::_check_pid_task_available() || _msp_payload_size != 9) {
+    if (!_pid_task || _msp_payload_size != MSP_PID_PAYLOAD_SIZE) {
         _send_msp_response(MSP_SET_PID, nullptr, 0); // Error or invalid payload size
         return;
     }

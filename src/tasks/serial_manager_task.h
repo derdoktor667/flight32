@@ -87,7 +87,7 @@ private:
     PidTask *_pid_task;
     SettingsManager *_settings_manager;
 
-    // --- Serial Protocol State ---
+    // Serial Protocol State
     enum class SerialMode {
         TERMINAL,
         MSP
@@ -96,11 +96,11 @@ private:
     unsigned long _last_msp_activity_ms = 0;
     static constexpr unsigned long MSP_TIMEOUT_MS = 2000; // Switch back to terminal after 2 seconds of no MSP activity
 
-    // --- Terminal Mode Variables ---
+    // Terminal Mode Variables
     String _terminal_input_buffer;
     bool _terminal_should_quit = false;
 
-    // --- MSP Mode Variables ---
+    // MSP Mode Variables
     enum class MspState {
         IDLE,
         HEADER_START,
@@ -114,18 +114,14 @@ private:
     uint8_t _msp_payload_size = 0;
     uint8_t _msp_command_id = 0;
     uint8_t _msp_crc = 0;
-    uint8_t _msp_payload_buffer[128];
+    uint8_t _msp_payload_buffer[MSP_MAX_PAYLOAD_SIZE];
     uint8_t _msp_payload_index = 0;
 
-    // --- Common Helpers ---
-    bool _check_imu_task_available();
-    bool _check_rx_task_available();
-    bool _check_motor_task_available();
-    bool _check_pid_task_available();
+    // Common Helpers
     const char *_format_bytes(uint32_t bytes);
     char _byte_buffer[BYTE_BUFFER_SIZE]; // For _format_bytes
 
-    // --- Terminal Mode Functions ---
+    // Terminal Mode Functions
     void _handle_terminal_input(char incoming_char);
     void _parse_terminal_command(String &command);
     const char *_get_category_string(CommandCategory category);
@@ -135,7 +131,7 @@ private:
     int8_t _get_motor_id(String &motor_name);
     static const char *_get_task_state_string(eTaskState state);
 
-    // Terminal Command Handlers (from old TerminalTask)
+    // Terminal Command Handlers
     void _handle_help(String &args);
     void _handle_status(String &args);
     void _handle_tasks(String &args);
@@ -171,12 +167,12 @@ private:
     static const ChannelMapping _terminal_channel_map[];
     static const int _num_terminal_channel_mappings;
 
-    // --- MSP Mode Functions ---
+    // MSP Mode Functions
     void _parse_msp_char(uint8_t c);
     void _process_msp_message();
     void _send_msp_response(uint8_t cmd, uint8_t *payload, uint8_t size);
 
-    // MSP Command Handlers (from old MspTask)
+    // MSP Command Handlers
     void _handle_msp_api_version();
     void _handle_msp_fc_variant();
     void _handle_msp_fc_version();

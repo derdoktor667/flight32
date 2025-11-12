@@ -56,4 +56,6 @@ private:
     float _testThrottle;
     uint32_t _testDuration;
     uint32_t _testStartTime;
+
+    bool _is_valid_throttle_percentage(float throttle);
 };

@@ -192,6 +192,20 @@ static constexpr uint8_t BYTE_BUFFER_SIZE = 15;
 // --- Time Constants ---
 static constexpr float MS_TO_SECONDS_FACTOR = 1000.0f;
 
+// --- MSP Protocol Constants ---
+static constexpr uint8_t MSP_PROTOCOL_VERSION = 0;
+static constexpr uint8_t MSP_API_VERSION_MAJOR = 1;
+static constexpr uint8_t MSP_API_VERSION_MINOR = 0;
+
+// --- Flight Controller Version Constants ---
+static constexpr uint8_t FC_VERSION_MAJOR = 0;
+static constexpr uint8_t FC_VERSION_MINOR = 0;
+static constexpr uint8_t FC_VERSION_PATCH = 1;
+
+// --- MSP Constants ---
+static constexpr uint8_t MSP_MAX_PAYLOAD_SIZE = 128;
+static constexpr uint8_t MSP_PID_PAYLOAD_SIZE = 9;
+
 // --- Terminal Formatting Constants ---
 static constexpr uint8_t TASK_NAME_COLUMN_WIDTH = 16;
 static constexpr uint8_t TASK_STATE_COLUMN_WIDTH = 10;
@@ -233,6 +247,18 @@ static constexpr int16_t INVALID_CHANNEL_VALUE = 0;
 
 // --- RC Arming Threshold ---
 static constexpr int16_t RC_CHANNEL_ARM_THRESHOLD = 1800;
+
+// --- Default RC Channel Mappings (0-based index) ---
+static constexpr uint8_t DEFAULT_RC_CHANNEL_ROLL = 1;
+static constexpr uint8_t DEFAULT_RC_CHANNEL_PITCH = 0;
+static constexpr uint8_t DEFAULT_RC_CHANNEL_THRO = 2;
+static constexpr uint8_t DEFAULT_RC_CHANNEL_YAW = 3;
+static constexpr uint8_t DEFAULT_RC_CHANNEL_ARM = 4;
+static constexpr uint8_t DEFAULT_RC_CHANNEL_FMODE = 5;
+static constexpr uint8_t DEFAULT_RC_CHANNEL_AUX1 = 6;
+static constexpr uint8_t DEFAULT_RC_CHANNEL_AUX2 = 7;
+static constexpr uint8_t DEFAULT_RC_CHANNEL_AUX3 = 8;
+static constexpr uint8_t DEFAULT_RC_CHANNEL_AUX4 = 9;
 
 // --- Task Names ---
 static constexpr const char *COM_TASK_NAME = "com_task";

@@ -156,8 +156,7 @@ void MotorTask::startMotorTest(uint8_t motorNum, float throttle, uint32_t durati
         com_send_log(LOG_ERROR, "MotorTest: Invalid motor number %d.", motorNum);
         return;
     }
-    if (throttle < 0.0f || throttle > 1.0f) { // Assuming throttle is normalized 0-1
-        com_send_log(LOG_ERROR, "MotorTest: Invalid throttle percentage %f. Must be between 0 and 1.", throttle);
+    if (!_is_valid_throttle_percentage(throttle)) {
         return;
     }
 
@@ -176,10 +175,9 @@ void MotorTask::startContinuousMotorTest(uint8_t motorNum, float throttle) {
         com_send_log(LOG_ERROR, "MotorTest: Invalid motor number %d.", motorNum);
         return;
     }
-    if (throttle < 0.0f || throttle > 1.0f) { // Assuming throttle is normalized 0-1
-        com_send_log(LOG_ERROR, "MotorTest: Invalid throttle percentage %f. Must be between 0 and 1.", throttle);
+    if (!_is_valid_throttle_percentage(throttle)) {
         return;
-        }
+    }
 
     stopMotorTest(); // Stop any ongoing test first
 
@@ -203,4 +201,12 @@ void MotorTask::stopMotorTest() {
         }
         com_send_log(LOG_INFO, "MotorTest: All motors stopped.");
     }
+}
+
+bool MotorTask::_is_valid_throttle_percentage(float throttle) {
+    if (throttle < 0.0f || throttle > 1.0f) {
+        com_send_log(LOG_ERROR, "MotorTest: Invalid throttle percentage %f. Must be between 0 and 1.", throttle);
+        return false;
+    }
+    return true;
 }
