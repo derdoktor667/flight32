@@ -33,9 +33,9 @@ static constexpr uint16_t TERMINAL_INPUT_BUFFER_SIZE = 128;
 // --- Com Task Configuration ---
 static constexpr uint32_t COM_TASK_STACK_SIZE = 4096;
 static constexpr uint8_t COM_TASK_PRIORITY = 2;
-static constexpr uint8_t COM_QUEUE_LENGTH = 20;
+static constexpr uint8_t COM_QUEUE_LENGTH = 50;
 static constexpr uint8_t COM_FLUSH_QUEUE_LENGTH = 1;
-static constexpr uint16_t COM_MESSAGE_MAX_LENGTH = 256;
+static constexpr uint16_t COM_MESSAGE_MAX_LENGTH = 512;
 static constexpr uint32_t COM_TASK_STARTUP_DELAY_MS = 10;
 
 // --- IMU Task Configuration ---
@@ -46,9 +46,9 @@ static constexpr uint8_t IMU_TASK_DELAY_MS = 10;
 static constexpr uint8_t MPU6050_I2C_SDA = 21;
 static constexpr uint8_t MPU6050_I2C_SCL = 22;
 static constexpr uint32_t MPU6050_I2C_CLOCK_SPEED = 400000;
-static constexpr uint8_t MPU6050_I2C_ADDRESS = 0x70; // MPU6050 I2C address. Typically 0x68 (AD0 low) or 0x69 (AD0 high). 0x70 might indicate a specific breakout board or configuration.
+static constexpr uint8_t MPU6050_I2C_ADDRESS = 0x70;     // usually 0x68
 static constexpr uint8_t MPU6050_FIFO_BUFFER_SIZE = 128; // Size of the MPU6050 FIFO buffer
-static constexpr bool IMU_DMP_ENABLED_DEFAULT = false; // Default setting for enabling the Digital Motion Processor (DMP)
+static constexpr bool IMU_DMP_ENABLED_DEFAULT = false;   // Default setting for enabling the Digital Motion Processor (DMP)
 
 // --- IMU Protocol Configuration ---
 enum class ImuType : uint8_t

@@ -22,7 +22,6 @@ const ChannelMapping Terminal::_channel_map[] = {
     {"aux4", SettingsManager::KEY_RC_CHANNEL_AUX4}};
 constexpr int Terminal::_num_channel_mappings = sizeof(Terminal::_channel_map) / sizeof(ChannelMapping);
 
-
 const Command Terminal::_commands[] = {
     {"help", &Terminal::_handle_help, "Shows this help message.", CommandCategory::SYSTEM},
     {"status", &Terminal::_handle_status, "Shows firmware information.", CommandCategory::SYSTEM},
@@ -80,8 +79,6 @@ const Command Terminal::_commands[] = {
     {"dump", &Terminal::_handle_dump_settings, "Dumps all settings for backup.", CommandCategory::SETTINGS}};
 constexpr int Terminal::_num_commands = sizeof(Terminal::_commands) / sizeof(Command);
 
-
-
 const CategoryInfo Terminal::_category_info[] = {
     {CommandCategory::SYSTEM, "system", "System commands and settings"},
     {CommandCategory::IMU, "imu", "IMU sensor commands"},
@@ -89,9 +86,9 @@ const CategoryInfo Terminal::_category_info[] = {
     {CommandCategory::MOTOR, "motor", "Motor control commands"},
     {CommandCategory::PID, "pid", "PID controller commands"},
     {CommandCategory::SETTINGS, "settings", "Settings management commands"},
+    {CommandCategory::RC_CHANNELS, "rc.channels", "RC Channel Mapping Settings"},
 };
 constexpr int Terminal::_num_categories = sizeof(Terminal::_category_info) / sizeof(CategoryInfo);
-
 
 Terminal::Terminal(Scheduler *scheduler, ImuTask *imu_task, RxTask *rx_task, MotorTask *motor_task, PidTask *pid_task, SettingsManager *settings_manager)
     : _scheduler(scheduler),
@@ -199,6 +196,8 @@ const char *Terminal::_get_category_string(CommandCategory category)
         return "PID Controller";
     case CommandCategory::SETTINGS:
         return "Settings Management";
+    case CommandCategory::RC_CHANNELS:
+        return "RC Channel Mapping";
     default:
         return "Unknown";
     }
@@ -218,23 +217,30 @@ CommandCategory Terminal::_get_category_from_string(String &category_str)
         return CommandCategory::PID;
     if (category_str.equalsIgnoreCase("settings") || category_str.equalsIgnoreCase("config"))
         return CommandCategory::SETTINGS;
+    if (category_str.equalsIgnoreCase("rc.channels") || category_str.equalsIgnoreCase("channels"))
+        return CommandCategory::RC_CHANNELS;
     return CommandCategory::UNKNOWN;
 }
 
 CommandCategory Terminal::_get_setting_category(const char *display_key)
 {
     String key_str = String(display_key);
+    CommandCategory assigned_category = CommandCategory::SETTINGS; // Default to SETTINGS
+
     if (key_str.startsWith("system."))
-        return CommandCategory::SYSTEM;
-    if (key_str.startsWith("gyro.") || key_str.startsWith("imu."))
-        return CommandCategory::IMU;
-    if (key_str.startsWith("rx."))
-        return CommandCategory::RX;
-    if (key_str.startsWith("motor."))
-        return CommandCategory::MOTOR;
-    if (key_str.startsWith("pid."))
-        return CommandCategory::PID;
-    return CommandCategory::SETTINGS;
+        assigned_category = CommandCategory::SYSTEM;
+    else if (key_str.startsWith("gyro.") || key_str.startsWith("imu.") || key_str.startsWith("mpu."))
+        assigned_category = CommandCategory::IMU;
+    else if (key_str.startsWith("rx.") || key_str.startsWith("rc.protocol"))
+        assigned_category = CommandCategory::RX;
+    else if (key_str.startsWith("motor."))
+        assigned_category = CommandCategory::MOTOR;
+    else if (key_str.startsWith("pid."))
+        assigned_category = CommandCategory::PID;
+    else if (key_str.startsWith("rc.ch."))
+        assigned_category = CommandCategory::RC_CHANNELS;
+
+    return assigned_category;
 }
 
 const char *Terminal::_get_motor_name(uint8_t motor_id)
@@ -1021,7 +1027,34 @@ void Terminal::_handle_factory_reset(String &args)
 
 void Terminal::_handle_list_settings(String &args)
 {
-    _settings_manager->listSettings();
+    com_send_log(TERMINAL_OUTPUT, "\n--- Available Settings ---");
+
+    for (int cat_idx = 0; cat_idx < _num_categories; ++cat_idx)
+    {
+        CommandCategory current_category = _category_info[cat_idx].category;
+        const char *category_name = _get_category_string(current_category);
+
+        if (current_category == CommandCategory::UNKNOWN)
+            continue;
+
+        // Check if there are any settings for this category before printing header
+        bool category_has_settings = false;
+        for (int i = 0; i < _settings_manager->_num_settings; ++i)
+        {
+            if (Terminal::_get_setting_category(_settings_manager->_settings_metadata[i].display_key) == current_category)
+            {
+                category_has_settings = true;
+                break;
+            }
+        }
+
+        if (category_has_settings)
+        {
+            com_send_log(TERMINAL_OUTPUT, "\n--- %s Settings ---", category_name);
+            _settings_manager->listSettings(current_category);
+        }
+    }
+    com_send_log(TERMINAL_OUTPUT, "--------------------------");
 }
 
 void Terminal::_handle_dump_settings(String &args)
@@ -1036,35 +1069,21 @@ void Terminal::_handle_dump_settings(String &args)
         if (current_category == CommandCategory::UNKNOWN)
             continue;
 
-        int max_display_key_len = 0;
+        // Check if there are any settings for this category before printing header
         bool category_has_settings = false;
         for (int i = 0; i < _settings_manager->_num_settings; ++i)
         {
-            const char *display_key = _settings_manager->_settings_metadata[i].display_key;
-            if (_get_setting_category(display_key) == current_category)
+            if (Terminal::_get_setting_category(_settings_manager->_settings_metadata[i].display_key) == current_category)
             {
-                int len = strlen(display_key);
-                if (len > max_display_key_len)
-                {
-                    max_display_key_len = len;
-                }
                 category_has_settings = true;
+                break;
             }
         }
 
         if (category_has_settings)
         {
             com_send_log(TERMINAL_OUTPUT, "\n--- %s Settings ---", category_name);
-            max_display_key_len += TERMINAL_COLUMN_BUFFER_WIDTH;
-            for (int i = 0; i < _settings_manager->_num_settings; ++i)
-            {
-                const char *display_key = _settings_manager->_settings_metadata[i].display_key;
-                const char *internal_key = _settings_manager->_settings_metadata[i].key;
-                if (_get_setting_category(display_key) == current_category)
-                {
-                    com_send_log(TERMINAL_OUTPUT, "set %-*s = %s", max_display_key_len, display_key, _settings_manager->getSettingValueHumanReadable(internal_key).c_str());
-                }
-            }
+            _settings_manager->dumpSettings(current_category);
         }
     }
     com_send_log(TERMINAL_OUTPUT, "\n# End of Dump");

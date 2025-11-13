@@ -27,6 +27,7 @@ enum class CommandCategory
     MOTOR,
     PID,
     SETTINGS,
+    RC_CHANNELS,
     UNKNOWN
 };
 
@@ -80,7 +81,9 @@ private:
     // Helper functions
     const char *_get_category_string(CommandCategory category);
     CommandCategory _get_category_from_string(String &category_str);
-    CommandCategory _get_setting_category(const char *display_key);
+
+public:
+    static CommandCategory _get_setting_category(const char *display_key);
     const char *_get_motor_name(uint8_t motor_id);
     int8_t _get_motor_id(String &motor_name);
     static const char *_get_task_state_string(eTaskState state);

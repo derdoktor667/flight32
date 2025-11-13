@@ -12,6 +12,8 @@
 #include <Arduino.h>
 #include "imu_sensor.h"
 
+enum class CommandCategory; // Forward declaration
+
 class SettingsManager
 {
 public:
@@ -21,8 +23,8 @@ public:
     void loadOrInitSettings();
     void saveSettings();
     void factoryReset();
-    void listSettings();
-    void dumpSettings();
+    void listSettings(CommandCategory category);
+    void dumpSettings(CommandCategory category);
 
     String getSettingValue(const char *key);
     bool setSettingValue(const char *key, const String &value_str);
@@ -39,8 +41,6 @@ public:
     static constexpr const char *KEY_SYSTEM_NAME = "system.name";
     static constexpr const char *DEFAULT_SYSTEM_NAME = "Flight32";
     static constexpr const char *KEY_MPU_GYRO_RANGE = "mpu.g_range";
-    static constexpr const char *KEY_MOTOR_PROTOCOL = "motor.protocol";
-    static constexpr const char *KEY_RX_PROTOCOL = "rx.protocol";
     static constexpr const char *KEY_RC_PROTOCOL_TYPE = "rc.protocol";
     static constexpr const char *KEY_RX_PIN = "rx.pin";
 
