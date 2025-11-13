@@ -51,7 +51,7 @@ SettingsManager::SettingsManager()
 
 void SettingsManager::begin()
 {
-
+    com_send_log(LOG_INFO, "SettingsManager: begin()");
     _preferences.begin(SETTINGS_NAMESPACE, false);
     _is_begun = true;
     loadOrInitSettings();
@@ -63,6 +63,7 @@ void SettingsManager::loadOrInitSettings()
         return;
 
     uint16_t saved_version = _preferences.getUShort(KEY_SCHEMA_VERSION, DEFAULT_SCHEMA_VERSION);
+    com_send_log(LOG_INFO, "SettingsManager: NVS Schema Version - Saved: %u, Current: %u", saved_version, CURRENT_SCHEMA_VERSION);
 
     if (saved_version != CURRENT_SCHEMA_VERSION)
     {
@@ -77,17 +78,18 @@ void SettingsManager::loadOrInitSettings()
 
 void SettingsManager::factoryReset()
 {
-    com_send_log(LOG_INFO, "SettingsManager: factoryReset()");
+    com_send_log(LOG_INFO, "SettingsManager: factoryReset() - Clearing NVS namespace '%s'", SETTINGS_NAMESPACE);
     if (!_is_begun)
         return;
     _preferences.clear();
     _write_defaults();
     saveSettings();
+    com_send_log(LOG_INFO, "SettingsManager: factoryReset() - Defaults applied and saved.");
 }
 
 void SettingsManager::_write_defaults()
 {
-    com_send_log(LOG_INFO, "SettingsManager: _write_defaults()");
+    com_send_log(LOG_INFO, "SettingsManager: _write_defaults() - Writing default settings to NVS.");
     for (int i = 0; i < _num_settings; ++i)
     {
         const char *key = _settings_metadata[i].key;
@@ -95,22 +97,25 @@ void SettingsManager::_write_defaults()
         {
         case UINT8:
             _preferences.putUChar(key, (uint8_t)_settings_metadata[i].default_value);
+            com_send_log(LOG_INFO, "  Default UINT8: %s = %u", key, (uint8_t)_settings_metadata[i].default_value);
             break;
         case INT32:
             _preferences.putInt(key, _settings_metadata[i].default_value);
+            com_send_log(LOG_INFO, "  Default INT32: %s = %d", key, _settings_metadata[i].default_value);
             break;
         case FLOAT:
             _preferences.putFloat(key, _settings_metadata[i].default_float_value);
+            com_send_log(LOG_INFO, "  Default FLOAT: %s = %.3f", key, _settings_metadata[i].default_float_value);
             break;
         case STRING:
             if (_settings_metadata[i].string_default != nullptr)
             {
-                com_send_log(LOG_INFO, "Writing default for %s: %s", key, _settings_metadata[i].string_default);
+                com_send_log(LOG_INFO, "  Default STRING: %s = %s", key, _settings_metadata[i].string_default);
                 _preferences.putString(key, _settings_metadata[i].string_default);
             }
             else
             {
-                com_send_log(LOG_INFO, "Writing empty default for %s", key);
+                com_send_log(LOG_INFO, "  Default STRING: %s = (empty)", key);
                 _preferences.putString(key, "");
             }
             break;
@@ -209,16 +214,33 @@ String SettingsManager::getSettingValue(const char *key)
             switch (_settings_metadata[i].type)
             {
             case UINT8:
-                return String(_preferences.getUChar(key, 0));
+            {
+                uint8_t val = _preferences.getUChar(key, 0);
+                com_send_log(LOG_INFO, "SettingsManager: getSettingValue(%s) -> UINT8: %u", key, val);
+                return String(val);
+            }
             case INT32:
-                return String(_preferences.getInt(key, 0));
+            {
+                int32_t val = _preferences.getInt(key, 0);
+                com_send_log(LOG_INFO, "SettingsManager: getSettingValue(%s) -> INT32: %d", key, val);
+                return String(val);
+            }
             case FLOAT:
-                return String(_preferences.getFloat(key, 0.0f));
+            {
+                float val = _preferences.getFloat(key, 0.0f);
+                com_send_log(LOG_INFO, "SettingsManager: getSettingValue(%s) -> FLOAT: %.3f", key, val);
+                return String(val);
+            }
             case STRING:
-                return _preferences.getString(key, "");
+            {
+                String val = _preferences.getString(key, "");
+                com_send_log(LOG_INFO, "SettingsManager: getSettingValue(%s) -> STRING: %s", key, val.c_str());
+                return val;
+            }
             }
         }
     }
+    com_send_log(LOG_WARN, "SettingsManager: getSettingValue(%s) -> Key not found in metadata.", key);
     return "";
 }
 
@@ -301,6 +323,7 @@ String SettingsManager::getSettingOptionsHumanReadable(const char *key)
 
 bool SettingsManager::setSettingValue(const char *key, const String &value_str)
 {
+    com_send_log(LOG_INFO, "SettingsManager: setSettingValue(%s, %s)", key, value_str.c_str());
     for (int i = 0; i < _num_settings; ++i)
     {
         if (strcmp(_settings_metadata[i].key, key) == 0)
@@ -330,28 +353,34 @@ bool SettingsManager::setSettingValue(const char *key, const String &value_str)
                 if (parsed_value >= 0 && parsed_value <= UINT8_MAX_VALUE)
                 {
                     _preferences.putUChar(key, (uint8_t)parsed_value);
+                    com_send_log(LOG_INFO, "SettingsManager: setSettingValue - UINT8 %s set to %u", key, (uint8_t)parsed_value);
                     return true;
                 }
+                com_send_log(LOG_WARN, "SettingsManager: setSettingValue - UINT8 %s failed, parsed_value %d out of range.", key, parsed_value);
                 return false;
             }
             case INT32:
             {
                 _preferences.putInt(key, value_str.toInt());
+                com_send_log(LOG_INFO, "SettingsManager: setSettingValue - INT32 %s set to %d", key, value_str.toInt());
                 return true;
             }
             case FLOAT:
             {
                 _preferences.putFloat(key, value_str.toFloat());
+                com_send_log(LOG_INFO, "SettingsManager: setSettingValue - FLOAT %s set to %.3f", key, value_str.toFloat());
                 return true;
             }
             case STRING:
             {
                 _preferences.putString(key, value_str);
+                com_send_log(LOG_INFO, "SettingsManager: setSettingValue - STRING %s set to %s", key, value_str.c_str());
                 return true;
             }
             }
         }
     }
+    com_send_log(LOG_WARN, "SettingsManager: setSettingValue - Key %s not found in metadata.", key);
     return false;
 }
 

@@ -51,12 +51,7 @@ private:
     Terminal *_terminal; // Instance of the new Terminal class
 
     // Serial Protocol State
-    enum class SerialMode
-    {
-        TERMINAL,
-        MSP
-    };
-    SerialMode _current_mode = SerialMode::TERMINAL;
+    ComSerialMode _current_mode = ComSerialMode::TERMINAL; // Current serial communication mode
     unsigned long _last_msp_activity_ms = 0;
     static constexpr unsigned long MSP_TIMEOUT_MS = 2000; // Switch back to terminal after 2 seconds of no MSP activity
 

@@ -209,22 +209,31 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 break;
             case MSP_GET_SETTING:
+                console.log('MSP_GET_SETTING Payload:', payload);
                 // Payload: [key_length (1 byte)] [key_string (variable)] [value_length (1 byte)] [value_string (variable)]
                 if (payload.length > 2) {
                     const keyLen = payload[0];
+                    console.log('keyLen:', keyLen);
                     const keyBytes = payload.slice(1, 1 + keyLen);
+                    console.log('keyBytes:', keyBytes);
                     const key = new TextDecoder().decode(keyBytes);
+                    console.log('key:', key);
 
                     const valueLenIndex = 1 + keyLen;
+                    console.log('valueLenIndex:', valueLenIndex);
                     const valueLen = payload[valueLenIndex];
+                    console.log('valueLen:', valueLen);
                     const valueBytes = payload.slice(valueLenIndex + 1, valueLenIndex + 1 + valueLen);
+                    console.log('valueBytes:', valueBytes);
                     const value = new TextDecoder().decode(valueBytes);
+                    console.log('value:', value);
 
                     settingResultSpan.textContent = `${key}: ${value}`;
                     settingKeyInput.value = key;
                     settingValueInput.value = value;
                 } else {
                     settingResultSpan.textContent = 'Error: Invalid setting payload';
+                    console.error('MSP_GET_SETTING: Invalid setting payload, length:', payload.length);
                 }
                 break;
             case MSP_SET_SETTING:

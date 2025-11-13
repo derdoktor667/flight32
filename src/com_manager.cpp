@@ -13,6 +13,8 @@
 QueueHandle_t com_queue;
 QueueHandle_t com_flush_signal_queue;
 
+static ComSerialMode _current_com_mode = ComSerialMode::TERMINAL; // Default mode
+
 void com_task(void *pvParameters)
 {
     com_queue = xQueueCreate(COM_QUEUE_LENGTH, sizeof(com_message_t));
@@ -25,31 +27,40 @@ void com_task(void *pvParameters)
     {
         if (xQueueReceive(com_queue, &msg, portMAX_DELAY) == pdPASS)
         {
-            switch (msg.type)
+            // Only print anything if in TERMINAL mode
+            if (_current_com_mode == ComSerialMode::TERMINAL)
             {
-            case LOG_INFO:
-                Serial.print("[INFO] ");
-                Serial.println(msg.content);
-                break;
-            case LOG_WARN:
-                Serial.print("[WARN] ");
-                Serial.println(msg.content);
-                break;
-            case LOG_ERROR:
-                Serial.print("[ERROR] ");
-                Serial.println(msg.content);
-                break;
-            case TERMINAL_OUTPUT:
-                Serial.println(msg.content);
-                break;
-            case TERMINAL_PROMPT:
-                Serial.print(msg.content);
-                break;
-            case TERMINAL_FLUSH:
+                switch (msg.type)
+                {
+                case LOG_INFO:
+                    Serial.print("[INFO] ");
+                    Serial.println(msg.content);
+                    break;
+                case LOG_WARN:
+                    Serial.print("[WARN] ");
+                    Serial.println(msg.content);
+                    break;
+                case LOG_ERROR:
+                    Serial.print("[ERROR] ");
+                    Serial.println(msg.content);
+                    break;
+                case TERMINAL_OUTPUT:
+                    Serial.println(msg.content);
+                    break;
+                case TERMINAL_PROMPT:
+                    Serial.print(msg.content);
+                    break;
+                case TERMINAL_FLUSH:
+                    xQueueSend(com_flush_signal_queue, &dummy, 0);
+                    break;
+                default:
+                    break;
+                }
+            }
+            else if (msg.type == TERMINAL_FLUSH)
+            {
+                // Even in MSP mode, we might need to acknowledge a flush if it was sent
                 xQueueSend(com_flush_signal_queue, &dummy, 0);
-                break;
-            default:
-                break;
             }
         }
     }
@@ -57,15 +68,19 @@ void com_task(void *pvParameters)
 
 void com_send_log(com_message_type_t type, const char *format, ...)
 {
-    com_message_t msg;
-    msg.type = type;
+    // Only send log messages to the queue if in TERMINAL mode
+    if (_current_com_mode == ComSerialMode::TERMINAL)
+    {
+        com_message_t msg;
+        msg.type = type;
 
-    va_list args;
-    va_start(args, format);
-    vsnprintf(msg.content, COM_MESSAGE_MAX_LENGTH, format, args);
-    va_end(args);
+        va_list args;
+        va_start(args, format);
+        vsnprintf(msg.content, COM_MESSAGE_MAX_LENGTH, format, args);
+        va_end(args);
 
-    xQueueSend(com_queue, &msg, 0);
+        xQueueSend(com_queue, &msg, 0);
+    }
 }
 
 void com_send_prompt(const char *prompt)
@@ -102,4 +117,9 @@ const char *com_format_bytes(uint32_t bytes)
         snprintf(_com_byte_buffer, sizeof(_com_byte_buffer), "%.1f MB", (float)bytes / BYTES_IN_MB);
     }
     return _com_byte_buffer;
+}
+
+void com_set_serial_mode(ComSerialMode mode)
+{
+    _current_com_mode = mode;
 }

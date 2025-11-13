@@ -62,7 +62,7 @@ void SerialManagerTask::run()
         uint8_t c = Serial.read();
 
         // Handshake logic: Check for MSP preamble
-        if (_current_mode == SerialMode::TERMINAL)
+        if (_current_mode == ComSerialMode::TERMINAL)
         {
             // Look for '$', 'R', 'M', 'S', 'P' sequence
             static uint8_t handshake_state = 0;
@@ -73,9 +73,10 @@ void SerialManagerTask::run()
                 handshake_state++;
                 if (handshake_state == strlen(msp_handshake))
                 {
-                    _current_mode = SerialMode::MSP;
+                    _current_mode = ComSerialMode::MSP;
+                    com_set_serial_mode(ComSerialMode::MSP); // Set com_manager to MSP mode
                     _last_msp_activity_ms = millis();
-                    com_send_log(LOG_INFO, "Switched to MSP mode.");
+                    Serial.println("[INFO] Switched to MSP mode (direct print)."); // Direct print for debugging
                     handshake_state = 0; // Reset handshake state
                     continue;            // Don't process this char as terminal input
                 }
@@ -86,7 +87,7 @@ void SerialManagerTask::run()
             }
         }
 
-        if (_current_mode == SerialMode::TERMINAL)
+        if (_current_mode == ComSerialMode::TERMINAL)
         {
             _terminal->handleInput(c);
         }
@@ -98,15 +99,16 @@ void SerialManagerTask::run()
     }
 
     // MSP Timeout logic
-    if (_current_mode == SerialMode::MSP && (millis() - _last_msp_activity_ms > MSP_TIMEOUT_MS))
+    if (_current_mode == ComSerialMode::MSP && (millis() - _last_msp_activity_ms > MSP_TIMEOUT_MS))
     {
-        _current_mode = SerialMode::TERMINAL;
-        com_send_log(LOG_INFO, "MSP timeout. Switched back to Terminal mode.");
+        _current_mode = ComSerialMode::TERMINAL;
+        com_set_serial_mode(ComSerialMode::TERMINAL); // Set com_manager back to TERMINAL mode
+        Serial.println("[INFO] MSP timeout. Switched back to Terminal mode (direct print)."); // Direct print for debugging
         showPrompt();
     }
 
     // If in terminal mode and should quit, signal scheduler
-    if (_current_mode == SerialMode::TERMINAL && _terminal->shouldQuit())
+    if (_current_mode == ComSerialMode::TERMINAL && _terminal->shouldQuit())
     {
         // _scheduler->stop(); // Scheduler does not have a stop method. Implement system halt if needed.
     }
@@ -350,11 +352,13 @@ void SerialManagerTask::_handle_msp_get_setting()
 
     if (internal_key == nullptr)
     {
+        com_send_log(LOG_ERROR, "MSP_GET_SETTING: Unknown setting display key: %s", display_key_str.c_str());
         _send_msp_response(MSP_GET_SETTING, nullptr, 0); // Error: unknown setting
         return;
     }
 
     String value_str = _settings_manager->getSettingValueHumanReadable(internal_key);
+    com_send_log(LOG_INFO, "MSP_GET_SETTING: Retrieved %s (internal: %s) = %s", display_key_str.c_str(), internal_key, value_str.c_str());
 
     // Response payload: [key_length (1 byte)] [key_string (variable)] [value_length (1 byte)] [value_string (variable)]
     // Max payload size is 128, so need to be careful with string lengths

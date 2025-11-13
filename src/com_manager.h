@@ -32,6 +32,13 @@ typedef struct
     };
 } com_message_t;
 
+// Define serial communication modes
+enum class ComSerialMode
+{
+    TERMINAL,
+    MSP
+};
+
 extern QueueHandle_t com_queue;
 extern QueueHandle_t com_flush_signal_queue;
 
@@ -41,3 +48,6 @@ void com_send_log(com_message_type_t type, const char *format, ...);
 void com_send_prompt(const char *prompt);
 void com_flush_output();
 const char *com_format_bytes(uint32_t bytes);
+
+// Function to set the current serial mode
+void com_set_serial_mode(ComSerialMode mode);
