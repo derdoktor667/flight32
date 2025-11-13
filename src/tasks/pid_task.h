@@ -11,10 +11,11 @@
 #include "../scheduler/task_base.h"
 #include "../pid/pid_controller.h"
 #include "imu_task.h"
-#include "rx_task.h"
 #include "motor_task.h"
-#include "../settings_manager.h"
 #include "../config.h"
+
+class RxTask;          // Forward declaration
+class SettingsManager; // Forward declaration
 
 class PidTask : public TaskBase
 {

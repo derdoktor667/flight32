@@ -100,7 +100,7 @@ void com_flush_output()
     xQueueReceive(com_flush_signal_queue, &dummy, portMAX_DELAY);
 }
 
-char _com_byte_buffer[BYTE_BUFFER_SIZE]; // Declare a buffer for com_format_bytes
+static char _com_byte_buffer[BYTE_BUFFER_SIZE];
 
 const char *com_format_bytes(uint32_t bytes)
 {

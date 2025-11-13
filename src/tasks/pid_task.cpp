@@ -6,6 +6,7 @@
 #include "../com_manager.h"
 #include "motor_task.h"
 #include "imu_task.h"
+#include "rx_task.h"
 
 #include <Arduino.h> // For constrain()
 #include <stdint.h>  // For uint32_t
@@ -30,7 +31,6 @@ PidTask::PidTask(const char *name, uint32_t stack_size, UBaseType_t priority, Ba
 void PidTask::setup()
 {
     _load_gains();
-
 }
 
 void PidTask::run()

@@ -12,7 +12,8 @@
 #include "../scheduler/task_base.h"
 #include <DShotRMT.h>
 #include "../config.h"
-#include "../settings_manager.h"
+
+class SettingsManager; // Forward declaration
 
 class MotorTask : public TaskBase
 {

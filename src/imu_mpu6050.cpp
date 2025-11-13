@@ -10,9 +10,8 @@
 #include "com_manager.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
-#include "settings_manager.h" // Include for SettingsManager
 
-LpfBandwidth get_lpf_bandwidth_from_index(uint8_t index)
+LpfBandwidth ImuMpu6050::getLpfBandwidthFromIndex(uint8_t index)
 {
     switch (index) // Assuming index directly maps to LpfBandwidth enum values
     {

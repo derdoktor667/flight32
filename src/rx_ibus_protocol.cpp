@@ -12,13 +12,14 @@
 
 RxIbusProtocol::RxIbusProtocol() : _ibus(IBUS_SERIAL_PORT, IBUS_RX_PIN) {}
 
-void RxIbusProtocol::begin(uint8_t uart_num, uint8_t rx_pin, uint8_t tx_pin, uint32_t baud_rate)
+void RxIbusProtocol::begin(uint8_t rx_pin)
 {
     _ibus.begin();
 }
 
-bool RxIbusProtocol::readChannels()
+bool RxIbusProtocol::updateChannels()
 {
+    _ibus.read();
     return true;
 }
 

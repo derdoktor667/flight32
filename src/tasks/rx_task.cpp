@@ -53,18 +53,12 @@ void RxTask::setup()
     if (_rx_protocol)
     {
         uint8_t rx_pin_to_use = 0;
-        uint8_t tx_pin_to_use = 0;
-        uint8_t uart_num_to_use = 0;
-        uint32_t baud_rate_to_use = 0;
 
         switch (protocol_type)
         {
         case RcProtocolType::IBUS:
-            uart_num_to_use = IBUS_UART_NUM;
             rx_pin_to_use = IBUS_RX_PIN;
-            tx_pin_to_use = IBUS_TX_PIN;
-            baud_rate_to_use = IBUS_BAUD_RATE;
-            com_send_log(LOG_INFO, "RxTask: Initializing IBUS on UART%d, RX:%d, TX:%d, Baud:%d", uart_num_to_use, rx_pin_to_use, tx_pin_to_use, baud_rate_to_use);
+            com_send_log(LOG_INFO, "RxTask: Initializing IBUS on RX:%d", rx_pin_to_use);
             break;
         case RcProtocolType::PPM:
             rx_pin_to_use = _settings_manager->getSettingValue(KEY_RX_PIN).toInt();
@@ -74,9 +68,8 @@ void RxTask::setup()
             com_send_log(LOG_ERROR, "RxTask: Unknown protocol type for pin configuration!");
             return;
         }
-        
-        _rx_protocol->begin(uart_num_to_use, rx_pin_to_use, tx_pin_to_use, baud_rate_to_use);
 
+        _rx_protocol->begin(rx_pin_to_use);
     }
     else
     {
@@ -86,7 +79,7 @@ void RxTask::setup()
 
 void RxTask::run()
 {
-    if (_rx_protocol && _rx_protocol->readChannels())
+    if (_rx_protocol && _rx_protocol->updateChannels())
     {
     }
 }

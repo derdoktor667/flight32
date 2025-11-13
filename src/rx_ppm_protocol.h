@@ -10,16 +10,14 @@
 
 #include "rx_protocol.h"
 #include <Arduino.h>
-#include "config.h" // Include config.h for PPM constants
-
-// PPM configuration constants are now defined in config.h
+#include "config.h"
 
 class RxPpmProtocol : public RxProtocol
 {
 public:
     RxPpmProtocol();
-    void begin(uint8_t uart_num, uint8_t rx_pin, uint8_t tx_pin, uint32_t baud_rate) override;
-    bool readChannels() override;
+    void begin(uint8_t rx_pin) override;
+    bool updateChannels() override;
     int16_t getChannelValue(uint8_t channel) override;
     bool isConnected() override;
 

@@ -59,7 +59,7 @@ Get your drone in the air in just a few minutes.
 arduino-cli compile --fqbn esp32:esp32:esp32 flight32.ino
 
 # Upload to your flight controller
-arduino-cli upload -p <Your_Port> --fqbn esp32:esp32:esp32 flight32.ino
+arduino-cli upload -p /dev/ttyUSB0 --fqbn esp32:esp32:esp32 flight32.ino
 ```
 
 ## 🎛️ Full Control via Serial Manager

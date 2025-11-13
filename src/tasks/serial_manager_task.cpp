@@ -7,7 +7,7 @@
  */
 
 #include "serial_manager_task.h"
-#include "../firmware.h"
+#include "../firmware_info.h"
 #include <cmath>
 #include <math.h>
 #include "imu_task.h"
@@ -308,7 +308,7 @@ void SerialManagerTask::_handle_msp_status()
 {
     // For simplicity, just send firmware version for now
     // More detailed status would require a custom payload structure
-    String version_str = get_firmware_version();
+    String version_str = FirmwareInfo::getFirmwareVersion();
     uint8_t payload[version_str.length() + 1];
     memcpy(payload, version_str.c_str(), version_str.length());
     payload[version_str.length()] = 0; // Null terminator

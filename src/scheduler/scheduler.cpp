@@ -39,8 +39,7 @@ void Scheduler::start()
             _tasks[i]->getPriority(),
             &handle,
             _tasks[i]->getCoreID());
-        _tasks[i]->_handle = handle;
-    }
+                    _tasks[i]->setHandle(handle);    }
 }
 
 void Scheduler::_task_trampoline(void *pvParameters)

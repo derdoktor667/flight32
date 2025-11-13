@@ -10,7 +10,6 @@
 #include "com_manager.h"
 #include "config.h"
 
-// Initialize static member
 RxPpmProtocol *RxPpmProtocol::_instance = nullptr;
 
 RxPpmProtocol::RxPpmProtocol()
@@ -23,7 +22,7 @@ RxPpmProtocol::RxPpmProtocol()
     _instance = this;
 }
 
-void RxPpmProtocol::begin(uint8_t uart_num, uint8_t rx_pin, uint8_t tx_pin, uint32_t baud_rate)
+void RxPpmProtocol::begin(uint8_t rx_pin)
 {
     _ppm_pin = rx_pin;
     pinMode(_ppm_pin, INPUT);
@@ -31,7 +30,7 @@ void RxPpmProtocol::begin(uint8_t uart_num, uint8_t rx_pin, uint8_t tx_pin, uint
     com_send_log(LOG_INFO, "PPM Protocol: Initializing on pin %d", _ppm_pin);
 }
 
-bool RxPpmProtocol::readChannels()
+bool RxPpmProtocol::updateChannels()
 {
     if (_new_data_available)
     {

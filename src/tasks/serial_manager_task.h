@@ -10,7 +10,7 @@
 #include "rx_task.h"
 #include "motor_task.h"
 #include "pid_task.h"
-#include "../terminal/terminal.h" // Include the new Terminal class
+#include "../terminal/terminal.h"
 
 // MSP Commands
 #define MSP_API_VERSION 1
@@ -48,7 +48,7 @@ private:
     MotorTask *_motor_task;
     PidTask *_pid_task;
     SettingsManager *_settings_manager;
-    Terminal *_terminal; // Instance of the new Terminal class
+    Terminal *_terminal;
 
     // Serial Protocol State
     ComSerialMode _current_mode = ComSerialMode::TERMINAL; // Current serial communication mode
@@ -72,10 +72,6 @@ private:
     uint8_t _msp_crc = 0;
     uint8_t _msp_payload_buffer[MSP_MAX_PAYLOAD_SIZE];
     uint8_t _msp_payload_index = 0;
-
-    // Common Helpers
-    // const char *_format_bytes(uint32_t bytes); // Moved to com_manager.h
-    // char _byte_buffer[BYTE_BUFFER_SIZE]; // Moved to com_manager.cpp
 
     // Terminal Mode Functions
     void _handle_terminal_input(char incoming_char);
