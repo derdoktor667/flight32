@@ -15,6 +15,7 @@ const SettingsManager::SettingMetadata SettingsManager::_settings_metadata[] = {
     {SettingsManager::KEY_SYSTEM_NAME, "system.name", "Configurable model name", SettingsManager::STRING, nullptr, 0, 0, 0.0f, SettingsManager::DEFAULT_SYSTEM_NAME},
     {SettingsManager::KEY_MPU_GYRO_RANGE, "gyro.resolution", "MPU6050 Gyroscope Range", SettingsManager::UINT8, SettingsManager::GYRO_RANGE_STRINGS, SettingsManager::NUM_GYRO_RANGES, DEFAULT_GYRO_RANGE, 0.0f, nullptr},
     {KEY_IMU_LPF_BANDWIDTH, "imu.lpf_bw", "IMU Low-Pass Filter Bandwidth", SettingsManager::UINT8, IMU_LPF_BANDWIDTH_STRINGS, NUM_IMU_LPF_BANDWIDTHS, DEFAULT_IMU_LPF_BANDWIDTH, 0.0f, nullptr},
+    {KEY_IMU_TYPE, "imu.type", "IMU Sensor Type", SettingsManager::UINT8, nullptr, 0, (uint8_t)DEFAULT_IMU_TYPE, 0.0f, nullptr},
     {SettingsManager::KEY_MPU_GYRO_OFF_X, "mpu.g_off.x", "Gyroscope X-axis offset", SettingsManager::FLOAT, nullptr, 0, 0, 0.0f, nullptr},
     {SettingsManager::KEY_MPU_GYRO_OFF_Y, "mpu.g_off.y", "Gyroscope Y-axis offset", SettingsManager::FLOAT, nullptr, 0, 0, 0.0f, nullptr},
     {SettingsManager::KEY_MPU_GYRO_OFF_Z, "mpu.g_off.z", "Gyroscope Z-axis offset", SettingsManager::FLOAT, nullptr, 0, 0, 0.0f, nullptr},
@@ -216,25 +217,21 @@ String SettingsManager::getSettingValue(const char *key)
             case UINT8:
             {
                 uint8_t val = _preferences.getUChar(key, 0);
-                com_send_log(LOG_INFO, "SettingsManager: getSettingValue(%s) -> UINT8: %u", key, val);
                 return String(val);
             }
             case INT32:
             {
                 int32_t val = _preferences.getInt(key, 0);
-                com_send_log(LOG_INFO, "SettingsManager: getSettingValue(%s) -> INT32: %d", key, val);
                 return String(val);
             }
             case FLOAT:
             {
                 float val = _preferences.getFloat(key, 0.0f);
-                com_send_log(LOG_INFO, "SettingsManager: getSettingValue(%s) -> FLOAT: %.3f", key, val);
                 return String(val);
             }
             case STRING:
             {
                 String val = _preferences.getString(key, "");
-                com_send_log(LOG_INFO, "SettingsManager: getSettingValue(%s) -> STRING: %s", key, val.c_str());
                 return val;
             }
             }
