@@ -1,10 +1,18 @@
+/**
+ * @file settings_manager.cpp
+ * @brief Manages persistent settings using ESP32's non-volatile storage (NVS).
+ * @author Wastl Kraus
+ * @date 2025-11-09
+ * @license MIT
+ */
+
 #include "config.h"
 #include "settings_manager.h"
 #include "com_manager.h"
-#include "terminal/terminal.h" // Required for Terminal::_get_setting_category
+#include "terminal/terminal.h"
 
-#include <cstdint> // For uint8_t, uint16_t
-#include <cstring> // For strlen, strcmp
+#include <cstdint>
+#include <cstring>
 
 const char *SettingsManager::GYRO_RANGE_STRINGS[] = {"250_DPS", "500_DPS", "1000_DPS", "2000_DPS"};
 const uint8_t SettingsManager::NUM_GYRO_RANGES = sizeof(SettingsManager::GYRO_RANGE_STRINGS) / sizeof(SettingsManager::GYRO_RANGE_STRINGS[0]);
@@ -182,11 +190,12 @@ void SettingsManager::listSettings(CommandCategory category)
         }
     }
 
-    if (settings_in_category_count == 0) return; // Don't print header if no settings
+    if (settings_in_category_count == 0)
+        return; // Don't print header if no settings
 
     com_send_log(TERMINAL_OUTPUT, "  (Found %d settings in this category)", settings_in_category_count);
     // Use a fixed width for the setting name to ensure consistent formatting and prevent truncation
-    static constexpr int SETTING_NAME_DISPLAY_WIDTH = 20; 
+    static constexpr int SETTING_NAME_DISPLAY_WIDTH = 20;
 
     com_send_log(TERMINAL_OUTPUT, "  %-*s %s", SETTING_NAME_DISPLAY_WIDTH, "Setting", "Description");
     String separator = "  ";
@@ -194,7 +203,7 @@ void SettingsManager::listSettings(CommandCategory category)
     {
         separator += "-";
     }
-    separator += "--------------------------------------------------";
+    separator += "--------------------------------";
     com_send_log(TERMINAL_OUTPUT, separator.c_str());
 
     for (int i = 0; i < _num_settings; i++)
@@ -219,7 +228,8 @@ void SettingsManager::dumpSettings(CommandCategory category)
         }
     }
 
-    if (settings_in_category_count == 0) return; // Don't print header if no settings
+    if (settings_in_category_count == 0)
+        return; // Don't print header if no settings
 
     com_send_log(TERMINAL_OUTPUT, "  (Found %d settings in this category)", settings_in_category_count);
     vTaskDelay(1); // Small delay to allow com_task to process

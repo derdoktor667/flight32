@@ -11,7 +11,6 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
 
-
 LpfBandwidth ImuMpu6050::getLpfBandwidthFromIndex(uint8_t index)
 {
     switch (index) // Assuming index directly maps to LpfBandwidth enum values

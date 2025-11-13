@@ -10,9 +10,7 @@
 
 #include "rx_protocol.h"
 #include <Arduino.h>
-#include "config.h" // Include config.h for PPM constants
-
-// PPM configuration constants are now defined in config.h
+#include "config.h"
 
 class RxPpmProtocol : public RxProtocol
 {

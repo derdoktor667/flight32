@@ -225,7 +225,7 @@ CommandCategory Terminal::_get_category_from_string(String &category_str)
 CommandCategory Terminal::_get_setting_category(const char *display_key)
 {
     String key_str = String(display_key);
-    CommandCategory assigned_category = CommandCategory::SETTINGS; // Default to SETTINGS
+    CommandCategory assigned_category = CommandCategory::SETTINGS;
 
     if (key_str.startsWith("system."))
         assigned_category = CommandCategory::SYSTEM;
@@ -326,7 +326,7 @@ void Terminal::_handle_help(String &args)
         {
             core_separator += "-";
         }
-        core_separator += "--------------------------------------------------";
+        core_separator += "------------------------------";
         com_send_log(TERMINAL_OUTPUT, core_separator.c_str());
 
         for (int i = 0; i < _num_commands; ++i)
@@ -358,7 +358,7 @@ void Terminal::_handle_help(String &args)
         {
             category_separator += "-";
         }
-        category_separator += "--------------------------------------------------";
+        category_separator += "------------------------------";
         com_send_log(TERMINAL_OUTPUT, category_separator.c_str());
 
         for (int i = 0; i < _num_categories; ++i)
@@ -467,7 +467,7 @@ void Terminal::_handle_tasks(String &args)
     com_send_log(TERMINAL_OUTPUT, "");
     com_send_log(TERMINAL_OUTPUT, "% -16s %-10s %-6s %-8s %-10s %-10s %-10s %s",
                  "Task Name", "State", "Prio", "CPU %", "Loop (us)", "Avg (us)", "Max (us)", "Stack HWM (bytes)");
-    com_send_log(TERMINAL_OUTPUT, "-------------------------------------------------------------------------------------------------------------------");
+    com_send_log(TERMINAL_OUTPUT, "---------------------------------------------------------------------------------------------------");
 
     for (uint8_t i = 0; i < _scheduler->getTaskCount(); i++)
     {
@@ -515,7 +515,7 @@ void Terminal::_handle_tasks(String &args)
                  freertos_status.usStackHighWaterMark);
         com_send_log(TERMINAL_OUTPUT, output_buffer);
     }
-    com_send_log(TERMINAL_OUTPUT, "-------------------------------------------------------------------------------------------------------------------");
+    com_send_log(TERMINAL_OUTPUT, "---------------------------------------------------------------------------------------------------");
 
     vPortFree(freertos_task_status_array);
 }

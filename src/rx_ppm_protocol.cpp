@@ -10,7 +10,6 @@
 #include "com_manager.h"
 #include "config.h"
 
-// Initialize static member
 RxPpmProtocol *RxPpmProtocol::_instance = nullptr;
 
 RxPpmProtocol::RxPpmProtocol()

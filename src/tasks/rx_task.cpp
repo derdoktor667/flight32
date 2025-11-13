@@ -68,9 +68,8 @@ void RxTask::setup()
             com_send_log(LOG_ERROR, "RxTask: Unknown protocol type for pin configuration!");
             return;
         }
-        
-        _rx_protocol->begin(rx_pin_to_use);
 
+        _rx_protocol->begin(rx_pin_to_use);
     }
     else
     {

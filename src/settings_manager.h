@@ -8,11 +8,11 @@
 
 #pragma once
 
-#include <Preferences.h>
 #include <Arduino.h>
+#include <Preferences.h>
 #include "imu_sensor.h"
 
-enum class CommandCategory; // Forward declaration
+enum class CommandCategory;
 
 class SettingsManager
 {

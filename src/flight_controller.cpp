@@ -8,7 +8,7 @@
 
 #include "flight_controller.h"
 #include "scheduler/scheduler.h"
-#include "tasks/serial_manager_task.h" // New SerialManagerTask
+#include "tasks/serial_manager_task.h"
 #include "com_manager.h"
 #include "config.h"
 #include "firmware_info.h"
@@ -25,7 +25,7 @@ FlightController::~FlightController()
     delete _imu_sensor;
     delete _imu_task;
     delete _rx_task;
-    delete _serial_manager_task; // New SerialManagerTask
+    delete _serial_manager_task;
     delete _motor_task;
     delete _pid_task;
 }
@@ -120,7 +120,7 @@ void FlightController::setup()
 
     com_send_log(LOG_INFO, "Welcome, type 'help' for a list of commands.");
     com_flush_output();
-    _serial_manager_task->showPrompt(); // Call showPrompt on the new SerialManagerTask
+    _serial_manager_task->showPrompt();
 
     _scheduler.start();
 }
