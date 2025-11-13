@@ -22,7 +22,7 @@ Flight32 is a robust, extensible, and user-friendly firmware that turns any ESP3
 *   🚀 **Peak Performance & Stability**: Experience ultra-stable flight with a real-time FreeRTOS-based scheduler that guarantees reliable, predictable performance.
 *   🧠 **Dual-Core Powerhouse**: Harnesses the full power of the ESP32's dual-core architecture, dedicating one core to flight-critical tasks and the other to communications.
 *   🧩 **Clean & Modular Architecture**: A clean, object-oriented design makes the firmware easy to understand, modify, and extend.
-*   📊 **Real-time System Insights**: Tune and debug on the fly with a powerful, built-in terminal. Monitor CPU load, loop times, and memory usage to squeeze every drop of performance out of your hardware.
+*   📊 **Real-time System Insights**: Tune and debug on the fly with a powerful, built-in terminal and MultiWii Serial Protocol (MSP) support. Monitor CPU load, loop times, and memory usage to squeeze every drop of performance out of your hardware.
 *   🎛️ **Persistent On-the-Fly Tuning**: A full PID controller and complete channel mapping are easily adjustable via the terminal, with all settings saved persistently to non-volatile storage.
 *   📡 **Extensible Receiver & IMU Support**: Built with a generic task structure to easily support new receiver protocols (currently IBUS, PPM) and IMU sensors (currently MPU6050).
 *   🔧 **Configurable MPU6050**: Fine-tune your MPU6050 with configurable gyroscope range, accelerometer range, and low-pass filter settings, along with improved temperature accuracy.
@@ -41,7 +41,7 @@ RX / Receiver    Waiting    4      0.06     1          0          7          355
 IMU / Sensor     Waiting    5      1.29     351        354        488        2716
 MOTORS / DShot   Waiting    3      0.70     100        100        285        3112
 PID Controller   Waiting    4      10.76    1766       1744       1998       2516
-CLI / Terminal   Running    1      0.03     7          7          34         7216
+Serial Manager   Running    1      0.03     7          7          34         7216
 -------------------------------------------------------------------------------------------------------------------
 ```
 
@@ -62,9 +62,9 @@ arduino-cli compile --fqbn esp32:esp32:esp32 flight32.ino
 arduino-cli upload -p <Your_Port> --fqbn esp32:esp32:esp32 flight32.ino
 ```
 
-## 🎛️ Full Control via Terminal
+## 🎛️ Full Control via Serial Manager
 
-Our interactive terminal gives you complete control over your flight controller. Here are some of the available commands (type `help` in the terminal for a full list).
+Our interactive serial manager provides complete control over your flight controller through both a powerful command-line interface (CLI) and MultiWii Serial Protocol (MSP) support. Here are some of the available CLI commands (type `help` in the terminal for a full list).
 
 <details>
   <summary><strong>System Commands</strong></summary>
