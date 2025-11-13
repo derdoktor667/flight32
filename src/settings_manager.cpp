@@ -1,6 +1,6 @@
+#include "config.h"
 #include "settings_manager.h"
 #include "com_manager.h"
-#include "config.h"
 
 #include <cstdint> // For uint8_t, uint16_t
 #include <cstring> // For strlen, strcmp

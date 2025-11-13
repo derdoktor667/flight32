@@ -11,7 +11,7 @@
 #include "tasks/serial_manager_task.h" // New SerialManagerTask
 #include "com_manager.h"
 #include "config.h"
-#include "firmware.h"
+#include "firmware_info.h"
 #include "settings_manager.h"
 #include <Arduino.h>
 #include "tasks/imu_task.h"
@@ -51,7 +51,7 @@ void FlightController::setup()
     com_send_log(TERMINAL_OUTPUT, "========================================");
     com_send_log(TERMINAL_OUTPUT, " Flight32 Flight Controller");
     com_send_log(TERMINAL_OUTPUT, "========================================");
-    com_send_log(LOG_INFO, "Firmware v%s starting...", get_firmware_version());
+    com_send_log(LOG_INFO, "Firmware v%s starting...", FirmwareInfo::getFirmwareVersion());
 
     _settings_manager.begin();
 
@@ -81,9 +81,9 @@ void FlightController::setup()
     }
 
     uint8_t lpf_bandwidth_index = _settings_manager.getSettingValue(KEY_IMU_LPF_BANDWIDTH).toInt();
-    LpfBandwidth lpf_bandwidth = get_lpf_bandwidth_from_index(lpf_bandwidth_index);
+    LpfBandwidth lpf_bandwidth = ImuMpu6050::getLpfBandwidthFromIndex(lpf_bandwidth_index);
 
-    if (!_imu_sensor->begin(MPU6050_I2C_CLOCK_SPEED, false, GYRO_RANGE_2000DPS, ACCEL_RANGE_16G, lpf_bandwidth))
+    if (!_imu_sensor->begin(MPU6050_I2C_CLOCK_SPEED, IMU_DMP_ENABLED_DEFAULT, GYRO_RANGE_2000DPS, ACCEL_RANGE_16G, lpf_bandwidth))
     {
         // Error message is already printed in the sensor's begin() method
         // Handle error, maybe loop forever

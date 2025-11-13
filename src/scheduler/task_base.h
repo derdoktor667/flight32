@@ -29,6 +29,9 @@ public:
 
     void taskRunner();
 
+    void setHandle(TaskHandle_t handle) { _handle = handle; }
+
+private:
     TaskHandle_t _handle = NULL;
 
 protected:

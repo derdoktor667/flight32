@@ -15,9 +15,9 @@ class RxProtocol
 public:
     virtual ~RxProtocol() = default;
 
-    virtual void begin(uint8_t uart_num, uint8_t rx_pin, uint8_t tx_pin, uint32_t baud_rate) = 0;
+    virtual void begin(uint8_t rx_pin) = 0;
 
-    virtual bool readChannels() = 0;
+    virtual bool updateChannels() = 0;
 
     virtual int16_t getChannelValue(uint8_t channel) = 0;
 

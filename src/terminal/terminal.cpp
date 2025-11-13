@@ -7,7 +7,7 @@
  */
 
 #include "terminal.h"
-#include "../firmware.h"
+#include "../firmware_info.h"
 
 const ChannelMapping Terminal::_channel_map[] = {
     {"roll", SettingsManager::KEY_RC_CHANNEL_ROLL},
@@ -20,7 +20,8 @@ const ChannelMapping Terminal::_channel_map[] = {
     {"aux2", SettingsManager::KEY_RC_CHANNEL_AUX2},
     {"aux3", SettingsManager::KEY_RC_CHANNEL_AUX3},
     {"aux4", SettingsManager::KEY_RC_CHANNEL_AUX4}};
-const int Terminal::_num_channel_mappings = sizeof(Terminal::_channel_map) / sizeof(ChannelMapping);
+constexpr int Terminal::_num_channel_mappings = sizeof(Terminal::_channel_map) / sizeof(ChannelMapping);
+
 
 const Command Terminal::_commands[] = {
     {"help", &Terminal::_handle_help, "Shows this help message.", CommandCategory::SYSTEM},
@@ -77,8 +78,9 @@ const Command Terminal::_commands[] = {
     {"factory_reset", &Terminal::_handle_factory_reset, "Resets all settings to their default values.", CommandCategory::SETTINGS},
     {"settings", &Terminal::_handle_list_settings, "Lists all available settings.", CommandCategory::SETTINGS},
     {"dump", &Terminal::_handle_dump_settings, "Dumps all settings for backup.", CommandCategory::SETTINGS}};
+constexpr int Terminal::_num_commands = sizeof(Terminal::_commands) / sizeof(Command);
 
-const int Terminal::_num_commands = sizeof(Terminal::_commands) / sizeof(Command);
+
 
 const CategoryInfo Terminal::_category_info[] = {
     {CommandCategory::SYSTEM, "system", "System commands and settings"},
@@ -88,7 +90,8 @@ const CategoryInfo Terminal::_category_info[] = {
     {CommandCategory::PID, "pid", "PID controller commands"},
     {CommandCategory::SETTINGS, "settings", "Settings management commands"},
 };
-const int Terminal::_num_categories = sizeof(Terminal::_category_info) / sizeof(CategoryInfo);
+constexpr int Terminal::_num_categories = sizeof(Terminal::_category_info) / sizeof(CategoryInfo);
+
 
 Terminal::Terminal(Scheduler *scheduler, ImuTask *imu_task, RxTask *rx_task, MotorTask *motor_task, PidTask *pid_task, SettingsManager *settings_manager)
     : _scheduler(scheduler),
@@ -298,21 +301,15 @@ void Terminal::_handle_help(String &args)
         com_send_log(TERMINAL_OUTPUT, "Core Commands:");
 
         int max_core_cmd_len = 0;
-        const char *core_commands[] = {"status", "tasks", "mem", "reboot", "factory_reset"};
-        const char *core_commands_desc[] = {
-            "Shows firmware information.",
-            "Shows information about running tasks.",
-            "Shows current memory usage.",
-            "Reboots the ESP32.",
-            "Resets all settings to their default values."};
-        int num_core_commands = sizeof(core_commands) / sizeof(core_commands[0]);
-
-        for (int i = 0; i < num_core_commands; ++i)
+        for (int i = 0; i < _num_commands; ++i)
         {
-            int len = strlen(core_commands[i]);
-            if (len > max_core_cmd_len)
+            if (_commands[i].category == CommandCategory::SYSTEM)
             {
-                max_core_cmd_len = len;
+                int len = strlen(_commands[i].name);
+                if (len > max_core_cmd_len)
+                {
+                    max_core_cmd_len = len;
+                }
             }
         }
         max_core_cmd_len += TERMINAL_COLUMN_BUFFER_WIDTH;
@@ -326,9 +323,12 @@ void Terminal::_handle_help(String &args)
         core_separator += "--------------------------------------------------";
         com_send_log(TERMINAL_OUTPUT, core_separator.c_str());
 
-        for (int i = 0; i < num_core_commands; ++i)
+        for (int i = 0; i < _num_commands; ++i)
         {
-            com_send_log(TERMINAL_OUTPUT, "  %-*s %s", max_core_cmd_len, core_commands[i], core_commands_desc[i]);
+            if (_commands[i].category == CommandCategory::SYSTEM)
+            {
+                com_send_log(TERMINAL_OUTPUT, "  %-*s %s", max_core_cmd_len, _commands[i].name, _commands[i].help);
+            }
         }
         com_send_log(TERMINAL_OUTPUT, core_separator.c_str());
         com_send_log(TERMINAL_OUTPUT, "");
@@ -435,7 +435,7 @@ void Terminal::_handle_help(String &args)
 void Terminal::_handle_status(String &args)
 {
     com_send_log(TERMINAL_OUTPUT, "");
-    com_send_log(TERMINAL_OUTPUT, "Flight32 Firmware v%s", get_firmware_version());
+    com_send_log(TERMINAL_OUTPUT, "Flight32 Firmware v%s", FirmwareInfo::getFirmwareVersion());
 }
 
 void Terminal::_handle_tasks(String &args)

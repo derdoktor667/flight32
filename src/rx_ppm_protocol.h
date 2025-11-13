@@ -18,8 +18,8 @@ class RxPpmProtocol : public RxProtocol
 {
 public:
     RxPpmProtocol();
-    void begin(uint8_t uart_num, uint8_t rx_pin, uint8_t tx_pin, uint32_t baud_rate) override;
-    bool readChannels() override;
+    void begin(uint8_t rx_pin) override;
+    bool updateChannels() override;
     int16_t getChannelValue(uint8_t channel) override;
     bool isConnected() override;
 

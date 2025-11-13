@@ -12,8 +12,6 @@
 #include "config.h"
 #include <ESP32_MPU6050.h>
 
-LpfBandwidth get_lpf_bandwidth_from_index(uint8_t index);
-
 class ImuMpu6050 : public ImuSensor
 {
 public:
@@ -28,6 +26,8 @@ public:
     ImuAxisData getAccelerometerOffset() const override;
     void setAccelerometerOffset(const ImuAxisData &offset) override;
     ImuQuaternionData getQuaternion() const override;
+
+    static LpfBandwidth getLpfBandwidthFromIndex(uint8_t index);
 
 private:
     bool _useDMP;
