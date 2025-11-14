@@ -50,13 +50,37 @@ Serial Manager   Running    1      0.03     7          7          34         721
 Get your drone in the air in just a few minutes.
 
 1.  **Install Board Support**: Make sure you have the **ESP32 board package** installed in your Arduino environment.
-2.  **Compile & Upload**: Open `flight32.ino` in the Arduino IDE, select your board and port, and hit upload. The IMU will automatically calibrate on every boot.
+
+2.  **Install External Libraries**: This project depends on several external libraries. Clone them into your Arduino libraries directory (usually `~/Arduino/libraries/` or `~/.arduino15/libraries/`).
+
+    ```bash
+    # Create the Arduino libraries directory if it doesn't exist
+    mkdir -p "$HOME/.arduino15/libraries"
+
+    # Clone DShotRMT (dev branch)
+    git clone --depth 1 --branch dev https://github.com/derdoktor667/DShotRMT.git "$HOME/.arduino15/libraries/DShotRMT"
+
+    # Clone ESP32_MPU6050 (dev branch)
+    git clone --depth 1 --branch dev https://github.com/derdoktor667/ESP32_MPU6050.git "$HOME/.arduino15/libraries/ESP32_MPU6050"
+
+    # Clone FlyskyIBUS (main branch)
+    git clone --depth 1 https://github.com/derdoktor667/FlyskyIBUS.git "$HOME/.arduino15/libraries/FlyskyIBUS"
+    ```
+
+3.  **Compile & Upload (Arduino IDE)**: Open `flight32.ino` in the Arduino IDE, select your board and port, and hit upload. The IMU will automatically calibrate on every boot.
 
 #### For Power Users (Arduino CLI)
 
 ```bash
+# Ensure libraries are installed as per step 2 above.
+
 # Compile the firmware
-arduino-cli compile --fqbn esp32:esp32:esp32 flight32.ino
+arduino-cli compile \
+  --fqbn esp32:esp32:esp32 \
+  --library "$HOME/.arduino15/libraries/DShotRMT" \
+  --library "$HOME/.arduino15/libraries/ESP32_MPU6050" \
+  --library "$HOME/.arduino15/libraries/FlyskyIBUS" \
+  flight32.ino
 
 # Upload to your flight controller
 arduino-cli upload -p /dev/ttyUSB0 --fqbn esp32:esp32:esp32 flight32.ino

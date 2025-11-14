@@ -80,6 +80,8 @@ private:
     // Helper functions
     const char *_get_category_string(CommandCategory category);
     CommandCategory _get_category_from_string(String &category_str);
+    String _generate_separator(int column_width, int description_width);
+    bool _category_has_settings(CommandCategory category); // New helper function // New helper function
 
 public:
     static CommandCategory _get_setting_category(const char *display_key);

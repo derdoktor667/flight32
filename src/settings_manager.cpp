@@ -203,7 +203,7 @@ void SettingsManager::listSettings(CommandCategory category)
     if (settings_in_category_count == 0)
         return; // Don't print header if no settings
 
-        static constexpr int SETTING_NAME_DISPLAY_WIDTH = 20;
+    
 
     com_send_log(TERMINAL_OUTPUT, "  %-*s %s", SETTING_NAME_DISPLAY_WIDTH, "Setting", "Description");
     String separator = "  ";

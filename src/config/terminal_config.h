@@ -43,6 +43,8 @@ constexpr uint8_t TERMINAL_MAX_CHANNEL_INDEX = 14;
 constexpr uint8_t TERMINAL_COLUMN_BUFFER_WIDTH = 2;
 constexpr uint8_t TERMINAL_RX_DATA_DISPLAY_CHANNELS = 10;
 constexpr uint8_t TERMINAL_RX_SINGLE_DESC_WIDTH = 25; // "RX Flight Mode (CH14)" is 22 chars, plus buffer
+constexpr uint8_t SETTING_NAME_DISPLAY_WIDTH = 20;
+constexpr uint16_t TASK_STATUS_OUTPUT_BUFFER_SIZE = 256;
 
 // --- Time Constants ---
 constexpr float MS_TO_SECONDS_FACTOR = 1000.0f;

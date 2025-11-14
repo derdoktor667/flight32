@@ -11,6 +11,7 @@
 #include <math.h>
 #include "imu_task.h"
 #include "../config/terminal_config.h"
+#include "../config/global_config.h" // Added for RADIANS_TO_DEGREES
 
 // Helper function to convert quaternion to Euler angles (roll, pitch, yaw)
 // Angles are in degrees
@@ -19,23 +20,23 @@ void quaternionToEuler(float w, float x, float y, float z, float *roll, float *p
     // Roll (x-axis rotation)
     float sinr_cosp = 2 * (w * x + y * z);
     float cosr_cosp = 1 - 2 * (x * x + y * y);
-    *roll = atan2(sinr_cosp, cosr_cosp) * 180.0 / M_PI;
+    *roll = atan2(sinr_cosp, cosr_cosp) * RADIANS_TO_DEGREES;
 
     // Pitch (y-axis rotation)
     float sinp = 2 * (w * y - z * x);
     if (fabs(sinp) >= 1)
     {                                                     // Check for singularity
-        *pitch = copysign(M_PI / 2, sinp) * 180.0 / M_PI; // Use 90 degrees if out of range
+        *pitch = copysign(M_PI / 2, sinp) * RADIANS_TO_DEGREES; // Use 90 degrees if out of range
     }
     else
     {
-        *pitch = asin(sinp) * 180.0 / M_PI;
+        *pitch = asin(sinp) * RADIANS_TO_DEGREES;
     }
 
     // Yaw (z-axis rotation)
     float siny_cosp = 2 * (w * z + x * y);
     float cosy_cosp = 1 - 2 * (y * y + z * z);
-    *yaw = atan2(siny_cosp, cosy_cosp) * 180.0 / M_PI;
+    *yaw = atan2(siny_cosp, cosy_cosp) * RADIANS_TO_DEGREES;
 }
 
 SerialManagerTask::SerialManagerTask(const char *name, uint32_t stackSize, UBaseType_t priority, BaseType_t coreID, uint32_t task_delay_ms, Scheduler *scheduler, ImuTask *imu_task, RxTask *rx_task, MotorTask *motor_task, PidTask *pid_task, SettingsManager *settings_manager)
@@ -256,31 +257,31 @@ void SerialManagerTask::_handle_msp_api_version()
     payload[0] = MSP_PROTOCOL_VERSION;
     payload[1] = MSP_API_VERSION_MAJOR;
     payload[2] = MSP_API_VERSION_MINOR;
-    _send_msp_response(MSP_API_VERSION, payload, 3);
+    _send_msp_response(MSP_API_VERSION, payload, MSP_API_VERSION_PAYLOAD_SIZE);
 }
 
 void SerialManagerTask::_handle_msp_fc_variant()
 {
     uint8_t payload[4] = {'F', 'L', '3', '2'};
-    _send_msp_response(MSP_FC_VARIANT, payload, 4);
+    _send_msp_response(MSP_FC_VARIANT, payload, MSP_FC_VARIANT_PAYLOAD_SIZE);
 }
 
 void SerialManagerTask::_handle_msp_fc_version()
 {
     uint8_t payload[3] = {FC_VERSION_MAJOR, FC_VERSION_MINOR, FC_VERSION_PATCH};
-    _send_msp_response(MSP_FC_VERSION, payload, 3);
+    _send_msp_response(MSP_FC_VERSION, payload, MSP_FC_VERSION_PAYLOAD_SIZE);
 }
 
 void SerialManagerTask::_handle_msp_board_info()
 {
     uint8_t payload[8] = {'F', 'L', '3', '2', 0, 0, 0, 0};
-    _send_msp_response(MSP_BOARD_INFO, payload, 8);
+    _send_msp_response(MSP_BOARD_INFO, payload, MSP_BOARD_INFO_PAYLOAD_SIZE);
 }
 
 void SerialManagerTask::_handle_msp_build_info()
 {
     uint8_t payload[20] = "Nov 12 202512:00:00";
-    _send_msp_response(MSP_BUILD_INFO, payload, 19);
+    _send_msp_response(MSP_BUILD_INFO, payload, MSP_BUILD_INFO_PAYLOAD_SIZE);
 }
 
 void SerialManagerTask::_handle_msp_reboot()
@@ -324,7 +325,7 @@ void SerialManagerTask::_handle_msp_mem_stats()
     payload[1] = (free_heap >> 8) & 0xFF;
     payload[2] = (free_heap >> 16) & 0xFF;
     payload[3] = (free_heap >> 24) & 0xFF;
-    _send_msp_response(MSP_MEM_STATS, payload, 4);
+    _send_msp_response(MSP_MEM_STATS, payload, MSP_MEM_STATS_PAYLOAD_SIZE);
 }
 
 void SerialManagerTask::_handle_msp_get_setting()
@@ -365,8 +366,8 @@ void SerialManagerTask::_handle_msp_get_setting()
     uint8_t response_key_len = display_key_str.length();
     uint8_t response_value_len = value_str.length();
 
-    if (response_key_len + response_value_len + 2 > 128)
-    {                                                    // 2 for key_len and value_len bytes
+    if (response_key_len + response_value_len + MSP_SETTING_KEY_VALUE_OVERHEAD_BYTES > MSP_MAX_PAYLOAD_SIZE)
+    {
         _send_msp_response(MSP_GET_SETTING, nullptr, 0); // Response too long
         return;
     }
@@ -393,8 +394,8 @@ void SerialManagerTask::_handle_msp_set_setting()
 
     // MSP payload for set setting: [key_length (1 byte)] [key_string (variable)] [value_length (1 byte)] [value_string (variable)]
     uint8_t key_len = _msp_payload_buffer[0];
-    if (key_len == 0 || key_len > (_msp_payload_size - 2))
-    {                                                    // -2 for key_len and value_len bytes
+    if (key_len == 0 || key_len > (_msp_payload_size - MSP_SETTING_KEY_VALUE_OVERHEAD_BYTES))
+    {
         _send_msp_response(MSP_SET_SETTING, nullptr, 0); // Error: invalid key length
         return;
     }
@@ -463,7 +464,7 @@ void SerialManagerTask::_handle_msp_pid_get()
     payload[i++] = (uint8_t)(yaw_gains.i * PID_SCALE_FACTOR);
     payload[i++] = (uint8_t)(yaw_gains.d * PID_SCALE_FACTOR);
 
-    _send_msp_response(MSP_PID, payload, 9);
+    _send_msp_response(MSP_PID, payload, MSP_PID_PAYLOAD_SIZE);
 }
 
 void SerialManagerTask::_handle_msp_pid_set()
@@ -509,41 +510,32 @@ void SerialManagerTask::_handle_msp_raw_imu()
     // Scaling factors similar to Betaflight for raw IMU data
     // Accel: 1G = 512 (approx, depends on sensor and range)
     // Gyro: 1 deg/s = 4 (approx, depends on sensor and range)
-    int16_t accX = (int16_t)(imu_data.accelX * 512.0f);
-    int16_t accY = (int16_t)(imu_data.accelY * 512.0f);
-    int16_t accZ = (int16_t)(imu_data.accelZ * 512.0f); // Fixed typo from accZ to accelZ
+    int16_t accX = (int16_t)(imu_data.accelX * MSP_ACCEL_SCALING_FACTOR);
+    int16_t accY = (int16_t)(imu_data.accelY * MSP_ACCEL_SCALING_FACTOR);
+    int16_t accZ = (int16_t)(imu_data.accelZ * MSP_ACCEL_SCALING_FACTOR);
 
-    int16_t gyroX = (int16_t)(imu_data.gyroX * 4.0f);
-    int16_t gyroY = (int16_t)(imu_data.gyroY * 4.0f);
-    int16_t gyroZ = (int16_t)(imu_data.gyroZ * 4.0f);
+    int16_t gyroX = (int16_t)(imu_data.gyroX * MSP_GYRO_SCALING_FACTOR);
+    int16_t gyroY = (int16_t)(imu_data.gyroY * MSP_GYRO_SCALING_FACTOR);
+    int16_t gyroZ = (int16_t)(imu_data.gyroZ * MSP_GYRO_SCALING_FACTOR);
 
     int16_t magX = 0, magY = 0, magZ = 0; // MPU6050 does not have magnetometer
 
     uint8_t payload[18]; // 3x Accel, 3x Gyro, 3x Mag (int16_t = 2 bytes each)
     int i = 0;
 
-    payload[i++] = (accX >> 0) & 0xFF;
-    payload[i++] = (accX >> 8) & 0xFF;
-    payload[i++] = (accY >> 0) & 0xFF;
-    payload[i++] = (accY >> 8) & 0xFF;
-    payload[i++] = (accZ >> 0) & 0xFF;
-    payload[i++] = (accZ >> 8) & 0xFF;
+    _write_int16_to_payload(payload, i, accX);
+    _write_int16_to_payload(payload, i, accY);
+    _write_int16_to_payload(payload, i, accZ);
 
-    payload[i++] = (gyroX >> 0) & 0xFF;
-    payload[i++] = (gyroX >> 8) & 0xFF;
-    payload[i++] = (gyroY >> 0) & 0xFF;
-    payload[i++] = (gyroY >> 8) & 0xFF;
-    payload[i++] = (gyroZ >> 0) & 0xFF;
-    payload[i++] = (gyroZ >> 8) & 0xFF;
+    _write_int16_to_payload(payload, i, gyroX);
+    _write_int16_to_payload(payload, i, gyroY);
+    _write_int16_to_payload(payload, i, gyroZ);
 
-    payload[i++] = (magX >> 0) & 0xFF;
-    payload[i++] = (magX >> 8) & 0xFF;
-    payload[i++] = (magY >> 0) & 0xFF;
-    payload[i++] = (magY >> 8) & 0xFF;
-    payload[i++] = (magZ >> 0) & 0xFF;
-    payload[i++] = (magZ >> 8) & 0xFF;
+    _write_int16_to_payload(payload, i, magX);
+    _write_int16_to_payload(payload, i, magY);
+    _write_int16_to_payload(payload, i, magZ);
 
-    _send_msp_response(MSP_RAW_IMU, payload, 18);
+    _send_msp_response(MSP_RAW_IMU, payload, MSP_RAW_IMU_PAYLOAD_SIZE);
 }
 
 void SerialManagerTask::_handle_msp_attitude()
@@ -558,21 +550,18 @@ void SerialManagerTask::_handle_msp_attitude()
     float roll_f, pitch_f, yaw_f;
     quaternionToEuler(q.w, q.x, q.y, q.z, &roll_f, &pitch_f, &yaw_f);
 
-    int16_t msp_roll = (int16_t)(roll_f * 10);
-    int16_t msp_pitch = (int16_t)(pitch_f * 10);
+    int16_t msp_roll = (int16_t)(roll_f * MSP_ATTITUDE_SCALE_FACTOR);
+    int16_t msp_pitch = (int16_t)(pitch_f * MSP_ATTITUDE_SCALE_FACTOR);
     int16_t msp_yaw = (int16_t)yaw_f; // Yaw is typically not scaled by 10 in MSP
 
     uint8_t payload[6]; // 3x angles (int16_t = 2 bytes each)
     int i = 0;
 
-    payload[i++] = (msp_roll >> 0) & 0xFF;
-    payload[i++] = (msp_roll >> 8) & 0xFF;
-    payload[i++] = (msp_pitch >> 0) & 0xFF;
-    payload[i++] = (msp_pitch >> 8) & 0xFF;
-    payload[i++] = (msp_yaw >> 0) & 0xFF;
-    payload[i++] = (msp_yaw >> 8) & 0xFF;
+    _write_int16_to_payload(payload, i, msp_roll);
+    _write_int16_to_payload(payload, i, msp_pitch);
+    _write_int16_to_payload(payload, i, msp_yaw);
 
-    _send_msp_response(MSP_ATTITUDE, payload, 6);
+    _send_msp_response(MSP_ATTITUDE, payload, MSP_ATTITUDE_PAYLOAD_SIZE);
 }
 
 void SerialManagerTask::_handle_msp_rc()
@@ -586,15 +575,20 @@ void SerialManagerTask::_handle_msp_rc()
     uint8_t payload[16]; // 8x RC channels (int16_t = 2 bytes each)
     int i = 0;
 
-    for (int j = 0; j < 8; j++)
-    { // Assuming 8 channels
+    for (int j = 0; j < PPM_MAX_CHANNELS; j++)
+    {
         // Use getChannel to retrieve the individual channel value
         int16_t channel_value = _rx_task->getChannel(j);
-        payload[i++] = (channel_value >> 0) & 0xFF;
-        payload[i++] = (channel_value >> 8) & 0xFF;
+        _write_int16_to_payload(payload, i, channel_value);
     }
 
-    _send_msp_response(MSP_RC, payload, 16);
+    _send_msp_response(MSP_RC, payload, MSP_RC_PAYLOAD_SIZE);
+}
+
+void SerialManagerTask::_write_int16_to_payload(uint8_t *payload, int &index, int16_t value)
+{
+    payload[index++] = (value >> 0) & 0xFF;
+    payload[index++] = (value >> 8) & 0xFF;
 }
 
 void SerialManagerTask::_handle_msp_motor()
@@ -608,12 +602,11 @@ void SerialManagerTask::_handle_msp_motor()
     uint8_t payload[8]; // 4x motor outputs (int16_t = 2 bytes each)
     int i = 0;
 
-    for (int j = 0; j < 4; j++)
-    { // Assuming 4 motors
+    for (int j = 0; j < NUM_MOTORS; j++)
+    {
         uint16_t motor_output = _motor_task->getMotorOutput(j);
-        payload[i++] = (motor_output >> 0) & 0xFF;
-        payload[i++] = (motor_output >> 8) & 0xFF;
+        _write_int16_to_payload(payload, i, motor_output);
     }
 
-    _send_msp_response(MSP_MOTOR, payload, 8);
+    _send_msp_response(MSP_MOTOR, payload, MSP_MOTOR_PAYLOAD_SIZE);
 }

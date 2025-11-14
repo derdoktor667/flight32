@@ -69,6 +69,7 @@ private:
     void _parse_msp_char(uint8_t c);
     void _process_msp_message();
     void _send_msp_response(uint8_t cmd, uint8_t *payload, uint8_t size);
+    void _write_int16_to_payload(uint8_t *payload, int &index, int16_t value); // New helper function
 
     // MSP Command Handlers
     void _handle_msp_api_version();

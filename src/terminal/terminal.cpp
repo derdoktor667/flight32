@@ -299,6 +299,33 @@ const char *Terminal::_get_task_state_string(eTaskState state)
     }
 }
 
+String Terminal::_generate_separator(int column_width, int description_width)
+{
+    String separator = "  ";
+    for (int i = 0; i < column_width; ++i)
+    {
+        separator += "-";
+    }
+    separator += " "; // Space between command and description separator
+    for (int i = 0; i < description_width; ++i)
+    {
+        separator += "-";
+    }
+    return separator;
+}
+
+bool Terminal::_category_has_settings(CommandCategory category)
+{
+    for (int i = 0; i < _settings_manager->_num_settings; ++i)
+    {
+        if (Terminal::_get_setting_category(_settings_manager->_settings_metadata[i].display_key) == category)
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
 // Command Handlers
 void Terminal::_handle_help(String &args)
 {
@@ -328,13 +355,8 @@ void Terminal::_handle_help(String &args)
         max_core_cmd_len += TERMINAL_COLUMN_BUFFER_WIDTH;
 
         com_send_log(TERMINAL_OUTPUT, "  %-*s %s", max_core_cmd_len, "Command", "Description");
-        String core_separator = "  ";
-        for (int i = 0; i < max_core_cmd_len; ++i)
-        {
-            core_separator += "-";
-        }
-        core_separator += "------------------------------";
-        com_send_log(TERMINAL_OUTPUT, core_separator.c_str());
+        String core_separator_str = _generate_separator(max_core_cmd_len, strlen("Description"));
+        com_send_log(TERMINAL_OUTPUT, core_separator_str.c_str());
 
         for (int i = 0; i < _num_commands; ++i)
         {
@@ -343,7 +365,7 @@ void Terminal::_handle_help(String &args)
                 com_send_log(TERMINAL_OUTPUT, "  %-*s %s", max_core_cmd_len, _commands[i].name, _commands[i].help);
             }
         }
-        com_send_log(TERMINAL_OUTPUT, core_separator.c_str());
+        com_send_log(TERMINAL_OUTPUT, core_separator_str.c_str());
         com_send_log(TERMINAL_OUTPUT, "");
 
         com_send_log(TERMINAL_OUTPUT, "Available Command Categories:");
@@ -360,19 +382,15 @@ void Terminal::_handle_help(String &args)
         max_category_prefix_len += TERMINAL_COLUMN_BUFFER_WIDTH;
 
         com_send_log(TERMINAL_OUTPUT, "  %-*s %s", max_category_prefix_len, "Category", "Description");
-        String category_separator = "  ";
-        for (int i = 0; i < max_category_prefix_len; ++i)
-        {
-            category_separator += "-";
-        }
-        category_separator += "------------------------------";
-        com_send_log(TERMINAL_OUTPUT, category_separator.c_str());
+        String category_separator_str = _generate_separator(max_category_prefix_len, strlen("Description"));
+        com_send_log(TERMINAL_OUTPUT, category_separator_str.c_str());
 
         for (int i = 0; i < _num_categories; ++i)
         {
             com_send_log(TERMINAL_OUTPUT, "  %-*s %s", max_category_prefix_len, _category_info[i].prefix, _category_info[i].description);
+            vTaskDelay(1); // Added delay for verbosity
         }
-        com_send_log(TERMINAL_OUTPUT, category_separator.c_str());
+        com_send_log(TERMINAL_OUTPUT, category_separator_str.c_str());
         com_send_log(TERMINAL_OUTPUT, "\n------------------------------");
     }
     else
@@ -421,26 +439,18 @@ void Terminal::_handle_help(String &args)
         }
 
         com_send_log(TERMINAL_OUTPUT, "  %-*s %s", max_command_name_len, "Command", "Description");
-        String separator = "  ";
-        for (int i = 0; i < max_command_name_len; ++i)
-        {
-            separator += "-";
-        }
-        separator += " "; // Space between command and description separator
-        for (int i = 0; i < max_description_len; ++i)
-        {
-            separator += "-";
-        }
-        com_send_log(TERMINAL_OUTPUT, separator.c_str());
+        String separator_str = _generate_separator(max_command_name_len, max_description_len);
+        com_send_log(TERMINAL_OUTPUT, separator_str.c_str());
 
         for (int i = 0; i < _num_commands; ++i)
         {
             if (_commands[i].category == requested_category)
             {
                 com_send_log(TERMINAL_OUTPUT, "  %-*s %s", max_command_name_len, _commands[i].name, _commands[i].help);
+                vTaskDelay(1); // Added delay for verbosity
             }
         }
-        com_send_log(TERMINAL_OUTPUT, separator.c_str());
+        com_send_log(TERMINAL_OUTPUT, separator_str.c_str());
         com_send_log(TERMINAL_OUTPUT, "\n--------------------------");
     }
 }
@@ -509,7 +519,7 @@ void Terminal::_handle_tasks(String &args)
         char cpu_str[8];
         snprintf(cpu_str, sizeof(cpu_str), "%.2f", cpu_percentage);
 
-        char output_buffer[256];
+        char output_buffer[TASK_STATUS_OUTPUT_BUFFER_SIZE];
         snprintf(output_buffer, sizeof(output_buffer),
                  "% -*s %-*s %-*u %-*s %-*u %-*u %-*u %u",
                  TASK_NAME_COLUMN_WIDTH, name,
@@ -668,20 +678,16 @@ void Terminal::_handle_rx_data(String &args)
     max_ch_len += TERMINAL_COLUMN_BUFFER_WIDTH;
 
     com_send_log(TERMINAL_OUTPUT, "  %-*s %s", max_ch_len, "Channel", "Value");
-    String separator = "  ";
-    for (int i = 0; i < max_ch_len; ++i)
-    {
-        separator += "-";
-    }
-    separator += "--------------------";
-    com_send_log(TERMINAL_OUTPUT, separator.c_str());
+    String separator_str = _generate_separator(max_ch_len, strlen("Value"));
+    com_send_log(TERMINAL_OUTPUT, separator_str.c_str());
 
     for (int i = 0; i < TERMINAL_RX_DATA_DISPLAY_CHANNELS; ++i)
     {
         String ch_str = "CH" + String(i + RC_CHANNEL_INDEX_OFFSET);
         com_send_log(TERMINAL_OUTPUT, "  %-*s %d", max_ch_len, ch_str.c_str(), _rx_task->getChannel(i));
+        vTaskDelay(1); // Added delay for verbosity
     }
-    com_send_log(TERMINAL_OUTPUT, separator.c_str());
+    com_send_log(TERMINAL_OUTPUT, separator_str.c_str());
 }
 
 void Terminal::_handle_rx_status(String &args)
@@ -701,7 +707,7 @@ void Terminal::_handle_rx_protocol(String &args)
     {
         String current_protocol = _settings_manager->getSettingValueHumanReadable(KEY_RC_PROTOCOL_TYPE);
         com_send_log(TERMINAL_OUTPUT, "Current RC Protocol: %s", current_protocol.c_str());
-        com_send_log(TERMINAL_OUTPUT, "Available protocols: IBUS, CRSF, SBUS");
+        com_send_log(TERMINAL_OUTPUT, "Available protocols: IBUS, PPM");
     }
     else
     {
@@ -775,13 +781,8 @@ void Terminal::_handle_rx_value_all(String &args)
     max_desc_len += TERMINAL_COLUMN_BUFFER_WIDTH;
 
     com_send_log(TERMINAL_OUTPUT, "  %-*s %s", max_desc_len, "Channel", "Value");
-    String separator = "  ";
-    for (int i = 0; i < max_desc_len; ++i)
-    {
-        separator += "-";
-    }
-    separator += "--------------------";
-    com_send_log(TERMINAL_OUTPUT, separator.c_str());
+    String separator_str = _generate_separator(max_desc_len, strlen("Value"));
+    com_send_log(TERMINAL_OUTPUT, separator_str.c_str());
 
     for (const auto &mapping : _channel_map)
     {
@@ -790,8 +791,9 @@ void Terminal::_handle_rx_value_all(String &args)
         int16_t value = _rx_task->getChannel(channel_index_0_based);
         String desc_str = String(mapping.name) + " (CH" + String(channel_index_1_based) + ")";
         com_send_log(TERMINAL_OUTPUT, "  %-*s %d", max_desc_len, desc_str.c_str(), value);
+        vTaskDelay(1); // Added delay for verbosity
     }
-    com_send_log(TERMINAL_OUTPUT, separator.c_str());
+    com_send_log(TERMINAL_OUTPUT, separator_str.c_str());
 }
 
 void Terminal::_handle_rx_channel_mapping(String &args)
@@ -923,14 +925,14 @@ void Terminal::_handle_motor_test(String &args)
         com_send_log(LOG_ERROR, "Invalid motor name: %s. Must be FL, FR, RL, or RR.", motor_name_str.c_str());
         return;
     }
-    if (throttle_percentage < 0.0f || throttle_percentage > 100.0f)
+    if (throttle_percentage < 0.0f || throttle_percentage > MAX_THROTTLE_PERCENTAGE)
     {
-        com_send_log(LOG_ERROR, "Invalid throttle percentage. Must be between 0 and 100.");
+        com_send_log(LOG_ERROR, "Invalid throttle percentage. Must be between 0 and %d.", (int)MAX_THROTTLE_PERCENTAGE);
         return;
     }
 
     // Convert percentage to normalized 0-1 float
-    float normalized_throttle = throttle_percentage / 100.0f;
+    float normalized_throttle = throttle_percentage / PERCENTAGE_TO_NORMALIZED_FACTOR;
 
     if (duration_ms > 0)
     {
@@ -1044,18 +1046,7 @@ void Terminal::_handle_list_settings(String &args)
         if (current_category == CommandCategory::UNKNOWN)
             continue;
 
-        // Check if there are any settings for this category before printing header
-        bool category_has_settings = false;
-        for (int i = 0; i < _settings_manager->_num_settings; ++i)
-        {
-            if (Terminal::_get_setting_category(_settings_manager->_settings_metadata[i].display_key) == current_category)
-            {
-                category_has_settings = true;
-                break;
-            }
-        }
-
-        if (category_has_settings)
+        if (_category_has_settings(current_category))
         {
             com_send_log(TERMINAL_OUTPUT, "\n--- %s Settings ---", category_name);
             _settings_manager->listSettings(current_category);
@@ -1076,18 +1067,7 @@ void Terminal::_handle_dump_settings(String &args)
         if (current_category == CommandCategory::UNKNOWN)
             continue;
 
-        // Check if there are any settings for this category before printing header
-        bool category_has_settings = false;
-        for (int i = 0; i < _settings_manager->_num_settings; ++i)
-        {
-            if (Terminal::_get_setting_category(_settings_manager->_settings_metadata[i].display_key) == current_category)
-            {
-                category_has_settings = true;
-                break;
-            }
-        }
-
-        if (category_has_settings)
+        if (_category_has_settings(current_category))
         {
             com_send_log(TERMINAL_OUTPUT, "\n--- %s Settings ---", category_name);
             _settings_manager->dumpSettings(current_category);
@@ -1119,13 +1099,8 @@ void Terminal::_handle_pid_get(String &args)
     max_label_len += TERMINAL_COLUMN_BUFFER_WIDTH;
 
     com_send_log(TERMINAL_OUTPUT, "  %-*s %s", max_label_len, "Axis", "Gains (P, I, D)");
-    String separator = "  ";
-    for (int i = 0; i < max_label_len; ++i)
-    {
-        separator += "-";
-    }
-    separator += "-------------------------";
-    com_send_log(TERMINAL_OUTPUT, separator.c_str());
+    String separator_str = _generate_separator(max_label_len, strlen("Gains (P, I, D)"));
+    com_send_log(TERMINAL_OUTPUT, separator_str.c_str());
 
     com_send_log(TERMINAL_OUTPUT, "  %-*s P=%d, I=%d, D=%d", max_label_len, "Roll:",
                  (int)(_pid_task->getGains(PidAxis::ROLL).p * PID_SCALE_FACTOR),
@@ -1139,7 +1114,7 @@ void Terminal::_handle_pid_get(String &args)
                  (int)(_pid_task->getGains(PidAxis::YAW).p * PID_SCALE_FACTOR),
                  (int)(_pid_task->getGains(PidAxis::YAW).i * PID_SCALE_FACTOR),
                  (int)(_pid_task->getGains(PidAxis::YAW).d * PID_SCALE_FACTOR));
-    com_send_log(TERMINAL_OUTPUT, separator.c_str());
+    com_send_log(TERMINAL_OUTPUT, separator_str.c_str());
 }
 
 void Terminal::_handle_pid_set(String &args)

@@ -8,7 +8,7 @@
 #pragma once
 
 #include <cstdint>
-#include "DShotRMT.h"
+#include <DShotRMT.h>
 
 // --- Motor Task Configuration ---
 constexpr uint32_t MOTOR_TASK_STACK_SIZE = 4096;
@@ -46,3 +46,7 @@ constexpr const char *KEY_MOTOR_PROTOCOL = "motor.protocol";
 constexpr uint8_t DEFAULT_MOTOR_PROTOCOL = static_cast<uint8_t>(DshotProtocolIndex::DSHOT300); // Corresponds to DSHOT300
 constexpr const char *DSHOT_PROTOCOL_STRINGS[] = {"DSHOT150", "DSHOT300", "DSHOT600", "DSHOT1200"};
 constexpr uint8_t NUM_DSHOT_PROTOCOLS = sizeof(DSHOT_PROTOCOL_STRINGS) / sizeof(DSHOT_PROTOCOL_STRINGS[0]);
+
+// --- Motor Test Constants ---
+constexpr float PERCENTAGE_TO_NORMALIZED_FACTOR = 100.0f;
+constexpr float MAX_THROTTLE_PERCENTAGE = 100.0f;
