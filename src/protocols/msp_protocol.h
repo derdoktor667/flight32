@@ -1,3 +1,10 @@
+/**
+ * @file msp_protocol.h
+ * @brief Defines constants and command IDs for the MultiWii Serial Protocol (MSP).
+ * @author Wastl Kraus - derdoktor667
+ * @license MIT
+ */
+
 #pragma once
 
 #include <cstdint>
@@ -30,4 +37,3 @@ static constexpr uint8_t MSP_ATTITUDE = 108;
 static constexpr uint8_t MSP_EEPROM_WRITE = 200;
 static constexpr uint8_t MSP_RESET_SETTINGS = 201;
 static constexpr uint8_t MSP_SET_PID = 202;
-

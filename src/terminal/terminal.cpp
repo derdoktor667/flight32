@@ -1,8 +1,7 @@
 /**
  * @file terminal.cpp
  * @brief Implements the Terminal class for handling CLI terminal commands and parsing.
- * @author Wastl Kraus
- * @date 2025-11-12
+ * @author Wastl Kraus - derdoktor667
  * @license MIT
  */
 

@@ -1,8 +1,7 @@
 /**
  * @file rx_task.cpp
  * @brief Implements the RxTask for handling RC receiver input.
- * @author Wastl Kraus
- * @date 2025-11-09
+ * @author Wastl Kraus - derdoktor667
  * @license MIT
  */
 

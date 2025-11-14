@@ -1,3 +1,10 @@
+/**
+ * @file serial_config.h
+ * @brief Configuration settings for serial communication parameters.
+ * @author Wastl Kraus - derdoktor667
+ * @license MIT
+ */
+
 #pragma once
 
 #include <cstdint>

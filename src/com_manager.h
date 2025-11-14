@@ -1,8 +1,7 @@
 /**
  * @file com_manager.h
  * @brief Defines the communication manager interface for serial logging and terminal output.
- * @author Wastl Kraus
- * @date 2025-11-09
+ * @author Wastl Kraus - derdoktor667
  * @license MIT
  */
 

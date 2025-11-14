@@ -1,3 +1,10 @@
+/**
+ * @file imu_config.h
+ * @brief Configuration settings for the IMU sensor, including task parameters, I2C settings, and LPF bandwidth.
+ * @author Wastl Kraus - derdoktor667
+ * @license MIT
+ */
+
 #pragma once
 
 #include <cstdint>
@@ -16,10 +23,10 @@ constexpr bool IMU_DMP_ENABLED_DEFAULT = false;   // Default setting for enablin
 
 // --- IMU Protocol Configuration ---
 enum class ImuType : uint8_t
-{
-    MPU6050 = 0,
-    NONE = 255
-};
+    {
+        MPU6050 = 0,
+        NONE = 255
+    };
 
 constexpr const char *KEY_IMU_TYPE = "imu.type";
 constexpr ImuType DEFAULT_IMU_TYPE = ImuType::MPU6050;

@@ -1,8 +1,7 @@
 /**
  * @file motor_task.cpp
  * @brief Implements motor control using DShotRMT for ESP32.
- * @author Wastl Kraus
- * @date 2025-11-09
+ * @author Wastl Kraus - derdoktor667
  * @license MIT
  */
 

@@ -1,3 +1,10 @@
+/**
+ * @file version_info.h
+ * @brief Defines firmware version information and related constants.
+ * @author Wastl Kraus - derdoktor667
+ * @license MIT
+ */
+
 #pragma once
 
 #include <cstdint>

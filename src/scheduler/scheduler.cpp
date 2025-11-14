@@ -1,8 +1,7 @@
 /**
  * @file scheduler.cpp
  * @brief Implements the Scheduler class for managing FreeRTOS tasks.
- * @author Wastl Kraus
- * @date 2025-11-09
+ * @author Wastl Kraus - derdoktor667
  * @license MIT
  */
 

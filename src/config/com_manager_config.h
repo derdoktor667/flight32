@@ -1,3 +1,10 @@
+/**
+ * @file com_manager_config.h
+ * @brief Configuration settings for the communication manager task, including queue lengths and message sizes.
+ * @author Wastl Kraus - derdoktor667
+ * @license MIT
+ */
+
 #pragma once
 
 #include <cstdint>

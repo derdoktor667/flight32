@@ -1,3 +1,10 @@
+/**
+ * @file serial_manager_task.h
+ * @brief Defines the SerialManagerTask class for managing serial communication.
+ * @author Wastl Kraus - derdoktor667
+ * @license MIT
+ */
+
 #pragma once
 
 #include <Arduino.h>

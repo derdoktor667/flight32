@@ -1,3 +1,10 @@
+/**
+ * @file motor_config.h
+ * @brief Configuration settings for motor control, including DShot protocol parameters and motor pin assignments.
+ * @author Wastl Kraus - derdoktor667
+ * @license MIT
+ */
+
 #pragma once
 
 #include <cstdint>

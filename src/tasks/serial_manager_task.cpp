@@ -1,8 +1,7 @@
 /**
  * @file serial_manager_task.cpp
  * @brief Implements the SerialManagerTask class for managing serial communication.
- * @author Your Name
- * @date 2025-11-12
+ * @author Wastl Kraus - derdoktor667
  * @license MIT
  */
 

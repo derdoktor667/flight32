@@ -1,15 +1,14 @@
 /**
  * @file com_manager.cpp
  * @brief Implements the communication manager for serial logging and terminal output.
- * @author Wastl Kraus
- * @date 2025-11-09
+ * @author Wastl Kraus - derdoktor667
  * @license MIT
  */
 
+#include <Arduino.h>
 #include "com_manager.h"
 #include "config/com_manager_config.h"
 #include "config/terminal_config.h"
-#include <Arduino.h>
 
 QueueHandle_t com_queue;
 QueueHandle_t com_flush_signal_queue;

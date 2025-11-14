@@ -1,3 +1,10 @@
+/**
+ * @file task_names.h
+ * @brief Defines constant strings for FreeRTOS task names for identification and debugging.
+ * @author Wastl Kraus - derdoktor667
+ * @license MIT
+ */
+
 #pragma once
 
 #include <cstdint>

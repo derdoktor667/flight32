@@ -1,8 +1,7 @@
 /**
- * @file config.h
+ * @file global_config.h
  * @brief Central configuration file for the Flight32 firmware.
- * @author Wastl Kraus
- * @date 2025-11-09
+ * @author Wastl Kraus - derdoktor667
  * @license MIT
  */
 

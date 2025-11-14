@@ -1,3 +1,10 @@
+/**
+ * @file pid_config.h
+ * @brief Configuration settings for the PID controller, including task parameters and default gains.
+ * @author Wastl Kraus - derdoktor667
+ * @license MIT
+ */
+
 #pragma once
 
 #include <cstdint>

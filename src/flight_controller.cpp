@@ -1,8 +1,7 @@
 /**
  * @file flight_controller.cpp
  * @brief Initializes and manages all flight controller components and FreeRTOS tasks.
- * @author Wastl Kraus
- * @date 2025-11-09
+ * @author Wastl Kraus - derdoktor667
  * @license MIT
  */
 

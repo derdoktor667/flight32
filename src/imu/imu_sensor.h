@@ -1,8 +1,7 @@
 /**
  * @file imu_sensor.h
  * @brief Defines the abstract base class for IMU sensors.
- * @author Wastl Kraus
- * @date 2025-11-09
+ * @author Wastl Kraus - derdoktor667
  * @license MIT
  */
 

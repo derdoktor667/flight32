@@ -1,8 +1,7 @@
 /**
  * @file imu_task.h
  * @brief Defines the ImuTask class for reading data from a generic IMU sensor.
- * @author Wastl Kraus
- * @date 2025-11-09
+ * @author Wastl Kraus - derdoktor667
  * @license MIT
  */
 

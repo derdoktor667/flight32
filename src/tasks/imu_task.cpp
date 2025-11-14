@@ -1,8 +1,7 @@
 /**
  * @file imu_task.cpp
  * @brief Implements the ImuTask for reading and updating IMU sensor data.
- * @author Wastl Kraus
- * @date 2025-11-09
+ * @author Wastl Kraus - derdoktor667
  * @license MIT
  */
 

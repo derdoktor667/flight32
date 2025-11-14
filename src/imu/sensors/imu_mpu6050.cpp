@@ -1,8 +1,7 @@
 /**
  * @file imu_mpu6050.cpp
  * @brief Implements the wrapper for the MPU6050 sensor.
- * @author Wastl Kraus
- * @date 2025-11-09
+ * @author Wastl Kraus - derdoktor667
  * @license MIT
  */
 

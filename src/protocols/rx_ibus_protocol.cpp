@@ -1,8 +1,7 @@
 /**
  * @file rx_ibus_protocol.cpp
  * @brief IBUS implementation of the RxProtocol interface.
- * @author Wastl Kraus
- * @date 2025-11-09
+ * @author Wastl Kraus - derdoktor667
  * @license MIT
  */
 

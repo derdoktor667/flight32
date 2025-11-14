@@ -1,8 +1,7 @@
 /**
  * @file rx_protocol.h
  * @brief Abstract base class for various RC receiver protocols.
- * @author Wastl Kraus
- * @date 2025-11-09
+ * @author Wastl Kraus - derdoktor667
  * @license MIT
  */
 

@@ -1,3 +1,10 @@
+/**
+ * @file settings_config.h
+ * @brief Configuration settings for the NVS-based settings manager.
+ * @author Wastl Kraus - derdoktor667
+ * @license MIT
+ */
+
 #pragma once
 
 #include <cstdint>

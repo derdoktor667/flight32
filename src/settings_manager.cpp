@@ -1,8 +1,7 @@
 /**
  * @file settings_manager.cpp
  * @brief Manages persistent settings using ESP32's non-volatile storage (NVS).
- * @author Wastl Kraus
- * @date 2025-11-09
+ * @author Wastl Kraus - derdoktor667
  * @license MIT
  */
 

@@ -1,3 +1,10 @@
+/**
+ * @file scheduler_config.h
+ * @brief Configuration settings for the FreeRTOS task scheduler.
+ * @author Wastl Kraus - derdoktor667
+ * @license MIT
+ */
+
 #pragma once
 
 #include <cstdint>

@@ -1,3 +1,10 @@
+/**
+ * @file pid_task.cpp
+ * @brief Implements the PidTask for PID control loop execution.
+ * @author Wastl Kraus - derdoktor667
+ * @license MIT
+ */
+
 #include "pid_task.h"
 #include "../imu/imu_sensor.h"
 #include "../protocols/rx_protocol.h"

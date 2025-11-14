@@ -1,8 +1,7 @@
 /**
  * @file flight_controller.h
  * @brief Defines the FlightController class, managing all core components and tasks.
- * @author Wastl Kraus
- * @date 2025-11-09
+ * @author Wastl Kraus - derdoktor667
  * @license MIT
  */
 

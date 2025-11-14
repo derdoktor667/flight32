@@ -1,3 +1,10 @@
+/**
+ * @file rx_config.h
+ * @brief Configuration settings for RC receiver protocols (IBUS, PPM) and channel mappings.
+ * @author Wastl Kraus - derdoktor667
+ * @license MIT
+ */
+
 #pragma once
 
 #include <cstdint>

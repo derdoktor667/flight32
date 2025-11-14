@@ -1,8 +1,7 @@
 /**
  * @file rx_ppm_protocol.cpp
  * @brief Implements the PPM (Pulse Position Modulation) protocol for RC receiver input.
- * @author Wastl Kraus
- * @date 2025-11-09
+ * @author Wastl Kraus - derdoktor667
  * @license MIT
  */
 

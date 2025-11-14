@@ -1,3 +1,10 @@
+/**
+ * @file terminal_config.h
+ * @brief Configuration settings for the serial terminal and communication manager tasks.
+ * @author Wastl Kraus - derdoktor667
+ * @license MIT
+ */
+
 #pragma once
 
 #include <cstdint>
