@@ -41,7 +41,6 @@ jobs:
             --library "$ARDUINO_LIBS_PATH/DShotRMT" \
             --library "$ARDUINO_LIBS_PATH/ESP32_MPU6050" \
             --library "$ARDUINO_LIBS_PATH/FlyskyIBUS" \
-            --verbose \
             flight32.ino
 
       - name: Report build status
