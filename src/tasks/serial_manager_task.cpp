@@ -11,7 +11,8 @@
 #include <math.h>
 #include "imu_task.h"
 #include "../config/terminal_config.h"
-#include "../config/global_config.h" // Added for RADIANS_TO_DEGREES
+
+static constexpr float RADIANS_TO_DEGREES = 180.0f / M_PI;
 
 // Helper function to convert quaternion to Euler angles (roll, pitch, yaw)
 // Angles are in degrees
