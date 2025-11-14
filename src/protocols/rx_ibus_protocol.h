@@ -9,7 +9,7 @@
 
 #include "rx_protocol.h"
 #include "../config/rx_config.h"
-#include "../../libraries/FlyskyIBUS/FlyskyIBUS.h"
+#include "FlyskyIBUS.h"
 
 class RxIbusProtocol : public RxProtocol
 {

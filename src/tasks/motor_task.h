@@ -9,7 +9,7 @@
 
 #include <Arduino.h>
 #include "../scheduler/task_base.h"
-#include "../../libraries/DShotRMT/DShotRMT.h"
+#include "DShotRMT.h"
 #include "../config/motor_config.h"
 
 class SettingsManager; // Forward declaration
