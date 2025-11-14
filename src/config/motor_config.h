@@ -8,7 +8,7 @@
 #pragma once
 
 #include <cstdint>
-#include <DShotRMT.h>
+#include "../../libraries/DShotRMT/DShotRMT.h"
 
 // --- Motor Task Configuration ---
 constexpr uint32_t MOTOR_TASK_STACK_SIZE = 4096;
