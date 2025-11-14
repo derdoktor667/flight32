@@ -16,6 +16,14 @@ jobs:
         with:
           submodules: true
 
+      - name: Clone external libraries
+        run: |
+          ARDUINO_LIBS_PATH="$HOME/.arduino15/libraries"
+          mkdir -p "$ARDUINO_LIBS_PATH"
+          git clone --depth 1 --branch dev https://github.com/derdoktor667/DShotRMT.git "$ARDUINO_LIBS_PATH/DShotRMT"
+          git clone --depth 1 --branch dev https://github.com/derdoktor667/ESP32_MPU6050.git "$ARDUINO_LIBS_PATH/ESP32_MPU6050"
+          git clone --depth 1 --branch dev https://github.com/derdoktor667/FlyskyIBUS.git "$ARDUINO_LIBS_PATH/FlyskyIBUS"
+
       - name: Set up Arduino CLI
         uses: arduino/setup-arduino-cli@v1
 
@@ -23,20 +31,16 @@ jobs:
         run: |
           arduino-cli core install esp32:esp32 --additional-urls https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
 
-      - name: Link libraries
-        run: |
-          ARDUINO_LIBS_PATH="$HOME/.arduino15/libraries"
-          mkdir -p "$ARDUINO_LIBS_PATH"
-          
-          # Create symlinks for Arduino Libraries from submodules
-          [ -d libraries/DShotRMT ] && ln -sf "$GITHUB_WORKSPACE/libraries/DShotRMT" "$ARDUINO_LIBS_PATH/DShotRMT" || true
-          [ -d libraries/ESP32_MPU6050 ] && ln -sf "$GITHUB_WORKSPACE/libraries/ESP32_MPU6050" "$ARDUINO_LIBS_PATH/ESP32_MPU6050" || true
-          [ -d libraries/FlyskyIBUS ] && ln -sf "$GITHUB_WORKSPACE/libraries/FlyskyIBUS" "$ARDUINO_LIBS_PATH/FlyskyIBUS" || true
+
 
       - name: Compile sketch
         run: |
+          ARDUINO_LIBS_PATH="$HOME/.arduino15/libraries"
           arduino-cli compile \
             --fqbn esp32:esp32:esp32 \
+            --library "$ARDUINO_LIBS_PATH/DShotRMT" \
+            --library "$ARDUINO_LIBS_PATH/ESP32_MPU6050" \
+            --library "$ARDUINO_LIBS_PATH/FlyskyIBUS" \
             --verbose \
             flight32.ino
 
