@@ -12,25 +12,7 @@
 #include "pid_task.h"
 #include "../terminal/terminal.h"
 
-// MSP Commands
-#define MSP_API_VERSION 1
-#define MSP_FC_VARIANT 2
-#define MSP_FC_VERSION 3
-#define MSP_BOARD_INFO 4
-#define MSP_BUILD_INFO 5
-#define MSP_REBOOT 6
-#define MSP_STATUS 7
-#define MSP_MEM_STATS 8
-#define MSP_GET_SETTING 9
-#define MSP_SET_SETTING 10
-#define MSP_PID 11
-#define MSP_RAW_IMU 102
-#define MSP_MOTOR 104
-#define MSP_RC 105
-#define MSP_ATTITUDE 108
-#define MSP_SET_PID 202
-#define MSP_EEPROM_WRITE 200
-#define MSP_RESET_SETTINGS 201
+#include "../msp_protocol.h"
 
 class SerialManagerTask : public TaskBase
 {

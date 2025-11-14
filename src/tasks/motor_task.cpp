@@ -6,6 +6,23 @@
  * @license MIT
  */
 
+// Motor Mixing for Quad-X Configuration
+
+// Motor Layout:
+//    FL (Front Left)      FR (Front Right)
+//          \                /
+//           \              /
+//            \    [CP]    /
+//             \          /
+//              \        /
+//         RL (Rear Left) - RR (Rear Right)
+
+// Mixing matrix:
+// RR =  T - P + R - Y  (rear right)
+// FR =  T - P - R + Y  (front right)
+// RL =  T + P + R + Y  (rear left)
+// FL =  T + P - R - Y  (front left)
+
 #include "motor_task.h"
 #include "../com_manager.h"
 #include "../settings_manager.h"

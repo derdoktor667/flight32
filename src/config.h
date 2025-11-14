@@ -163,7 +163,8 @@ static constexpr const char *KEY_PID_YAW_P = "pid.yaw.p";
 static constexpr const char *KEY_PID_YAW_I = "pid.yaw.i";
 static constexpr const char *KEY_PID_YAW_D = "pid.yaw.d";
 
-static constexpr float PID_SCALE_FACTOR = 100.0f; // Scaling factor for PID gains
+// PID scaling: 1/100 for precision
+static constexpr float PID_SCALE_FACTOR = 100.0f; // 1 unit = 0.01 gain
 
 static constexpr float DEFAULT_PID_ROLL_P = 0.2f;
 static constexpr float DEFAULT_PID_ROLL_I = 0.02f;
@@ -203,21 +204,6 @@ static constexpr uint8_t BYTE_BUFFER_SIZE = 15;
 
 // --- Time Constants ---
 static constexpr float MS_TO_SECONDS_FACTOR = 1000.0f;
-
-// --- MSP Protocol Constants ---
-static constexpr uint8_t MSP_PROTOCOL_VERSION = 0;
-static constexpr uint8_t MSP_API_VERSION_MAJOR = 1;
-static constexpr uint8_t MSP_API_VERSION_MINOR = 0;
-static constexpr unsigned long MSP_TIMEOUT_MS = 10000;
-
-// --- Flight Controller Version Constants ---
-static constexpr uint8_t FC_VERSION_MAJOR = 0;
-static constexpr uint8_t FC_VERSION_MINOR = 0;
-static constexpr uint8_t FC_VERSION_PATCH = 1;
-
-// --- MSP Constants ---
-static constexpr uint8_t MSP_MAX_PAYLOAD_SIZE = 128;
-static constexpr uint8_t MSP_PID_PAYLOAD_SIZE = 9;
 
 // --- Terminal Formatting Constants ---
 static constexpr uint8_t TASK_NAME_COLUMN_WIDTH = 16;

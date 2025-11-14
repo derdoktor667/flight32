@@ -198,9 +198,7 @@ void SettingsManager::listSettings(CommandCategory category)
     if (settings_in_category_count == 0)
         return; // Don't print header if no settings
 
-    com_send_log(TERMINAL_OUTPUT, "  (Found %d settings in this category)", settings_in_category_count);
-    // Use a fixed width for the setting name to ensure consistent formatting and prevent truncation
-    static constexpr int SETTING_NAME_DISPLAY_WIDTH = 20;
+        static constexpr int SETTING_NAME_DISPLAY_WIDTH = 20;
 
     com_send_log(TERMINAL_OUTPUT, "  %-*s %s", SETTING_NAME_DISPLAY_WIDTH, "Setting", "Description");
     String separator = "  ";
@@ -236,8 +234,7 @@ void SettingsManager::dumpSettings(CommandCategory category)
     if (settings_in_category_count == 0)
         return; // Don't print header if no settings
 
-    com_send_log(TERMINAL_OUTPUT, "  (Found %d settings in this category)", settings_in_category_count);
-    vTaskDelay(1); // Small delay to allow com_task to process
+        vTaskDelay(1); // Small delay to allow com_task to process
     for (int i = 0; i < _num_settings; ++i)
     {
         if (Terminal::_get_setting_category(_settings_metadata[i].display_key) == category)
