@@ -9,7 +9,7 @@
 #pragma once
 
 #include "imu_sensor.h"
-#include "config.h"
+#include "imu_config.h"
 #include <ESP32_MPU6050.h>
 
 class ImuMpu6050 : public ImuSensor

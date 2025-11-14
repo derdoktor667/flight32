@@ -11,6 +11,7 @@
 #include <Arduino.h>
 #include <Preferences.h>
 #include "imu_sensor.h"
+#include "settings_config.h"
 
 enum class CommandCategory;
 
@@ -38,35 +39,7 @@ public:
     ImuAxisData getAccelOffsets();
     void setAccelOffsets(const ImuAxisData &offsets);
 
-    static constexpr const char *KEY_SYSTEM_NAME = "system.name";
-    static constexpr const char *DEFAULT_SYSTEM_NAME = "Flight32";
-    static constexpr const char *KEY_MPU_GYRO_RANGE = "mpu.g_range";
-    static constexpr const char *KEY_RC_PROTOCOL_TYPE = "rc.protocol";
-    static constexpr const char *KEY_RX_PIN = "rx.pin";
 
-    static constexpr const char *KEY_RC_CHANNEL_ROLL = "rc.ch.roll";
-    static constexpr const char *KEY_RC_CHANNEL_PITCH = "rc.ch.pitch";
-    static constexpr const char *KEY_RC_CHANNEL_THRO = "rc.ch.thro";
-    static constexpr const char *KEY_RC_CHANNEL_YAW = "rc.ch.yaw";
-    static constexpr const char *KEY_RC_CHANNEL_ARM = "rc.ch.arm";
-    static constexpr const char *KEY_RC_CHANNEL_FMODE = "rc.ch.fmode";
-    static constexpr const char *KEY_RC_CHANNEL_AUX1 = "rc.ch.aux1";
-    static constexpr const char *KEY_RC_CHANNEL_AUX2 = "rc.ch.aux2";
-    static constexpr const char *KEY_RC_CHANNEL_AUX3 = "rc.ch.aux3";
-    static constexpr const char *KEY_RC_CHANNEL_AUX4 = "rc.ch.aux4";
-
-    static constexpr const char *KEY_MPU_GYRO_OFF_X = "mpu.g_off.x";
-    static constexpr const char *KEY_MPU_GYRO_OFF_Y = "mpu.g_off.y";
-    static constexpr const char *KEY_MPU_GYRO_OFF_Z = "mpu.g_off.z";
-    static constexpr const char *KEY_MPU_ACCEL_OFF_X = "mpu.a_off.x";
-    static constexpr const char *KEY_MPU_ACCEL_OFF_Y = "mpu.a_off.y";
-    static constexpr const char *KEY_MPU_ACCEL_OFF_Z = "mpu.a_off.z";
-
-    static const char *GYRO_RANGE_STRINGS[];
-    static const uint8_t NUM_GYRO_RANGES;
-
-    static const char *RC_PROTOCOL_STRINGS[];
-    static const uint8_t NUM_RC_PROTOCOLS;
 
     enum SettingType
     {

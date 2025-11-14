@@ -7,7 +7,8 @@
  */
 
 #include "com_manager.h"
-#include "config.h"
+#include "com_manager_config.h"
+#include "terminal/terminal_config.h"
 #include <Arduino.h>
 
 QueueHandle_t com_queue;

@@ -12,7 +12,7 @@
 #include "../pid/pid_controller.h"
 #include "imu_task.h"
 #include "motor_task.h"
-#include "../config.h"
+#include "../pid/pid_config.h"
 
 class RxTask;          // Forward declaration
 class SettingsManager; // Forward declaration

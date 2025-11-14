@@ -10,6 +10,7 @@
 
 #include "../scheduler/task_base.h"
 #include "../imu_sensor.h"
+#include "../imu_config.h"
 
 class ImuTask : public TaskBase
 {

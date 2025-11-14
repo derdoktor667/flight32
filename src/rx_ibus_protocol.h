@@ -9,6 +9,7 @@
 #pragma once
 
 #include "rx_protocol.h"
+#include "rx_config.h"
 #include <FlyskyIBUS.h>
 
 class RxIbusProtocol : public RxProtocol

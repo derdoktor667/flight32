@@ -7,10 +7,11 @@
  */
 
 #include "serial_manager_task.h"
-#include "../firmware_info.h"
+#include "../version_info.h"
 #include <cmath>
 #include <math.h>
 #include "imu_task.h"
+#include "../terminal/terminal_config.h"
 
 // Helper function to convert quaternion to Euler angles (roll, pitch, yaw)
 // Angles are in degrees
@@ -308,7 +309,7 @@ void SerialManagerTask::_handle_msp_status()
 {
     // For simplicity, just send firmware version for now
     // More detailed status would require a custom payload structure
-    String version_str = FirmwareInfo::getFirmwareVersion();
+    String version_str = FIRMWARE_VERSION;
     uint8_t payload[version_str.length() + 1];
     memcpy(payload, version_str.c_str(), version_str.length());
     payload[version_str.length()] = 0; // Null terminator

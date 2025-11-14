@@ -7,6 +7,7 @@
  */
 
 #include "imu_task.h"
+#include "../imu_config.h"
 #include "../com_manager.h"
 
 ImuTask::ImuTask(const char *name, uint32_t stack_size, UBaseType_t priority, BaseType_t core_id, uint32_t task_delay_ms, ImuSensor &imu_sensor)

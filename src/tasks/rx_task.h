@@ -12,6 +12,7 @@
 #include "../scheduler/task_base.h"
 #include "../rx_protocol.h"
 #include "../settings_manager.h"
+#include "../rx_config.h"
 
 class RxTask : public TaskBase
 {

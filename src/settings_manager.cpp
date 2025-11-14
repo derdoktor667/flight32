@@ -6,7 +6,12 @@
  * @license MIT
  */
 
-#include "config.h"
+#include "settings_config.h"
+#include "imu_config.h"
+#include "rx_config.h"
+#include "motor_config.h"
+#include "pid/pid_config.h"
+#include "terminal/terminal_config.h"
 #include "settings_manager.h"
 #include "com_manager.h"
 #include "terminal/terminal.h"
@@ -14,11 +19,12 @@
 #include <cstdint>
 #include <cstring>
 
-const char *SettingsManager::GYRO_RANGE_STRINGS[] = {"250_DPS", "500_DPS", "1000_DPS", "2000_DPS"};
-const uint8_t SettingsManager::NUM_GYRO_RANGES = sizeof(SettingsManager::GYRO_RANGE_STRINGS) / sizeof(SettingsManager::GYRO_RANGE_STRINGS[0]);
+// These string arrays are specific to SettingsManager for displaying options
+const char *GYRO_RANGE_STRINGS[] = {"250_DPS", "500_DPS", "1000_DPS", "2000_DPS"};
+const uint8_t NUM_GYRO_RANGES = sizeof(GYRO_RANGE_STRINGS) / sizeof(GYRO_RANGE_STRINGS[0]);
 
-const char *SettingsManager::RC_PROTOCOL_STRINGS[] = {"IBUS", "PPM"};
-const uint8_t SettingsManager::NUM_RC_PROTOCOLS = sizeof(SettingsManager::RC_PROTOCOL_STRINGS) / sizeof(SettingsManager::RC_PROTOCOL_STRINGS[0]);
+const char *RC_PROTOCOL_STRINGS[] = {"IBUS", "PPM"};
+const uint8_t NUM_RC_PROTOCOLS = sizeof(RC_PROTOCOL_STRINGS) / sizeof(RC_PROTOCOL_STRINGS[0]);
 
 const char *IMU_TYPE_STRINGS[] = {"MPU6050", "NONE"};
 const uint8_t NUM_IMU_TYPES = sizeof(IMU_TYPE_STRINGS) / sizeof(IMU_TYPE_STRINGS[0]);
@@ -27,29 +33,29 @@ const char *BOOLEAN_STRINGS[] = {"false", "true"};
 const uint8_t NUM_BOOLEAN_STRINGS = sizeof(BOOLEAN_STRINGS) / sizeof(BOOLEAN_STRINGS[0]);
 
 const SettingsManager::SettingMetadata SettingsManager::_settings_metadata[] = {
-    {SettingsManager::KEY_SYSTEM_NAME, "system.name", "Configurable model name", SettingsManager::STRING, nullptr, 0, 0, 0.0f, SettingsManager::DEFAULT_SYSTEM_NAME},
-    {SettingsManager::KEY_MPU_GYRO_RANGE, "gyro.resolution", "MPU6050 Gyroscope Range", SettingsManager::UINT8, SettingsManager::GYRO_RANGE_STRINGS, SettingsManager::NUM_GYRO_RANGES, DEFAULT_GYRO_RANGE, 0.0f, nullptr},
+    {KEY_SYSTEM_NAME, "system.name", "Configurable model name", SettingsManager::STRING, nullptr, 0, 0, 0.0f, DEFAULT_SYSTEM_NAME},
+    {KEY_MPU_GYRO_RANGE, "gyro.resolution", "MPU6050 Gyroscope Range", SettingsManager::UINT8, GYRO_RANGE_STRINGS, NUM_GYRO_RANGES, DEFAULT_GYRO_RANGE, 0.0f, nullptr},
     {KEY_IMU_TYPE, "imu.type", "IMU Sensor Type", SettingsManager::UINT8, IMU_TYPE_STRINGS, NUM_IMU_TYPES, (uint8_t)DEFAULT_IMU_TYPE, 0.0f, nullptr},
     {KEY_IMU_LPF_BANDWIDTH, "imu.lpf_bw", "IMU Low-Pass Filter Bandwidth", SettingsManager::UINT8, IMU_LPF_BANDWIDTH_STRINGS, NUM_IMU_LPF_BANDWIDTHS, DEFAULT_IMU_LPF_BANDWIDTH, 0.0f, nullptr},
     {"imu.dmp_enabled", "imu.dmp_enabled", "IMU Digital Motion Processor (DMP) Enabled", SettingsManager::UINT8, BOOLEAN_STRINGS, NUM_BOOLEAN_STRINGS, IMU_DMP_ENABLED_DEFAULT, 0.0f, nullptr},
-    {SettingsManager::KEY_MPU_GYRO_OFF_X, "mpu.g_off.x", "Gyroscope X-axis offset", SettingsManager::FLOAT, nullptr, 0, 0, 0.0f, nullptr},
-    {SettingsManager::KEY_MPU_GYRO_OFF_Y, "mpu.g_off.y", "Gyroscope Y-axis offset", SettingsManager::FLOAT, nullptr, 0, 0, 0.0f, nullptr},
-    {SettingsManager::KEY_MPU_GYRO_OFF_Z, "mpu.g_off.z", "Gyroscope Z-axis offset", SettingsManager::FLOAT, nullptr, 0, 0, 0.0f, nullptr},
-    {SettingsManager::KEY_MPU_ACCEL_OFF_X, "mpu.a_off.x", "Accelerometer X-axis offset", SettingsManager::FLOAT, nullptr, 0, 0, 0.0f, nullptr},
-    {SettingsManager::KEY_MPU_ACCEL_OFF_Y, "mpu.a_off.y", "Accelerometer Y-axis offset", SettingsManager::FLOAT, nullptr, 0, 0, 0.0f, nullptr},
-    {SettingsManager::KEY_MPU_ACCEL_OFF_Z, "mpu.a_off.z", "Accelerometer Z-axis offset", SettingsManager::FLOAT, nullptr, 0, 0, 0.0f, nullptr},
-    {SettingsManager::KEY_RC_PROTOCOL_TYPE, "rc.protocol", "RC Receiver Protocol", SettingsManager::UINT8, RC_PROTOCOL_STRINGS, NUM_RC_PROTOCOLS, (uint8_t)DEFAULT_RC_PROTOCOL_TYPE, 0.0f, nullptr},
-    {SettingsManager::KEY_RX_PIN, "rx.pin", "Generic RX Input Pin (GPIO)", SettingsManager::UINT8, nullptr, 0, DEFAULT_RX_PIN, 0.0f, nullptr},
-    {SettingsManager::KEY_RC_CHANNEL_ROLL, "rc.ch.roll", "RC Roll Channel Index", SettingsManager::UINT8, nullptr, 0, DEFAULT_RC_CHANNEL_ROLL, 0.0f, nullptr},
-    {SettingsManager::KEY_RC_CHANNEL_PITCH, "rc.ch.pitch", "RC Pitch Channel Index", SettingsManager::UINT8, nullptr, 0, DEFAULT_RC_CHANNEL_PITCH, 0.0f, nullptr},
-    {SettingsManager::KEY_RC_CHANNEL_THRO, "rc.ch.thro", "RC Throttle Channel Index", SettingsManager::UINT8, nullptr, 0, DEFAULT_RC_CHANNEL_THRO, 0.0f, nullptr},
-    {SettingsManager::KEY_RC_CHANNEL_YAW, "rc.ch.yaw", "RC Yaw Channel Index", SettingsManager::UINT8, nullptr, 0, DEFAULT_RC_CHANNEL_YAW, 0.0f, nullptr},
-    {SettingsManager::KEY_RC_CHANNEL_ARM, "rc.ch.arm", "RC Arming Channel Index", SettingsManager::UINT8, nullptr, 0, DEFAULT_RC_CHANNEL_ARM, 0.0f, nullptr},
-    {SettingsManager::KEY_RC_CHANNEL_FMODE, "rc.ch.fmode", "RC Flight Mode Channel Index", SettingsManager::UINT8, nullptr, 0, DEFAULT_RC_CHANNEL_FMODE, 0.0f, nullptr},
-    {SettingsManager::KEY_RC_CHANNEL_AUX1, "rc.ch.aux1", "RC Auxiliary Channel 1 Index", SettingsManager::UINT8, nullptr, 0, DEFAULT_RC_CHANNEL_AUX1, 0.0f, nullptr},
-    {SettingsManager::KEY_RC_CHANNEL_AUX2, "rc.ch.aux2", "RC Auxiliary Channel 2 Index", SettingsManager::UINT8, nullptr, 0, DEFAULT_RC_CHANNEL_AUX2, 0.0f, nullptr},
-    {SettingsManager::KEY_RC_CHANNEL_AUX3, "rc.ch.aux3", "RC Auxiliary Channel 3 Index", SettingsManager::UINT8, nullptr, 0, DEFAULT_RC_CHANNEL_AUX3, 0.0f, nullptr},
-    {SettingsManager::KEY_RC_CHANNEL_AUX4, "rc.ch.aux4", "RC Auxiliary Channel 4 Index", SettingsManager::UINT8, nullptr, 0, DEFAULT_RC_CHANNEL_AUX4, 0.0f, nullptr},
+    {KEY_MPU_GYRO_OFF_X, "mpu.g_off.x", "Gyroscope X-axis offset", SettingsManager::FLOAT, nullptr, 0, 0, 0.0f, nullptr},
+    {KEY_MPU_GYRO_OFF_Y, "mpu.g_off.y", "Gyroscope Y-axis offset", SettingsManager::FLOAT, nullptr, 0, 0, 0.0f, nullptr},
+    {KEY_MPU_GYRO_OFF_Z, "mpu.g_off.z", "Gyroscope Z-axis offset", SettingsManager::FLOAT, nullptr, 0, 0, 0.0f, nullptr},
+    {KEY_MPU_ACCEL_OFF_X, "mpu.a_off.x", "Accelerometer X-axis offset", SettingsManager::FLOAT, nullptr, 0, 0, 0.0f, nullptr},
+    {KEY_MPU_ACCEL_OFF_Y, "mpu.a_off.y", "Accelerometer Y-axis offset", SettingsManager::FLOAT, nullptr, 0, 0, 0.0f, nullptr},
+    {KEY_MPU_ACCEL_OFF_Z, "mpu.a_off.z", "Accelerometer Z-axis offset", SettingsManager::FLOAT, nullptr, 0, 0, 0.0f, nullptr},
+    {KEY_RC_PROTOCOL_TYPE, "rc.protocol", "RC Receiver Protocol", SettingsManager::UINT8, RC_PROTOCOL_STRINGS, NUM_RC_PROTOCOLS, (uint8_t)DEFAULT_RC_PROTOCOL_TYPE, 0.0f, nullptr},
+    {KEY_RX_PIN, "rx.pin", "Generic RX Input Pin (GPIO)", SettingsManager::UINT8, nullptr, 0, DEFAULT_RX_PIN, 0.0f, nullptr},
+    {KEY_RC_CHANNEL_ROLL, "rc.ch.roll", "RC Roll Channel Index", SettingsManager::UINT8, nullptr, 0, DEFAULT_RC_CHANNEL_ROLL, 0.0f, nullptr},
+    {KEY_RC_CHANNEL_PITCH, "rc.ch.pitch", "RC Pitch Channel Index", SettingsManager::UINT8, nullptr, 0, DEFAULT_RC_CHANNEL_PITCH, 0.0f, nullptr},
+    {KEY_RC_CHANNEL_THRO, "rc.ch.thro", "RC Throttle Channel Index", SettingsManager::UINT8, nullptr, 0, DEFAULT_RC_CHANNEL_THRO, 0.0f, nullptr},
+    {KEY_RC_CHANNEL_YAW, "rc.ch.yaw", "RC Yaw Channel Index", SettingsManager::UINT8, nullptr, 0, DEFAULT_RC_CHANNEL_YAW, 0.0f, nullptr},
+    {KEY_RC_CHANNEL_ARM, "rc.ch.arm", "RC Arming Channel Index", SettingsManager::UINT8, nullptr, 0, DEFAULT_RC_CHANNEL_ARM, 0.0f, nullptr},
+    {KEY_RC_CHANNEL_FMODE, "rc.ch.fmode", "RC Flight Mode Channel Index", SettingsManager::UINT8, nullptr, 0, DEFAULT_RC_CHANNEL_FMODE, 0.0f, nullptr},
+    {KEY_RC_CHANNEL_AUX1, "rc.ch.aux1", "RC Auxiliary Channel 1 Index", SettingsManager::UINT8, nullptr, 0, DEFAULT_RC_CHANNEL_AUX1, 0.0f, nullptr},
+    {KEY_RC_CHANNEL_AUX2, "rc.ch.aux2", "RC Auxiliary Channel 2 Index", SettingsManager::UINT8, nullptr, 0, DEFAULT_RC_CHANNEL_AUX2, 0.0f, nullptr},
+    {KEY_RC_CHANNEL_AUX3, "rc.ch.aux3", "RC Auxiliary Channel 3 Index", SettingsManager::UINT8, nullptr, 0, DEFAULT_RC_CHANNEL_AUX3, 0.0f, nullptr},
+    {KEY_RC_CHANNEL_AUX4, "rc.ch.aux4", "RC Auxiliary Channel 4 Index", SettingsManager::UINT8, nullptr, 0, DEFAULT_RC_CHANNEL_AUX4, 0.0f, nullptr},
     {KEY_MOTOR_PROTOCOL, "motor.protocol", "DShot Motor Protocol", SettingsManager::UINT8, DSHOT_PROTOCOL_STRINGS, NUM_DSHOT_PROTOCOLS, DEFAULT_MOTOR_PROTOCOL, 0.0f, nullptr},
     {KEY_PID_ROLL_P, "pid.roll.p", "PID Roll Proportional Gain", SettingsManager::FLOAT, nullptr, 0, 0, DEFAULT_PID_ROLL_P, nullptr},
     {KEY_PID_ROLL_I, "pid.roll.i", "PID Roll Integral Gain", SettingsManager::FLOAT, nullptr, 0, 0, DEFAULT_PID_ROLL_I, nullptr},
@@ -297,16 +303,16 @@ String SettingsManager::getSettingValueHumanReadable(const char *key)
                 }
             }
             // Special handling for RX channel keys: display as 1-based
-            if (strcmp(key, SettingsManager::KEY_RC_CHANNEL_ROLL) == 0 ||
-                strcmp(key, SettingsManager::KEY_RC_CHANNEL_PITCH) == 0 ||
-                strcmp(key, SettingsManager::KEY_RC_CHANNEL_THRO) == 0 ||
-                strcmp(key, SettingsManager::KEY_RC_CHANNEL_YAW) == 0 ||
-                strcmp(key, SettingsManager::KEY_RC_CHANNEL_ARM) == 0 ||
-                strcmp(key, SettingsManager::KEY_RC_CHANNEL_FMODE) == 0 ||
-                strcmp(key, SettingsManager::KEY_RC_CHANNEL_AUX1) == 0 ||
-                strcmp(key, SettingsManager::KEY_RC_CHANNEL_AUX2) == 0 ||
-                strcmp(key, SettingsManager::KEY_RC_CHANNEL_AUX3) == 0 ||
-                strcmp(key, SettingsManager::KEY_RC_CHANNEL_AUX4) == 0)
+            if (strcmp(key, KEY_RC_CHANNEL_ROLL) == 0 ||
+                strcmp(key, KEY_RC_CHANNEL_PITCH) == 0 ||
+                strcmp(key, KEY_RC_CHANNEL_THRO) == 0 ||
+                strcmp(key, KEY_RC_CHANNEL_YAW) == 0 ||
+                strcmp(key, KEY_RC_CHANNEL_ARM) == 0 ||
+                strcmp(key, KEY_RC_CHANNEL_FMODE) == 0 ||
+                strcmp(key, KEY_RC_CHANNEL_AUX1) == 0 ||
+                strcmp(key, KEY_RC_CHANNEL_AUX2) == 0 ||
+                strcmp(key, KEY_RC_CHANNEL_AUX3) == 0 ||
+                strcmp(key, KEY_RC_CHANNEL_AUX4) == 0)
             {
                 if (_settings_metadata[i].type == UINT8)
                 {

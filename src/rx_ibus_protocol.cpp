@@ -7,7 +7,7 @@
  */
 
 #include "rx_ibus_protocol.h"
-#include "config.h"
+#include "rx_config.h"
 #include "com_manager.h"
 
 RxIbusProtocol::RxIbusProtocol() : _ibus(IBUS_SERIAL_PORT, IBUS_RX_PIN) {}

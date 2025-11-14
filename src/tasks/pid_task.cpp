@@ -1,8 +1,10 @@
 #include "pid_task.h"
 #include "../imu_sensor.h"
 #include "../rx_protocol.h"
+#include "../rx_config.h"
 #include "../settings_manager.h"
-#include "../config.h"
+#include "../pid/pid_config.h"
+#include "../terminal/terminal_config.h"
 #include "../com_manager.h"
 #include "motor_task.h"
 #include "imu_task.h"
@@ -35,11 +37,11 @@ void PidTask::setup()
 
 void PidTask::run()
 {
-    int constrained_roll = constrain(_rx_task->getChannel(_settings_manager->getSettingValue(SettingsManager::KEY_RC_CHANNEL_ROLL).toInt()), RC_CHANNEL_MIN_RAW, RC_CHANNEL_MAX_RAW);
-    int constrained_pitch = constrain(_rx_task->getChannel(_settings_manager->getSettingValue(SettingsManager::KEY_RC_CHANNEL_PITCH).toInt()), RC_CHANNEL_MIN_RAW, RC_CHANNEL_MAX_RAW);
-    int constrained_yaw = constrain(_rx_task->getChannel(_settings_manager->getSettingValue(SettingsManager::KEY_RC_CHANNEL_YAW).toInt()), RC_CHANNEL_MIN_RAW, RC_CHANNEL_MAX_RAW);
-    int constrained_throttle = constrain(_rx_task->getChannel(_settings_manager->getSettingValue(SettingsManager::KEY_RC_CHANNEL_THRO).toInt()), RC_CHANNEL_MIN_RAW, RC_CHANNEL_MAX_RAW);
-    int arm_channel_value = _rx_task->getChannel(_settings_manager->getSettingValue(SettingsManager::KEY_RC_CHANNEL_ARM).toInt());
+    int constrained_roll = constrain(_rx_task->getChannel(_settings_manager->getSettingValue(KEY_RC_CHANNEL_ROLL).toInt()), RC_CHANNEL_MIN_RAW, RC_CHANNEL_MAX_RAW);
+    int constrained_pitch = constrain(_rx_task->getChannel(_settings_manager->getSettingValue(KEY_RC_CHANNEL_PITCH).toInt()), RC_CHANNEL_MIN_RAW, RC_CHANNEL_MAX_RAW);
+    int constrained_yaw = constrain(_rx_task->getChannel(_settings_manager->getSettingValue(KEY_RC_CHANNEL_YAW).toInt()), RC_CHANNEL_MIN_RAW, RC_CHANNEL_MAX_RAW);
+    int constrained_throttle = constrain(_rx_task->getChannel(_settings_manager->getSettingValue(KEY_RC_CHANNEL_THRO).toInt()), RC_CHANNEL_MIN_RAW, RC_CHANNEL_MAX_RAW);
+    int arm_channel_value = _rx_task->getChannel(_settings_manager->getSettingValue(KEY_RC_CHANNEL_ARM).toInt());
 
     _isArmed = (arm_channel_value > RC_CHANNEL_ARM_THRESHOLD);
 

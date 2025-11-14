@@ -11,7 +11,7 @@
 #include <Arduino.h>
 #include "../scheduler/task_base.h"
 #include <DShotRMT.h>
-#include "../config.h"
+#include "../motor_config.h"
 
 class SettingsManager; // Forward declaration
 

@@ -4,7 +4,7 @@
 #include "../scheduler/task_base.h"
 #include "../scheduler/scheduler.h"
 #include "../settings_manager.h"
-#include "../config.h"
+#include "../terminal/terminal_config.h"
 #include "../com_manager.h"
 #include "imu_task.h"
 #include "rx_task.h"

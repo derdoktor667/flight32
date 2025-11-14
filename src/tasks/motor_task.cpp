@@ -23,10 +23,11 @@
 // RL =  T + P + R + Y  (rear left)
 // FL =  T + P - R - Y  (front left)
 
+#include "../motor_config.h"
 #include "motor_task.h"
 #include "../com_manager.h"
 #include "../settings_manager.h"
-#include "../config.h" // For THROTTLE_DEADZONE_THRESHOLD, MOTOR_MIN_THROTTLE_RAW, MOTOR_MAX_THROTTLE_RAW
+#include "../motor_config.h"
 
 dshot_mode_t get_dshot_mode_from_index(uint8_t index)
 {
@@ -144,10 +145,10 @@ void MotorTask::run()
         const float min_throttle = MOTOR_MIN_THROTTLE_RAW;
         const float max_throttle = MOTOR_MAX_THROTTLE_RAW;
 
-        _motor_throttles[(uint8_t)MotorIndex::RR] = constrain(m_rr * (max_throttle - min_throttle) + min_throttle, min_throttle, max_throttle);
-        _motor_throttles[(uint8_t)MotorIndex::FR] = constrain(m_fr * (max_throttle - min_throttle) + min_throttle, min_throttle, max_throttle);
-        _motor_throttles[(uint8_t)MotorIndex::RL] = constrain(m_rl * (max_throttle - min_throttle) + min_throttle, min_throttle, max_throttle);
-        _motor_throttles[(uint8_t)MotorIndex::FL] = constrain(m_fl * (max_throttle - min_throttle) + min_throttle, min_throttle, max_throttle);
+        _motor_throttles[MOTOR_INDEX_RR] = constrain(m_rr * (max_throttle - min_throttle) + min_throttle, min_throttle, max_throttle);
+        _motor_throttles[MOTOR_INDEX_FR] = constrain(m_fr * (max_throttle - min_throttle) + min_throttle, min_throttle, max_throttle);
+        _motor_throttles[MOTOR_INDEX_RL] = constrain(m_rl * (max_throttle - min_throttle) + min_throttle, min_throttle, max_throttle);
+        _motor_throttles[MOTOR_INDEX_FL] = constrain(m_fl * (max_throttle - min_throttle) + min_throttle, min_throttle, max_throttle);
     }
 
     for (int i = 0; i < NUM_MOTORS; ++i)

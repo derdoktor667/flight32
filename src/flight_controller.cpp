@@ -10,14 +10,17 @@
 #include "scheduler/scheduler.h"
 #include "tasks/serial_manager_task.h"
 #include "com_manager.h"
-#include "config.h"
-#include "firmware_info.h"
+#include "serial_config.h"
+#include "pid/pid_config.h"
+#include "version_info.h"
 #include "settings_manager.h"
+#include "task_names.h"
 #include <Arduino.h>
 #include "tasks/imu_task.h"
 #include "imu_mpu6050.h"
 #include "tasks/motor_task.h"
 #include "tasks/rx_task.h"
+#include "rx_config.h"
 #include <Wire.h>
 
 FlightController::~FlightController()
@@ -51,7 +54,7 @@ void FlightController::setup()
     com_send_log(TERMINAL_OUTPUT, "========================================");
     com_send_log(TERMINAL_OUTPUT, " Flight32 Flight Controller");
     com_send_log(TERMINAL_OUTPUT, "========================================");
-    com_send_log(LOG_INFO, "Firmware v%s starting...", FirmwareInfo::getFirmwareVersion());
+    com_send_log(LOG_INFO, "Firmware v%s starting...", FIRMWARE_VERSION);
 
     _settings_manager.begin();
 

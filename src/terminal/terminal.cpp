@@ -6,20 +6,28 @@
  * @license MIT
  */
 
+#include "../motor_config.h"
 #include "terminal.h"
-#include "../firmware_info.h"
+#include "../version_info.h"
+#include "terminal_config.h"
+#include "../settings_config.h"
+#include "../imu_config.h"
+#include "../rx_config.h"
+#include "../motor_config.h"
+#include "../pid/pid_config.h"
+#include "../task_names.h"
 
 const ChannelMapping Terminal::_channel_map[] = {
-    {"roll", SettingsManager::KEY_RC_CHANNEL_ROLL},
-    {"pitch", SettingsManager::KEY_RC_CHANNEL_PITCH},
-    {"throttle", SettingsManager::KEY_RC_CHANNEL_THRO},
-    {"yaw", SettingsManager::KEY_RC_CHANNEL_YAW},
-    {"arm", SettingsManager::KEY_RC_CHANNEL_ARM},
-    {"fmode", SettingsManager::KEY_RC_CHANNEL_FMODE},
-    {"aux1", SettingsManager::KEY_RC_CHANNEL_AUX1},
-    {"aux2", SettingsManager::KEY_RC_CHANNEL_AUX2},
-    {"aux3", SettingsManager::KEY_RC_CHANNEL_AUX3},
-    {"aux4", SettingsManager::KEY_RC_CHANNEL_AUX4}};
+    {"roll", KEY_RC_CHANNEL_ROLL},
+    {"pitch", KEY_RC_CHANNEL_PITCH},
+    {"throttle", KEY_RC_CHANNEL_THRO},
+    {"yaw", KEY_RC_CHANNEL_YAW},
+    {"arm", KEY_RC_CHANNEL_ARM},
+    {"fmode", KEY_RC_CHANNEL_FMODE},
+    {"aux1", KEY_RC_CHANNEL_AUX1},
+    {"aux2", KEY_RC_CHANNEL_AUX2},
+    {"aux3", KEY_RC_CHANNEL_AUX3},
+    {"aux4", KEY_RC_CHANNEL_AUX4}};
 constexpr int Terminal::_num_channel_mappings = sizeof(Terminal::_channel_map) / sizeof(ChannelMapping);
 
 const Command Terminal::_commands[] = {
@@ -132,7 +140,7 @@ void Terminal::showPrompt()
 {
     com_flush_output();
     com_send_log(TERMINAL_OUTPUT, "");
-    String system_name = _settings_manager->getSettingValue(SettingsManager::KEY_SYSTEM_NAME);
+    String system_name = _settings_manager->getSettingValue(KEY_SYSTEM_NAME);
     String prompt = "[" + system_name + " ~]";
     com_send_prompt(prompt.c_str());
 }
@@ -245,15 +253,15 @@ CommandCategory Terminal::_get_setting_category(const char *display_key)
 
 const char *Terminal::_get_motor_name(uint8_t motor_id)
 {
-    switch ((MotorIndex)motor_id)
+    switch (motor_id)
     {
-    case MotorIndex::FL:
+    case MOTOR_INDEX_FL:
         return "FL";
-    case MotorIndex::FR:
+    case MOTOR_INDEX_FR:
         return "FR";
-    case MotorIndex::RL:
+    case MOTOR_INDEX_RL:
         return "RL";
-    case MotorIndex::RR:
+    case MOTOR_INDEX_RR:
         return "RR";
     default:
         return "UNKNOWN";
@@ -263,13 +271,13 @@ const char *Terminal::_get_motor_name(uint8_t motor_id)
 int8_t Terminal::_get_motor_id(String &motor_name)
 {
     if (motor_name.equalsIgnoreCase("FL"))
-        return (int8_t)MotorIndex::FL;
+        return (int8_t)MOTOR_INDEX_FL;
     if (motor_name.equalsIgnoreCase("FR"))
-        return (int8_t)MotorIndex::FR;
+        return (int8_t)MOTOR_INDEX_FR;
     if (motor_name.equalsIgnoreCase("RL"))
-        return (int8_t)MotorIndex::RL;
+        return (int8_t)MOTOR_INDEX_RL;
     if (motor_name.equalsIgnoreCase("RR"))
-        return (int8_t)MotorIndex::RR;
+        return (int8_t)MOTOR_INDEX_RR;
     return -1; // Invalid motor name
 }
 
@@ -441,7 +449,7 @@ void Terminal::_handle_help(String &args)
 void Terminal::_handle_status(String &args)
 {
     com_send_log(TERMINAL_OUTPUT, "");
-    com_send_log(TERMINAL_OUTPUT, "Flight32 Firmware v%s", FirmwareInfo::getFirmwareVersion());
+    com_send_log(TERMINAL_OUTPUT, "Flight32 Firmware v%s", FIRMWARE_VERSION);
 }
 
 void Terminal::_handle_tasks(String &args)

@@ -31,7 +31,3 @@ static constexpr uint8_t MSP_EEPROM_WRITE = 200;
 static constexpr uint8_t MSP_RESET_SETTINGS = 201;
 static constexpr uint8_t MSP_SET_PID = 202;
 
-// --- Flight Controller Version Constants ---
-static constexpr uint8_t FC_VERSION_MAJOR = 0;
-static constexpr uint8_t FC_VERSION_MINOR = 3;
-static constexpr uint8_t FC_VERSION_PATCH = 0;

@@ -7,7 +7,7 @@
  */
 
 #include "rx_task.h"
-#include "../config.h"
+#include "../rx_config.h"
 #include "../com_manager.h"
 #include "../rx_ibus_protocol.h"
 #include "../rx_ppm_protocol.h"
