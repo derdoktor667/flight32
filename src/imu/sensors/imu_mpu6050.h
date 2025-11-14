@@ -9,7 +9,7 @@
 
 #include "../imu_sensor.h"
 #include "../../config/imu_config.h"
-#include "../../libraries/ESP32_MPU6050/ESP32_MPU6050.h"
+#include <ESP32_MPU6050.h>
 
 class ImuMpu6050 : public ImuSensor
 {
