@@ -11,3 +11,9 @@
 
 // --- Serial Configuration ---
 constexpr auto SERIAL_BAUD_RATE = 115200;
+
+// --- MSP FC Variant ---
+constexpr char MSP_FC_VARIANT_NAME[] = "FL32";
+
+// --- MSP Board Info ---
+constexpr char MSP_BOARD_NAME[] = "FL32";

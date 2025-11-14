@@ -11,6 +11,7 @@
 #include <math.h>
 #include "imu_task.h"
 #include "../config/terminal_config.h"
+#include "../config/serial_config.h"
 
 static constexpr float RADIANS_TO_DEGREES = 180.0f / M_PI;
 
@@ -263,8 +264,7 @@ void SerialManagerTask::_handle_msp_api_version()
 
 void SerialManagerTask::_handle_msp_fc_variant()
 {
-    uint8_t payload[4] = {'F', 'L', '3', '2'};
-    _send_msp_response(MSP_FC_VARIANT, payload, MSP_FC_VARIANT_PAYLOAD_SIZE);
+    _send_msp_response(MSP_FC_VARIANT, (uint8_t *)MSP_FC_VARIANT_NAME, MSP_FC_VARIANT_PAYLOAD_SIZE);
 }
 
 void SerialManagerTask::_handle_msp_fc_version()
@@ -275,7 +275,8 @@ void SerialManagerTask::_handle_msp_fc_version()
 
 void SerialManagerTask::_handle_msp_board_info()
 {
-    uint8_t payload[8] = {'F', 'L', '3', '2', 0, 0, 0, 0};
+    uint8_t payload[MSP_BOARD_INFO_PAYLOAD_SIZE] = {0};
+    strncpy((char *)payload, MSP_BOARD_NAME, MSP_BOARD_INFO_PAYLOAD_SIZE);
     _send_msp_response(MSP_BOARD_INFO, payload, MSP_BOARD_INFO_PAYLOAD_SIZE);
 }
 

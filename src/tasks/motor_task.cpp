@@ -195,7 +195,7 @@ void MotorTask::startMotorTest(uint8_t motorNum, float throttle, uint32_t durati
     _testDuration = duration_ms;
     _testStartTime = millis();
     _motorTestState = SPINNING_TIMED;
-    com_send_log(LOG_INFO, "MotorTest: Motor %d spinning at %.1f%% throttle for %lu ms.", motorNum + 1, throttle * 100.0f, duration_ms);
+    com_send_log(LOG_INFO, "MotorTest: Motor %d spinning at %.1f%% throttle for %lu ms.", motorNum + 1, throttle * PERCENTAGE_TO_NORMALIZED_FACTOR, duration_ms);
 }
 
 void MotorTask::startContinuousMotorTest(uint8_t motorNum, float throttle)
@@ -215,7 +215,7 @@ void MotorTask::startContinuousMotorTest(uint8_t motorNum, float throttle)
     _testMotorNum = motorNum;
     _testThrottle = throttle;
     _motorTestState = SPINNING_CONTINUOUS;
-    com_send_log(LOG_INFO, "MotorTest: Motor %d spinning continuously at %.1f%% throttle. Send 'motor stop' to stop.", motorNum + 1, throttle * 100.0f);
+    com_send_log(LOG_INFO, "MotorTest: Motor %d spinning continuously at %.1f%% throttle. Send 'motor stop' to stop.", motorNum + 1, throttle * PERCENTAGE_TO_NORMALIZED_FACTOR);
 }
 
 void MotorTask::stopMotorTest()
