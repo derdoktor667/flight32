@@ -18,7 +18,7 @@
 #include <cstdint>
 #include <cstring>
 
-// These string arrays are specific to SettingsManager for displaying options
+// These string arrays are specific to SettingsManager for displaying options in a human-readable format.
 const char *GYRO_RANGE_STRINGS[] = {"250_DPS", "500_DPS", "1000_DPS", "2000_DPS"};
 const uint8_t NUM_GYRO_RANGES = sizeof(GYRO_RANGE_STRINGS) / sizeof(GYRO_RANGE_STRINGS[0]);
 
@@ -31,7 +31,9 @@ const uint8_t NUM_IMU_TYPES = sizeof(IMU_TYPE_STRINGS) / sizeof(IMU_TYPE_STRINGS
 const char *BOOLEAN_STRINGS[] = {"false", "true"};
 const uint8_t NUM_BOOLEAN_STRINGS = sizeof(BOOLEAN_STRINGS) / sizeof(BOOLEAN_STRINGS[0]);
 
+// Array containing metadata for all configurable settings.
 const SettingsManager::SettingMetadata SettingsManager::_settings_metadata[] = {
+    // Each entry defines a setting: internal key, display key, description, type, string map for options, default value, etc.
     {KEY_SYSTEM_NAME, "system.name", "Configurable model name", SettingsManager::STRING, nullptr, 0, 0, 0.0f, DEFAULT_SYSTEM_NAME},
     {KEY_MPU_GYRO_RANGE, "gyro.resolution", "MPU6050 Gyroscope Range", SettingsManager::UINT8, GYRO_RANGE_STRINGS, NUM_GYRO_RANGES, DEFAULT_GYRO_RANGE, 0.0f, nullptr},
     {KEY_IMU_TYPE, "imu.type", "IMU Sensor Type", SettingsManager::UINT8, IMU_TYPE_STRINGS, NUM_IMU_TYPES, (uint8_t)DEFAULT_IMU_TYPE, 0.0f, nullptr},
@@ -71,6 +73,7 @@ SettingsManager::SettingsManager()
 {
 }
 
+// Initializes the SettingsManager, starting NVS and loading/initializing settings.
 void SettingsManager::begin()
 {
     com_send_log(LOG_INFO, "SettingsManager: begin()");
@@ -79,6 +82,7 @@ void SettingsManager::begin()
     loadOrInitSettings();
 }
 
+// Loads settings from NVS or initializes them if a schema mismatch is detected.
 void SettingsManager::loadOrInitSettings()
 {
     if (!_is_begun)
@@ -87,6 +91,7 @@ void SettingsManager::loadOrInitSettings()
     uint16_t saved_version = _preferences.getUShort(KEY_SCHEMA_VERSION, DEFAULT_SCHEMA_VERSION);
     com_send_log(LOG_INFO, "SettingsManager: NVS Schema Version - Saved: %u, Current: %u", saved_version, CURRENT_SCHEMA_VERSION);
 
+    // Compare saved schema version with the current version.
     if (saved_version != CURRENT_SCHEMA_VERSION)
     {
         com_send_log(LOG_WARN, "Settings: Schema mismatch or first run. Applying defaults.");
@@ -98,6 +103,7 @@ void SettingsManager::loadOrInitSettings()
     }
 }
 
+// Resets all settings to their factory defaults and saves them to NVS.
 void SettingsManager::factoryReset()
 {
     com_send_log(LOG_INFO, "SettingsManager: factoryReset() - Clearing NVS namespace '%s'", SETTINGS_NAMESPACE);
@@ -109,6 +115,7 @@ void SettingsManager::factoryReset()
     com_send_log(LOG_INFO, "SettingsManager: factoryReset() - Defaults applied and saved.");
 }
 
+// Writes default values for all defined settings to NVS.
 void SettingsManager::_write_defaults()
 {
     com_send_log(LOG_INFO, "SettingsManager: _write_defaults() - Writing default settings to NVS.");
@@ -145,14 +152,17 @@ void SettingsManager::_write_defaults()
     }
 }
 
+// Saves the current settings to NVS, including the schema version.
 void SettingsManager::saveSettings()
 {
     if (!_is_begun)
         return;
 
+    // Store the current schema version.
     _preferences.putUShort(KEY_SCHEMA_VERSION, CURRENT_SCHEMA_VERSION);
 }
 
+// Retrieves gyroscope offset values from NVS.
 ImuAxisData SettingsManager::getGyroOffsets()
 {
     return {
@@ -161,6 +171,7 @@ ImuAxisData SettingsManager::getGyroOffsets()
         _preferences.getFloat(KEY_MPU_GYRO_OFF_Z, 0.0f)};
 }
 
+// Sets gyroscope offset values in NVS.
 void SettingsManager::setGyroOffsets(const ImuAxisData &offsets)
 {
     _preferences.putFloat(KEY_MPU_GYRO_OFF_X, offsets.x);
@@ -168,6 +179,7 @@ void SettingsManager::setGyroOffsets(const ImuAxisData &offsets)
     _preferences.putFloat(KEY_MPU_GYRO_OFF_Z, offsets.z);
 }
 
+// Retrieves accelerometer offset values from NVS.
 ImuAxisData SettingsManager::getAccelOffsets()
 {
     return {
@@ -176,6 +188,7 @@ ImuAxisData SettingsManager::getAccelOffsets()
         _preferences.getFloat(KEY_MPU_ACCEL_OFF_Z, 0.0f)};
 }
 
+// Sets accelerometer offset values in NVS.
 void SettingsManager::setAccelOffsets(const ImuAxisData &offsets)
 {
     _preferences.putFloat(KEY_MPU_ACCEL_OFF_X, offsets.x);
@@ -183,10 +196,12 @@ void SettingsManager::setAccelOffsets(const ImuAxisData &offsets)
     _preferences.putFloat(KEY_MPU_ACCEL_OFF_Z, offsets.z);
 }
 
+// Lists settings belonging to a specific category to the terminal.
 void SettingsManager::listSettings(CommandCategory category)
 {
     int max_display_key_len = 0;
     int settings_in_category_count = 0;
+    // First pass: Determine max display key length and count settings in category for formatting.
     for (int i = 0; i < _num_settings; ++i)
     {
         if (Terminal::_get_setting_category(_settings_metadata[i].display_key) == category)
@@ -201,9 +216,7 @@ void SettingsManager::listSettings(CommandCategory category)
     }
 
     if (settings_in_category_count == 0)
-        return; // Don't print header if no settings
-
-    
+        return;
 
     com_send_log(TERMINAL_OUTPUT, "  %-*s %s", SETTING_NAME_DISPLAY_WIDTH, "Setting", "Description");
     String separator = "  ";
@@ -214,20 +227,23 @@ void SettingsManager::listSettings(CommandCategory category)
     separator += "--------------------------------";
     com_send_log(TERMINAL_OUTPUT, separator.c_str());
 
+    // Second pass: Print settings and their descriptions.
     for (int i = 0; i < _num_settings; i++)
     {
         if (Terminal::_get_setting_category(_settings_metadata[i].display_key) == category)
         {
             com_send_log(TERMINAL_OUTPUT, "  %-*s - %s", SETTING_NAME_DISPLAY_WIDTH, _settings_metadata[i].display_key, _settings_metadata[i].description);
-            vTaskDelay(1); // Small delay to allow com_task to process
+            vTaskDelay(1); // Small delay to yield to other tasks.
         }
     }
     com_send_log(TERMINAL_OUTPUT, separator.c_str());
 }
 
+// Dumps current values of settings belonging to a specific category to the terminal.
 void SettingsManager::dumpSettings(CommandCategory category)
 {
     int settings_in_category_count = 0;
+    // First pass: Count settings in category.
     for (int i = 0; i < _num_settings; ++i)
     {
         if (Terminal::_get_setting_category(_settings_metadata[i].display_key) == category)
@@ -237,21 +253,24 @@ void SettingsManager::dumpSettings(CommandCategory category)
     }
 
     if (settings_in_category_count == 0)
-        return; // Don't print header if no settings
+        return;
 
-        vTaskDelay(1); // Small delay to allow com_task to process
+    vTaskDelay(1); // Small delay to yield to other tasks.
+    // Iterate through all settings and dump values for the specified category.
     for (int i = 0; i < _num_settings; ++i)
     {
         if (Terminal::_get_setting_category(_settings_metadata[i].display_key) == category)
         {
             const char *display_key = _settings_metadata[i].display_key;
             const char *internal_key = _settings_metadata[i].key;
+            // Print setting in "set key = value" format.
             com_send_log(TERMINAL_OUTPUT, "set %s = %s", display_key, getSettingValueHumanReadable(internal_key).c_str());
-            vTaskDelay(1); // Small delay to allow com_task to process
+            vTaskDelay(1); // Small delay to yield to other tasks.
         }
     }
 }
 
+// Retrieves the raw string value of a setting from NVS.
 String SettingsManager::getSettingValue(const char *key)
 {
     for (int i = 0; i < _num_settings; ++i)
@@ -287,12 +306,14 @@ String SettingsManager::getSettingValue(const char *key)
     return "";
 }
 
+// Retrieves the human-readable string value of a setting.
 String SettingsManager::getSettingValueHumanReadable(const char *key)
 {
     for (int i = 0; i < _num_settings; ++i)
     {
         if (strcmp(_settings_metadata[i].key, key) == 0)
         {
+            // If a string map exists, use it to convert the value to a human-readable string.
             if (_settings_metadata[i].string_map != nullptr && _settings_metadata[i].string_map_size > 0)
             {
                 int value = getSettingValue(key).toInt();
@@ -301,7 +322,7 @@ String SettingsManager::getSettingValueHumanReadable(const char *key)
                     return _settings_metadata[i].string_map[value];
                 }
             }
-            // Special handling for RX channel keys: display as 1-based
+            // Special handling for RC channel keys: convert to 1-based index for display.
             if (strcmp(key, KEY_RC_CHANNEL_ROLL) == 0 ||
                 strcmp(key, KEY_RC_CHANNEL_PITCH) == 0 ||
                 strcmp(key, KEY_RC_CHANNEL_THRO) == 0 ||
@@ -315,10 +336,10 @@ String SettingsManager::getSettingValueHumanReadable(const char *key)
             {
                 if (_settings_metadata[i].type == UINT8)
                 {
-                    return String(getSettingValue(key).toInt() + RC_CHANNEL_INDEX_OFFSET); // Convert to 1-based
+                    return String(getSettingValue(key).toInt() + RC_CHANNEL_INDEX_OFFSET);
                 }
             }
-            // Special handling for PID keys: display as scaled integers
+            // Special handling for PID keys: scale float values to integers for display.
             if (strcmp(key, KEY_PID_ROLL_P) == 0 ||
                 strcmp(key, KEY_PID_ROLL_I) == 0 ||
                 strcmp(key, KEY_PID_ROLL_D) == 0 ||
@@ -340,12 +361,14 @@ String SettingsManager::getSettingValueHumanReadable(const char *key)
     return "";
 }
 
+// Retrieves a human-readable string of available options for a setting.
 String SettingsManager::getSettingOptionsHumanReadable(const char *key)
 {
     for (int i = 0; i < _num_settings; ++i)
     {
         if (strcmp(_settings_metadata[i].key, key) == 0)
         {
+            // If a string map exists, build a comma-separated string of options.
             if (_settings_metadata[i].string_map != nullptr && _settings_metadata[i].string_map_size > 0)
             {
                 String options_str = "";
@@ -364,6 +387,7 @@ String SettingsManager::getSettingOptionsHumanReadable(const char *key)
     return "";
 }
 
+// Sets the value of a setting in NVS based on a string input.
 bool SettingsManager::setSettingValue(const char *key, const String &value_str)
 {
     com_send_log(LOG_INFO, "SettingsManager: setSettingValue(%s, %s)", key, value_str.c_str());
@@ -376,6 +400,7 @@ bool SettingsManager::setSettingValue(const char *key, const String &value_str)
             case UINT8:
             {
                 int parsed_value = INVALID_SETTING_VALUE;
+                // If a string map exists, try to parse the input string as one of the options.
                 if (_settings_metadata[i].string_map != nullptr && _settings_metadata[i].string_map_size > 0)
                 {
                     for (uint8_t j = 0; j < _settings_metadata[i].string_map_size; ++j)
@@ -427,6 +452,7 @@ bool SettingsManager::setSettingValue(const char *key, const String &value_str)
     return false;
 }
 
+// Retrieves the description of a setting.
 const char *SettingsManager::getSettingDescription(const char *key)
 {
     for (int i = 0; i < _num_settings; ++i)
@@ -439,6 +465,7 @@ const char *SettingsManager::getSettingDescription(const char *key)
     return "Unknown Setting";
 }
 
+// Retrieves the internal key from a display key.
 const char *SettingsManager::getInternalKeyFromDisplayKey(const char *display_key)
 {
     for (int i = 0; i < _num_settings; ++i)

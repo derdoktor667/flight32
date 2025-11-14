@@ -138,6 +138,33 @@ Our interactive serial manager provides complete control over your flight contro
 
 ---
 
+## ESP32 Devkit Pinout (Common)
+
+This section provides a common pinout reference for ESP32 Devkit boards, focusing on pins typically used in flight controller applications. Please note that pin configurations can vary between different ESP32 versions and manufacturers. Always refer to your specific board's documentation.
+
+**Power & Ground:**
+*   **5V:** 5V power supply input/output.
+*   **3.3V:** 3.3V power supply output.
+*   **GND:** Ground.
+
+**I2C (for IMU, e.g., MPU6050):**
+*   **GPIO21 (SDA):** I2C Data Line.
+*   **GPIO22 (SCL):** I2C Clock Line.
+
+**UART (for RX, e.g., IBUS):**
+*   **GPIO16 (RX2):** UART2 Receive.
+*   **GPIO17 (TX2):** UART2 Transmit.
+
+**Motor Control (DShot - example GPIOs, can be configured):**
+*   **GPIO18:** Motor 1 Signal (Front Right).
+*   **GPIO19:** Motor 2 Signal (Front Left).
+*   **GPIO23:** Motor 3 Signal (Rear Right).
+*   **GPIO25:** Motor 4 Signal (Rear Left).
+
+**Note:** This is a general guide. Always consult the schematic and pinout diagram specific to your ESP32 Devkit board.
+
+---
+
 ## 🗺️ Roadmap
 
 Flight32 is an actively developed project. Here's a glimpse of what's on the horizon:

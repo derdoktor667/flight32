@@ -22,6 +22,7 @@
 #include "config/rx_config.h"
 #include <Wire.h>
 
+// Destructor for FlightController, responsible for cleaning up dynamically allocated task objects.
 FlightController::~FlightController()
 {
     delete _imu_sensor;
@@ -32,13 +33,15 @@ FlightController::~FlightController()
     delete _pid_task;
 }
 
+// Setup function for the FlightController, initializes hardware and FreeRTOS tasks.
 void FlightController::setup()
 {
     Wire.begin();
-    Wire.setClock(MPU6050_I2C_CLOCK_SPEED); // Set I2C clock to 1MHz (Fast Mode Plus)
+    Wire.setClock(MPU6050_I2C_CLOCK_SPEED);
 
     Serial.begin(SERIAL_BAUD_RATE);
 
+    // Create and start the communication task.
     xTaskCreate(
         com_task,
         COM_TASK_NAME,
@@ -47,8 +50,10 @@ void FlightController::setup()
         COM_TASK_PRIORITY,
         NULL);
 
+    // Delay to allow the communication task to initialize.
     vTaskDelay(pdMS_TO_TICKS(COM_TASK_STARTUP_DELAY_MS));
 
+    // Print startup messages to the serial terminal.
     com_send_log(TERMINAL_OUTPUT, "");
     com_send_log(TERMINAL_OUTPUT, "========================================");
     com_send_log(TERMINAL_OUTPUT, " Flight32 Flight Controller");
@@ -57,8 +62,10 @@ void FlightController::setup()
 
     _settings_manager.begin();
 
+    // Delay to allow sensors to power up.
     delay(SENSOR_POWER_UP_DELAY_MS);
 
+    // Retrieve IMU type from settings.
     String imu_type_str = _settings_manager.getSettingValue(KEY_IMU_TYPE);
     ImuType imu_type;
     if (imu_type_str.length() == 0)
@@ -70,6 +77,7 @@ void FlightController::setup()
         imu_type = (ImuType)imu_type_str.toInt();
     }
 
+    // Initialize the appropriate IMU sensor based on settings.
     switch (imu_type)
     {
     case ImuType::MPU6050:
@@ -78,17 +86,19 @@ void FlightController::setup()
         break;
     default:
         com_send_log(LOG_ERROR, "No valid IMU type configured.");
-        // Handle error, maybe loop forever or use a dummy sensor
+        // Handle error, maybe loop forever or use a dummy sensor.
         return;
     }
 
+    // Get LPF bandwidth from settings and convert to appropriate enum.
     uint8_t lpf_bandwidth_index = _settings_manager.getSettingValue(KEY_IMU_LPF_BANDWIDTH).toInt();
     LpfBandwidth lpf_bandwidth = ImuMpu6050::getLpfBandwidthFromIndex(lpf_bandwidth_index);
 
+    // Initialize the IMU sensor with configured parameters.
     if (!_imu_sensor->begin(MPU6050_I2C_CLOCK_SPEED, IMU_DMP_ENABLED_DEFAULT, GYRO_RANGE_2000DPS, ACCEL_RANGE_16G, lpf_bandwidth))
     {
-        // Error message is already printed in the sensor's begin() method
-        // Handle error, maybe loop forever
+        // Error message is already printed in the sensor's begin() method.
+        // Handle error, maybe loop forever.
         return;
     }
 
@@ -97,32 +107,38 @@ void FlightController::setup()
 
     com_send_log(LOG_INFO, "Starting IMU calibration...");
     _imu_sensor->calibrate();
+    // Save new offsets to settings.
     _settings_manager.setGyroOffsets(_imu_sensor->getGyroscopeOffset());
     _settings_manager.setAccelOffsets(_imu_sensor->getAccelerometerOffset());
     _settings_manager.saveSettings();
     com_send_log(LOG_INFO, "IMU calibration complete and offsets saved.");
 
+    // Create FreeRTOS task objects.
     _imu_task = new ImuTask(IMU_TASK_NAME, IMU_TASK_STACK_SIZE, IMU_TASK_PRIORITY, IMU_TASK_CORE, IMU_TASK_DELAY_MS, *_imu_sensor);
     _rx_task = new RxTask(RX_TASK_NAME, RX_TASK_STACK_SIZE, RX_TASK_PRIORITY, RX_TASK_CORE, RX_TASK_DELAY_MS, &_settings_manager);
     _motor_task = new MotorTask(MOTOR_TASK_NAME, MOTOR_TASK_STACK_SIZE, MOTOR_TASK_PRIORITY, MOTOR_TASK_CORE, MOTOR_TASK_DELAY_MS, MOTOR_PINS_ARRAY, &_settings_manager);
     _pid_task = new PidTask(PID_TASK_NAME, PID_TASK_STACK_SIZE, PID_TASK_PRIORITY, PID_TASK_CORE, PID_TASK_DELAY_MS, _imu_task, _rx_task, _motor_task, &_settings_manager);
 
+    // Add tasks to the scheduler.
     _scheduler.addTask(_rx_task);
     _scheduler.addTask(_imu_task);
     _scheduler.addTask(_motor_task);
     _scheduler.addTask(_pid_task);
 
+    // Create and add the Serial Manager task.
     _serial_manager_task = new SerialManagerTask(SERIAL_MANAGER_TASK_NAME, SERIAL_MANAGER_TASK_STACK_SIZE, SERIAL_MANAGER_TASK_PRIORITY, SERIAL_MANAGER_TASK_CORE, SERIAL_MANAGER_TASK_DELAY_MS, &_scheduler, _imu_task, _rx_task, _motor_task, _pid_task, &_settings_manager);
     _scheduler.addTask(_serial_manager_task);
 
+    // Call setup() for each registered task.
     for (uint8_t i = 0; i < _scheduler.getTaskCount(); i++)
     {
         _scheduler.getTask(i)->setup();
     }
 
+    // Display welcome message and prompt.
     com_send_log(LOG_INFO, "Welcome, type 'help' for a list of commands.");
     com_flush_output();
     _serial_manager_task->showPrompt();
 
-    _scheduler.start();
+    _scheduler.start(); // Start the FreeRTOS scheduler, beginning task execution.
 }
