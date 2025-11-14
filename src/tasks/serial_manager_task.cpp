@@ -57,44 +57,52 @@ void SerialManagerTask::setup()
 
 void SerialManagerTask::run()
 {
-    while (Serial.available() > 0)
+    // Add mutex for Serial access
+    static SemaphoreHandle_t serial_mutex = xSemaphoreCreateMutex();
+
+    if (xSemaphoreTake(serial_mutex, pdMS_TO_TICKS(10)) == pdTRUE)
     {
-        uint8_t c = Serial.read();
 
-        // Handshake logic: Check for MSP preamble
-        if (_current_mode == ComSerialMode::TERMINAL)
+        while (Serial.available() > 0)
         {
-            // Look for '$', 'R', 'M', 'S', 'P' sequence
-            static uint8_t handshake_state = 0;
-            const char msp_handshake[] = "$RMSP";
+            uint8_t c = Serial.read();
 
-            if (c == msp_handshake[handshake_state])
+            // Handshake logic: Check for MSP preamble
+            if (_current_mode == ComSerialMode::TERMINAL)
             {
-                handshake_state++;
-                if (handshake_state == strlen(msp_handshake))
+                // Look for '$', 'R', 'M', 'S', 'P' sequence
+                static uint8_t handshake_state = 0;
+                const char msp_handshake[] = "$RMSP";
+
+                if (c == msp_handshake[handshake_state])
                 {
-                    _current_mode = ComSerialMode::MSP;
-                    com_set_serial_mode(ComSerialMode::MSP); // Set com_manager to MSP mode
-                    _last_msp_activity_ms = millis();
-                    Serial.println("[INFO] Switched to MSP mode (direct print)."); // Direct print for debugging
-                    handshake_state = 0; // Reset handshake state
-                    continue;            // Don't process this char as terminal input
+                    handshake_state++;
+                    if (handshake_state == strlen(msp_handshake))
+                    {
+                        _current_mode = ComSerialMode::MSP;
+                        com_set_serial_mode(ComSerialMode::MSP); // Set com_manager to MSP mode
+                        _last_msp_activity_ms = millis();
+                        Serial.println("[INFO] Switched to MSP mode (direct print)."); // Direct print for debugging
+                        handshake_state = 0;                                           // Reset handshake state
+                        continue;                                                      // Don't process this char as terminal input
+                    }
+                }
+                else
+                {
+                    handshake_state = 0; // Reset if sequence is broken
                 }
             }
-            else
-            {
-                handshake_state = 0; // Reset if sequence is broken
-            }
-        }
 
-        if (_current_mode == ComSerialMode::TERMINAL)
-        {
-            _terminal->handleInput(c);
-        }
-        else // MSP Mode
-        {
-            _parse_msp_char(c);
-            _last_msp_activity_ms = millis(); // Update activity on any MSP char
+            if (_current_mode == ComSerialMode::TERMINAL)
+            {
+                _terminal->handleInput(c);
+            }
+            else // MSP Mode
+            {
+                _parse_msp_char(c);
+                _last_msp_activity_ms = millis(); // Update activity on any MSP char
+            }
+            xSemaphoreGive(serial_mutex);
         }
     }
 
@@ -102,7 +110,7 @@ void SerialManagerTask::run()
     if (_current_mode == ComSerialMode::MSP && (millis() - _last_msp_activity_ms > MSP_TIMEOUT_MS))
     {
         _current_mode = ComSerialMode::TERMINAL;
-        com_set_serial_mode(ComSerialMode::TERMINAL); // Set com_manager back to TERMINAL mode
+        com_set_serial_mode(ComSerialMode::TERMINAL);                                         // Set com_manager back to TERMINAL mode
         Serial.println("[INFO] MSP timeout. Switched back to Terminal mode (direct print)."); // Direct print for debugging
         showPrompt();
     }
