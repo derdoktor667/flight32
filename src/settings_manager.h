@@ -10,8 +10,8 @@
 
 #include <Arduino.h>
 #include <Preferences.h>
-#include "imu_sensor.h"
-#include "settings_config.h"
+#include "imu/imu_sensor.h"
+#include "config/settings_config.h"
 
 enum class CommandCategory;
 

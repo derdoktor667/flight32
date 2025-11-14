@@ -11,7 +11,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
 #include <cstdarg>
-#include "com_manager_config.h"
+#include "config/com_manager_config.h"
 
 typedef enum
 {

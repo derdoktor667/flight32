@@ -10,7 +10,7 @@
 
 #include <Arduino.h>
 #include "../settings_manager.h"
-#include "terminal_config.h"
+#include "../config/terminal_config.h"
 #include "../com_manager.h"
 #include "../scheduler/scheduler.h"
 #include "../tasks/imu_task.h"

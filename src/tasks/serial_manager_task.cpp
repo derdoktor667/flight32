@@ -7,11 +7,11 @@
  */
 
 #include "serial_manager_task.h"
-#include "../version_info.h"
+#include "../utils/version_info.h"
 #include <cmath>
 #include <math.h>
 #include "imu_task.h"
-#include "../terminal/terminal_config.h"
+#include "../config/terminal_config.h"
 
 // Helper function to convert quaternion to Euler angles (roll, pitch, yaw)
 // Angles are in degrees

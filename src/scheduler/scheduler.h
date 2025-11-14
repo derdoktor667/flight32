@@ -10,7 +10,7 @@
 
 #include <Arduino.h>
 #include "task_base.h"
-#include "scheduler_config.h"
+#include "../config/scheduler_config.h"
 
 class Scheduler
 {

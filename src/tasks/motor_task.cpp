@@ -23,11 +23,11 @@
 // RL =  T + P + R + Y  (rear left)
 // FL =  T + P - R - Y  (front left)
 
-#include "../motor_config.h"
+#include "../config/motor_config.h"
 #include "motor_task.h"
 #include "../com_manager.h"
 #include "../settings_manager.h"
-#include "../motor_config.h"
+#include "../config/motor_config.h"
 
 dshot_mode_t get_dshot_mode_from_index(uint8_t index)
 {

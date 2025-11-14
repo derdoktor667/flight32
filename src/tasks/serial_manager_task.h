@@ -4,7 +4,7 @@
 #include "../scheduler/task_base.h"
 #include "../scheduler/scheduler.h"
 #include "../settings_manager.h"
-#include "../terminal/terminal_config.h"
+#include "../config/terminal_config.h"
 #include "../com_manager.h"
 #include "imu_task.h"
 #include "rx_task.h"
@@ -12,7 +12,7 @@
 #include "pid_task.h"
 #include "../terminal/terminal.h"
 
-#include "../msp_protocol.h"
+#include "../protocols/msp_protocol.h"
 
 class SerialManagerTask : public TaskBase
 {

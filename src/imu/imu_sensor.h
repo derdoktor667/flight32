@@ -12,7 +12,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
 #include "libraries/ESP32_MPU6050/src/ESP32_MPU6050.h"
-#include "imu_config.h"
+#include "../config/imu_config.h"
 
 // A structure to hold IMU data
 struct ImuData

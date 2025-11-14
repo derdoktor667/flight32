@@ -7,8 +7,8 @@
  */
 
 #include "rx_ppm_protocol.h"
-#include "com_manager.h"
-#include "rx_config.h"
+#include "../com_manager.h"
+#include "../config/rx_config.h"
 
 RxPpmProtocol *RxPpmProtocol::_instance = nullptr;
 

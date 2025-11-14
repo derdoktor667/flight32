@@ -10,7 +10,7 @@
 
 #include "rx_protocol.h"
 #include <Arduino.h>
-#include "rx_config.h"
+#include "../config/rx_config.h"
 
 class RxPpmProtocol : public RxProtocol
 {

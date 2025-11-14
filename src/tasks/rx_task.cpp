@@ -7,10 +7,10 @@
  */
 
 #include "rx_task.h"
-#include "../rx_config.h"
+#include "../config/rx_config.h"
 #include "../com_manager.h"
-#include "../rx_ibus_protocol.h"
-#include "../rx_ppm_protocol.h"
+#include "../protocols/rx_ibus_protocol.h"
+#include "../protocols/rx_ppm_protocol.h"
 
 RxTask::RxTask(const char *name, uint32_t stackSize, UBaseType_t priority, BaseType_t coreID, uint32_t task_delay_ms, SettingsManager *settings_manager)
     : TaskBase(name, stackSize, priority, coreID, task_delay_ms), _rx_protocol(nullptr), _settings_manager(settings_manager) {}

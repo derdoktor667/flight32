@@ -7,8 +7,8 @@
  */
 
 #include "imu_mpu6050.h"
-#include "imu_config.h"
-#include "com_manager.h"
+#include "../../config/imu_config.h"
+#include "../../com_manager.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
 

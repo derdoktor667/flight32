@@ -6,16 +6,16 @@
  * @license MIT
  */
 
-#include "../motor_config.h"
+#include "../config/motor_config.h"
 #include "terminal.h"
-#include "../version_info.h"
-#include "terminal_config.h"
-#include "../settings_config.h"
-#include "../imu_config.h"
-#include "../rx_config.h"
-#include "../motor_config.h"
-#include "../pid/pid_config.h"
-#include "../task_names.h"
+#include "../utils/version_info.h"
+#include "../config/terminal_config.h"
+#include "../config/settings_config.h"
+#include "../config/imu_config.h"
+#include "../config/rx_config.h"
+#include "../config/motor_config.h"
+#include "../config/pid_config.h"
+#include "../utils/task_names.h"
 
 const ChannelMapping Terminal::_channel_map[] = {
     {"roll", KEY_RC_CHANNEL_ROLL},

@@ -10,17 +10,17 @@
 #include "scheduler/scheduler.h"
 #include "tasks/serial_manager_task.h"
 #include "com_manager.h"
-#include "serial_config.h"
-#include "pid/pid_config.h"
-#include "version_info.h"
+#include "config/serial_config.h"
+#include "config/pid_config.h"
+#include "utils/version_info.h"
 #include "settings_manager.h"
-#include "task_names.h"
+#include "utils/task_names.h"
 #include <Arduino.h>
 #include "tasks/imu_task.h"
-#include "imu_mpu6050.h"
+#include "imu/sensors/imu_mpu6050.h"
 #include "tasks/motor_task.h"
 #include "tasks/rx_task.h"
-#include "rx_config.h"
+#include "config/rx_config.h"
 #include <Wire.h>
 
 FlightController::~FlightController()

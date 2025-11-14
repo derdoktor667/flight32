@@ -8,7 +8,7 @@
 
 #include <Arduino.h>
 #include "src/flight_controller.h"
-#include "src/serial_config.h"
+#include "src/config/serial_config.h"
 
 //
 FlightController *fc;

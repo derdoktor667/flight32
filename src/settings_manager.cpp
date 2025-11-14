@@ -6,12 +6,12 @@
  * @license MIT
  */
 
-#include "settings_config.h"
-#include "imu_config.h"
-#include "rx_config.h"
-#include "motor_config.h"
-#include "pid/pid_config.h"
-#include "terminal/terminal_config.h"
+#include "config/settings_config.h"
+#include "config/imu_config.h"
+#include "config/rx_config.h"
+#include "config/motor_config.h"
+#include "config/pid_config.h"
+#include "config/terminal_config.h"
 #include "settings_manager.h"
 #include "com_manager.h"
 #include "terminal/terminal.h"

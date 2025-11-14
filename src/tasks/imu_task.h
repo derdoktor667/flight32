@@ -9,8 +9,8 @@
 #pragma once
 
 #include "../scheduler/task_base.h"
-#include "../imu_sensor.h"
-#include "../imu_config.h"
+#include "../imu/imu_sensor.h"
+#include "../config/imu_config.h"
 
 class ImuTask : public TaskBase
 {
