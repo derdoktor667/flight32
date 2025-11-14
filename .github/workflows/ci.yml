@@ -65,7 +65,12 @@ jobs:
           find "$GITHUB_WORKSPACE" -type f -name 'library.properties' -print0 | \
             xargs -0 -n1 dirname | sort -u | while read -r libdir; do
               echo "Installing library from $libdir"
-              cp -R "$libdir" "$HOME/Arduino/libraries/$(basename "$libdir")"
+              dest="$HOME/Arduino/libraries/$(basename "$libdir")"
+              if [ -d "$dest" ]; then
+                echo "Replacing existing library at $dest"
+                rm -rf "$dest"
+              fi
+              cp -R "$libdir" "$dest"
             done
 
   # ============================================================================
@@ -107,7 +112,12 @@ jobs:
           find "$GITHUB_WORKSPACE" -type f -name 'library.properties' -print0 | \
             xargs -0 -n1 dirname | sort -u | while read -r libdir; do
               echo "Installing library from $libdir"
-              cp -R "$libdir" "$HOME/Arduino/libraries/$(basename "$libdir")"
+              dest="$HOME/Arduino/libraries/$(basename "$libdir")"
+              if [ -d "$dest" ]; then
+                echo "Replacing existing library at $dest"
+                rm -rf "$dest"
+              fi
+              cp -R "$libdir" "$dest"
             done
           # Find .ino files in repository root (depth 1) and compile them
           SKETCHES=$(find "$GITHUB_WORKSPACE" -maxdepth 1 -type f -name '*.ino' -print)
