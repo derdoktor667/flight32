@@ -1,217 +1,51 @@
-name: flight32 Build
+name: CI
 
 on:
   push:
-    branches: [ '*']
+    branches: [ main, dev, develop ]
   pull_request:
-    branches: [ '*']
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+    branches: [ main, dev, develop ]
 
 jobs:
-  build:
-    name: Build (no cache)
+  compile:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
-
+    
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          submodules: recursive
+          submodules: true
 
-      - name: Setup Arduino CLI
-        uses: arduino/setup-arduino-cli@v2
+      - name: Set up Arduino CLI
+        uses: arduino/setup-arduino-cli@v1
 
-      - name: Prepare Arduino libraries directory
-        shell: bash
+      - name: Install ESP32 board package
         run: |
-          set -euo pipefail
-          # Ensure we use the libraries from the repository (always prefer repo libs)
-          ```github-actions-workflow
-          name: flight32 Build
+          arduino-cli core install esp32:esp32 --additional-urls https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
 
-          on:
-            push:
-              branches: [ '*' ]
-            pull_request:
-              branches: [ '*' ]
+      - name: Link libraries
+        run: |
+          ARDUINO_LIBS_PATH="$HOME/.arduino15/libraries"
+          mkdir -p "$ARDUINO_LIBS_PATH"
+          
+          # Create symlinks for Arduino Libraries from submodules
+          [ -d libraries/DShotRMT ] && ln -sf "$GITHUB_WORKSPACE/libraries/DShotRMT" "$ARDUINO_LIBS_PATH/DShotRMT" || true
+          [ -d libraries/ESP32_MPU6050 ] && ln -sf "$GITHUB_WORKSPACE/libraries/ESP32_MPU6050" "$ARDUINO_LIBS_PATH/ESP32_MPU6050" || true
+          [ -d libraries/FlyskyIBUS ] && ln -sf "$GITHUB_WORKSPACE/libraries/FlyskyIBUS" "$ARDUINO_LIBS_PATH/FlyskyIBUS" || true
 
-          concurrency:
-            group: ${{ github.workflow }}-${{ github.ref }}
-            cancel-in-progress: true
+      - name: Compile sketch
+        run: |
+          arduino-cli compile \
+            --fqbn esp32:esp32:esp32 \
+            --verbose \
+            flight32.ino
 
-          jobs:
-            build:
-              name: Build (no cache)
-              runs-on: ubuntu-latest
-              timeout-minutes: 30
-
-              steps:
-                - name: Checkout repository
-                  uses: actions/checkout@v4
-                  with:
-                    submodules: recursive
-
-                - name: Setup Arduino CLI
-                  uses: arduino/setup-arduino-cli@v2
-
-                - name: Prepare Arduino libraries directory
-                  shell: bash
-                  run: |
-                    set -euo pipefail
-                    # Ensure we use the libraries from the repository (always prefer repo libs)
-                    mkdir -p "$HOME/Arduino/libraries"
-                    # Remove any preinstalled libraries to avoid duplicate definitions
-                    rm -rf "$HOME/Arduino/libraries"/* || true
-                    # Initialize submodules to make repo libraries available
-                    git submodule update --init --recursive
-                    # Copy any Arduino libraries (library.properties) from repo into Arduino/libraries
-                    find "$GITHUB_WORKSPACE" -type f -name 'library.properties' -print0 | \
-                      xargs -0 -n1 dirname | sort -u | while read -r libdir; do
-                        dest="$HOME/Arduino/libraries/$(basename "$libdir")"
-                        echo "Copying $libdir -> $dest"
-                        cp -R "$libdir" "$dest"
-                      done
-
-                - name: Install core and external libs
-                  shell: bash
-                  run: |
-                    set -euo pipefail
-                    # Ensure esp32 core available
-                    arduino-cli core update-index --additional-urls https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
-                    arduino-cli core install esp32:esp32
-                    # Install well-known external libs via Library Manager (keeps versions stable)
-                    arduino-cli lib install "ArduinoJson" || true
-                    # For Async libraries, prefer cloning stable repos when not available via lib manager
-                    if [ ! -d "$HOME/Arduino/libraries/ESPAsyncWebServer" ]; then
-                      git clone --depth=1 https://github.com/ESP32Async/ESPAsyncWebServer "$HOME/Arduino/libraries/ESPAsyncWebServer"
-                    fi
-                    if [ ! -d "$HOME/Arduino/libraries/AsyncTCP" ]; then
-                      git clone --depth=1 https://github.com/ESP32Async/AsyncTCP "$HOME/Arduino/libraries/AsyncTCP"
-                    fi
-
-                - name: Find and compile sketches
-                  shell: bash
-                  env:
-                    ARDUINO_LIBS: "$HOME/Arduino/libraries"
-                  run: |
-                    set -euo pipefail
-                    mkdir -p build-logs
-                    SKETCHES=$(find "$GITHUB_WORKSPACE" -maxdepth 1 -type f -name '*.ino' -print)
-                    if [ -z "$SKETCHES" ]; then
-                      echo "No .ino sketches found in project root — skipping compilation"
-                      exit 0
-                    fi
-                    for SK in $SKETCHES; do
-                      name=$(basename "$SK")
-                      logfile=build-logs/${name%.ino}.log
-                      echo "------ Compiling $SK (log: $logfile) ------"
-                      if arduino-cli compile --fqbn esp32:esp32:esp32 --libraries "$ARDUINO_LIBS" "$SK" >"$logfile" 2>&1; then
-                        echo "Compiled $SK successfully"
-                      else
-                        echo "Compilation failed for $SK. See $logfile for details"
-                        # upload logs as artifact in the next step by failing with non-zero
-                        exit 1
-                      fi
-                    done
-
-                - name: Upload build logs
-                  if: always()
-                  uses: actions/upload-artifact@v4
-                  name: flight32 Build
-
-                  on:
-                    push:
-                      branches: [ '*' ]
-                    pull_request:
-                      branches: [ '*' ]
-
-                  concurrency:
-                    group: ${{ github.workflow }}-${{ github.ref }}
-                    cancel-in-progress: true
-
-                  jobs:
-                    build:
-                      name: Build (no cache)
-                      runs-on: ubuntu-latest
-                      timeout-minutes: 30
-
-                      steps:
-                        - name: Checkout repository
-                          uses: actions/checkout@v4
-                          with:
-                            submodules: recursive
-
-                        - name: Setup Arduino CLI
-                          uses: arduino/setup-arduino-cli@v2
-
-                        - name: Prepare Arduino libraries directory
-                          shell: bash
-                          run: |
-                            set -euo pipefail
-                            # Ensure we use the libraries from the repository (always prefer repo libs)
-                            mkdir -p "$HOME/Arduino/libraries"
-                            # Remove any preinstalled libraries to avoid duplicate definitions
-                            rm -rf "$HOME/Arduino/libraries"/* || true
-                            # Initialize submodules to make repo libraries available
-                            git submodule update --init --recursive
-                            # Copy any Arduino libraries (library.properties) from repo into Arduino/libraries
-                            find "$GITHUB_WORKSPACE" -type f -name 'library.properties' -print0 | \
-                              xargs -0 -n1 dirname | sort -u | while read -r libdir; do
-                                dest="$HOME/Arduino/libraries/$(basename "$libdir")"
-                                echo "Copying $libdir -> $dest"
-                                cp -R "$libdir" "$dest"
-                              done
-
-                        - name: Install core and external libs
-                          shell: bash
-                          run: |
-                            set -euo pipefail
-                            # Ensure esp32 core available
-                            arduino-cli core update-index --additional-urls https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
-                            arduino-cli core install esp32:esp32
-                            # Install well-known external libs via Library Manager (keeps versions stable)
-                            arduino-cli lib install "ArduinoJson" || true
-                            # For Async libraries, prefer cloning stable repos when not available via lib manager
-                            if [ ! -d "$HOME/Arduino/libraries/ESPAsyncWebServer" ]; then
-                              git clone --depth=1 https://github.com/ESP32Async/ESPAsyncWebServer "$HOME/Arduino/libraries/ESPAsyncWebServer"
-                            fi
-                            if [ ! -d "$HOME/Arduino/libraries/AsyncTCP" ]; then
-                              git clone --depth=1 https://github.com/ESP32Async/AsyncTCP "$HOME/Arduino/libraries/AsyncTCP"
-                            fi
-
-                        - name: Find and compile sketches
-                          shell: bash
-                          env:
-                            ARDUINO_LIBS: "$HOME/Arduino/libraries"
-                          run: |
-                            set -euo pipefail
-                            mkdir -p build-logs
-                            SKETCHES=$(find "$GITHUB_WORKSPACE" -maxdepth 1 -type f -name '*.ino' -print)
-                            if [ -z "$SKETCHES" ]; then
-                              echo "No .ino sketches found in project root — skipping compilation"
-                              exit 0
-                            fi
-                            for SK in $SKETCHES; do
-                              name=$(basename "$SK")
-                              logfile=build-logs/${name%.ino}.log
-                              echo "------ Compiling $SK (log: $logfile) ------"
-                              if arduino-cli compile --fqbn esp32:esp32:esp32 --libraries "$ARDUINO_LIBS" "$SK" >"$logfile" 2>&1; then
-                                echo "Compiled $SK successfully"
-                              else
-                                echo "Compilation failed for $SK. See $logfile for details"
-                                # upload logs as artifact in the next step by failing with non-zero
-                                exit 1
-                              fi
-                            done
-
-                        - name: Upload build logs
-                          if: always()
-                          uses: actions/upload-artifact@v4
-                          with:
-                            name: build-logs
-                            path: build-logs
-          SKETCHES=$(find "$GITHUB_WORKSPACE" -maxdepth 1 -type f -name '*.ino' -print)
+      - name: Report build status
+        if: always()
+        run: |
+          if [ $? -eq 0 ]; then
+            echo "✅ Build successful!"
+          else
+            echo "❌ Build failed!"
+            exit 1
+          fi
