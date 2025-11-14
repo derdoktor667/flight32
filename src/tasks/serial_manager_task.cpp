@@ -57,52 +57,44 @@ void SerialManagerTask::setup()
 
 void SerialManagerTask::run()
 {
-    // Add mutex for Serial access
-    static SemaphoreHandle_t serial_mutex = xSemaphoreCreateMutex();
-
-    if (xSemaphoreTake(serial_mutex, pdMS_TO_TICKS(10)) == pdTRUE)
+    while (Serial.available() > 0)
     {
+        uint8_t c = Serial.read();
 
-        while (Serial.available() > 0)
+        // Handshake logic: Check for MSP preamble
+        if (_current_mode == ComSerialMode::TERMINAL)
         {
-            uint8_t c = Serial.read();
+            // Look for '$', 'R', 'M', 'S', 'P' sequence
+            static uint8_t handshake_state = 0;
+            const char msp_handshake[] = "$RMSP";
 
-            // Handshake logic: Check for MSP preamble
-            if (_current_mode == ComSerialMode::TERMINAL)
+            if (c == msp_handshake[handshake_state])
             {
-                // Look for '$', 'R', 'M', 'S', 'P' sequence
-                static uint8_t handshake_state = 0;
-                const char msp_handshake[] = "$RMSP";
-
-                if (c == msp_handshake[handshake_state])
+                handshake_state++;
+                if (handshake_state == strlen(msp_handshake))
                 {
-                    handshake_state++;
-                    if (handshake_state == strlen(msp_handshake))
-                    {
-                        _current_mode = ComSerialMode::MSP;
-                        com_set_serial_mode(ComSerialMode::MSP); // Set com_manager to MSP mode
-                        _last_msp_activity_ms = millis();
-                        Serial.println("[INFO] Switched to MSP mode (direct print)."); // Direct print for debugging
-                        handshake_state = 0;                                           // Reset handshake state
-                        continue;                                                      // Don't process this char as terminal input
-                    }
-                }
-                else
-                {
-                    handshake_state = 0; // Reset if sequence is broken
+                    _current_mode = ComSerialMode::MSP;
+                    com_set_serial_mode(ComSerialMode::MSP); // Set com_manager to MSP mode
+                    _last_msp_activity_ms = millis();
+                    Serial.println("[INFO] Switched to MSP mode (direct print)."); // Direct print for debugging
+                    handshake_state = 0;                                           // Reset handshake state
+                    continue;                                                      // Don't process this char as terminal input
                 }
             }
+            else
+            {
+                handshake_state = 0; // Reset if sequence is broken
+            }
+        }
 
-            if (_current_mode == ComSerialMode::TERMINAL)
-            {
-                _terminal->handleInput(c);
-            }
-            else // MSP Mode
-            {
-                _parse_msp_char(c);
-                _last_msp_activity_ms = millis(); // Update activity on any MSP char
-            }
-            xSemaphoreGive(serial_mutex);
+        if (_current_mode == ComSerialMode::TERMINAL)
+        {
+            _terminal->handleInput(c);
+        }
+        else // MSP Mode
+        {
+            _parse_msp_char(c);
+            _last_msp_activity_ms = millis(); // Update activity on any MSP char
         }
     }
 
