@@ -9,6 +9,7 @@
 #include "rx_ibus_protocol.h"
 #include "../config/rx_config.h"
 #include "../com_manager.h"
+#include "../../libraries/FlyskyIBUS/src/FlyskyIBUS.cpp"
 
 RxIbusProtocol::RxIbusProtocol() : _ibus(IBUS_SERIAL_PORT, IBUS_RX_PIN) {}
 
