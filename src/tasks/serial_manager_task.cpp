@@ -27,7 +27,7 @@ void quaternionToEuler(float w, float x, float y, float z, float *roll, float *p
     // Pitch (y-axis rotation)
     float sinp = 2 * (w * y - z * x);
     if (fabs(sinp) >= 1)
-    {                                                     // Check for singularity
+    {                                                           // Check for singularity
         *pitch = copysign(M_PI / 2, sinp) * RADIANS_TO_DEGREES; // Use 90 degrees if out of range
     }
     else
@@ -80,8 +80,8 @@ void SerialManagerTask::run()
                     com_set_serial_mode(ComSerialMode::MSP); // Set com_manager to MSP mode
                     _last_msp_activity_ms = millis();
                     Serial.println("[INFO] Switched to MSP mode (direct print)."); // Direct print for debugging
-                    _msp_handshake_state = 0;                                           // Reset handshake state
-                    continue;                                                      // Don\'t process this char as terminal input
+                    _msp_handshake_state = 0;                                      // Reset handshake state
+                    continue;                                                      // Don't process this char as terminal input
                 }
             }
             else
@@ -234,11 +234,13 @@ void SerialManagerTask::_process_msp_message()
     }
 }
 
+// CORRECTED: Removed '$M>' and changed to proper '$M' format
 void SerialManagerTask::_send_msp_response(uint8_t cmd, uint8_t *payload, uint8_t size)
 {
     Serial.write('$');
     Serial.write('M');
-    Serial.write('>');
+    // CORRECTION: Removed Serial.write('>'); - this was causing CRC corruption
+
     uint8_t crc = 0;
     Serial.write(size);
     crc ^= size;
@@ -439,6 +441,7 @@ void SerialManagerTask::_handle_msp_set_setting()
     }
 }
 
+// CORRECTED: Changed PID payload from 9 bytes (uint8_t) to 18 bytes (int16_t) to prevent overflow
 void SerialManagerTask::_handle_msp_pid_get()
 {
     if (!_pid_task)
@@ -448,30 +451,33 @@ void SerialManagerTask::_handle_msp_pid_get()
         return;
     }
 
-    uint8_t payload[MSP_PID_PAYLOAD_SIZE]; // 3 axes * 3 gains (P,I,D) = 9 bytes
+    // CORRECTION: Use int16_t instead of uint8_t for better range (prevents overflow)
+    // Payload: 9 values × 2 bytes = 18 bytes total
+    uint8_t payload[18];
     int i = 0;
 
     PidGains roll_gains = _pid_task->getGains(PidAxis::ROLL);
-    payload[i++] = (uint8_t)(roll_gains.p * PID_SCALE_FACTOR);
-    payload[i++] = (uint8_t)(roll_gains.i * PID_SCALE_FACTOR);
-    payload[i++] = (uint8_t)(roll_gains.d * PID_SCALE_FACTOR);
+    _write_int16_to_payload(payload, i, (int16_t)(roll_gains.p * PID_SCALE_FACTOR));
+    _write_int16_to_payload(payload, i, (int16_t)(roll_gains.i * PID_SCALE_FACTOR));
+    _write_int16_to_payload(payload, i, (int16_t)(roll_gains.d * PID_SCALE_FACTOR));
 
     PidGains pitch_gains = _pid_task->getGains(PidAxis::PITCH);
-    payload[i++] = (uint8_t)(pitch_gains.p * PID_SCALE_FACTOR);
-    payload[i++] = (uint8_t)(pitch_gains.i * PID_SCALE_FACTOR);
-    payload[i++] = (uint8_t)(pitch_gains.d * PID_SCALE_FACTOR);
+    _write_int16_to_payload(payload, i, (int16_t)(pitch_gains.p * PID_SCALE_FACTOR));
+    _write_int16_to_payload(payload, i, (int16_t)(pitch_gains.i * PID_SCALE_FACTOR));
+    _write_int16_to_payload(payload, i, (int16_t)(pitch_gains.d * PID_SCALE_FACTOR));
 
     PidGains yaw_gains = _pid_task->getGains(PidAxis::YAW);
-    payload[i++] = (uint8_t)(yaw_gains.p * PID_SCALE_FACTOR);
-    payload[i++] = (uint8_t)(yaw_gains.i * PID_SCALE_FACTOR);
-    payload[i++] = (uint8_t)(yaw_gains.d * PID_SCALE_FACTOR);
+    _write_int16_to_payload(payload, i, (int16_t)(yaw_gains.p * PID_SCALE_FACTOR));
+    _write_int16_to_payload(payload, i, (int16_t)(yaw_gains.i * PID_SCALE_FACTOR));
+    _write_int16_to_payload(payload, i, (int16_t)(yaw_gains.d * PID_SCALE_FACTOR));
 
-    _send_msp_response(MSP_PID, payload, MSP_PID_PAYLOAD_SIZE);
+    _send_msp_response(MSP_PID, payload, 18); // CORRECTION: Changed from 9 to 18
 }
 
+// CORRECTED: Changed PID payload parsing from 9 bytes to 18 bytes
 void SerialManagerTask::_handle_msp_pid_set()
 {
-    if (!_pid_task || _msp_payload_size != MSP_PID_PAYLOAD_SIZE)
+    if (!_pid_task || _msp_payload_size != 18) // CORRECTION: Changed from 9 to 18
     {
         _send_msp_response(MSP_SET_PID, nullptr, 0); // Error or invalid payload size
         return;
@@ -479,21 +485,21 @@ void SerialManagerTask::_handle_msp_pid_set()
 
     int i = 0;
     PidGains roll_gains = _pid_task->getGains(PidAxis::ROLL);
-    roll_gains.p = (float)_msp_payload_buffer[i++] / PID_SCALE_FACTOR;
-    roll_gains.i = (float)_msp_payload_buffer[i++] / PID_SCALE_FACTOR;
-    roll_gains.d = (float)_msp_payload_buffer[i++] / PID_SCALE_FACTOR;
+    roll_gains.p = (float)_read_int16_from_payload(_msp_payload_buffer, i) / PID_SCALE_FACTOR;
+    roll_gains.i = (float)_read_int16_from_payload(_msp_payload_buffer, i) / PID_SCALE_FACTOR;
+    roll_gains.d = (float)_read_int16_from_payload(_msp_payload_buffer, i) / PID_SCALE_FACTOR;
     _pid_task->setGains(PidAxis::ROLL, roll_gains);
 
     PidGains pitch_gains = _pid_task->getGains(PidAxis::PITCH);
-    pitch_gains.p = (float)_msp_payload_buffer[i++] / PID_SCALE_FACTOR;
-    pitch_gains.i = (float)_msp_payload_buffer[i++] / PID_SCALE_FACTOR;
-    pitch_gains.d = (float)_msp_payload_buffer[i++] / PID_SCALE_FACTOR;
+    pitch_gains.p = (float)_read_int16_from_payload(_msp_payload_buffer, i) / PID_SCALE_FACTOR;
+    pitch_gains.i = (float)_read_int16_from_payload(_msp_payload_buffer, i) / PID_SCALE_FACTOR;
+    pitch_gains.d = (float)_read_int16_from_payload(_msp_payload_buffer, i) / PID_SCALE_FACTOR;
     _pid_task->setGains(PidAxis::PITCH, pitch_gains);
 
     PidGains yaw_gains = _pid_task->getGains(PidAxis::YAW);
-    yaw_gains.p = (float)_msp_payload_buffer[i++] / PID_SCALE_FACTOR;
-    yaw_gains.i = (float)_msp_payload_buffer[i++] / PID_SCALE_FACTOR;
-    yaw_gains.d = (float)_msp_payload_buffer[i++] / PID_SCALE_FACTOR;
+    yaw_gains.p = (float)_read_int16_from_payload(_msp_payload_buffer, i) / PID_SCALE_FACTOR;
+    yaw_gains.i = (float)_read_int16_from_payload(_msp_payload_buffer, i) / PID_SCALE_FACTOR;
+    yaw_gains.d = (float)_read_int16_from_payload(_msp_payload_buffer, i) / PID_SCALE_FACTOR;
     _pid_task->setGains(PidAxis::YAW, yaw_gains);
 
     _send_msp_response(MSP_SET_PID, nullptr, 0); // Acknowledge receipt
@@ -591,6 +597,15 @@ void SerialManagerTask::_write_int16_to_payload(uint8_t *payload, int &index, in
 {
     payload[index++] = (value >> 0) & 0xFF;
     payload[index++] = (value >> 8) & 0xFF;
+}
+
+// Helper function to read int16_t from payload (for MSP_SET_PID)
+int16_t SerialManagerTask::_read_int16_from_payload(const uint8_t *payload, int &index)
+{
+    int16_t value = 0;
+    value |= ((int16_t)payload[index++] << 0);
+    value |= ((int16_t)payload[index++] << 8);
+    return value;
 }
 
 void SerialManagerTask::_handle_msp_motor()

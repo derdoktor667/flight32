@@ -18,7 +18,7 @@
 #include "motor_task.h"
 #include "pid_task.h"
 #include "../terminal/terminal.h"
-#include <memory> // For std::unique_ptr
+#include <memory>
 
 #include "../protocols/msp_protocol.h"
 
@@ -71,7 +71,10 @@ private:
     void _parse_msp_char(uint8_t c);
     void _process_msp_message();
     void _send_msp_response(uint8_t cmd, uint8_t *payload, uint8_t size);
-    void _write_int16_to_payload(uint8_t *payload, int &index, int16_t value); // New helper function
+    
+    // Added new helper function for reading int16_t values
+    void _write_int16_to_payload(uint8_t *payload, int &index, int16_t value);
+    int16_t _read_int16_from_payload(const uint8_t *payload, int &index);
 
     // MSP Command Handlers
     void _handle_msp_api_version();
