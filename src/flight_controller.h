@@ -19,16 +19,22 @@
 #include "tasks/pid_task.h"
 
 #include "settings_manager.h"
+#include "utils/system_state.h"
 #include <memory>
 
 class FlightController
 {
 public:
-    FlightController() = default;
+    FlightController();
 
     void setup();
 
+    SystemState getSystemState() const;
+
 private:
+    void setSystemState(SystemState new_state);
+
+    SystemState _system_state;
     SettingsManager _settings_manager;
     Scheduler _scheduler;
     std::unique_ptr<ImuSensor> _imu_sensor;

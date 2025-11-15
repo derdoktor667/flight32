@@ -22,6 +22,48 @@
 #include "config/rx_config.h"
 #include <Wire.h>
 
+// Helper function to convert SystemState enum to a string for logging.
+const char *systemStateToString(SystemState state)
+{
+    switch (state)
+    {
+    case SystemState::INITIALIZING:
+        return "INITIALIZING";
+    case SystemState::CALIBRATING:
+        return "CALIBRATING";
+    case SystemState::READY:
+        return "READY";
+    case SystemState::ARMED:
+        return "ARMED";
+    case SystemState::IN_FLIGHT:
+        return "IN_FLIGHT";
+    case SystemState::FAILSAFE:
+        return "FAILSAFE";
+    case SystemState::ERROR:
+        return "ERROR";
+    default:
+        return "UNKNOWN";
+    }
+}
+
+FlightController::FlightController() : _system_state(SystemState::INITIALIZING)
+{
+    // Constructor body can be empty if all initialization is done in the member initializer list.
+}
+
+SystemState FlightController::getSystemState() const
+{
+    return _system_state;
+}
+
+void FlightController::setSystemState(SystemState new_state)
+{
+    if (_system_state != new_state)
+    {
+        _system_state = new_state;
+        com_send_log(ComMessageType::LOG_INFO, "System state changed to: %s", systemStateToString(_system_state));
+    }
+}
 
 // Setup function for the FlightController, initializes hardware and FreeRTOS tasks.
 void FlightController::setup()
@@ -42,6 +84,8 @@ void FlightController::setup()
 
     // Delay to allow the communication task to initialize.
     vTaskDelay(pdMS_TO_TICKS(COM_TASK_STARTUP_DELAY_MS));
+
+    setSystemState(SystemState::INITIALIZING);
 
     // Print startup messages to the serial terminal.
     com_send_log(ComMessageType::TERMINAL_OUTPUT, "");
@@ -75,9 +119,12 @@ void FlightController::setup()
         com_send_log(ComMessageType::LOG_INFO, "Using MPU6050 IMU.");
         break;
     default:
-        com_send_log(ComMessageType::LOG_ERROR, "No valid IMU type configured.");
-        // Handle error, maybe loop forever or use a dummy sensor.
-        return;
+        com_send_log(ComMessageType::LOG_ERROR, "No valid IMU type configured. Halting execution.");
+        setSystemState(SystemState::ERROR);
+        while (true)
+        {
+            vTaskDelay(portMAX_DELAY);
+        } // Halt
     }
 
     // Get LPF bandwidth from settings and convert to appropriate enum.
@@ -88,14 +135,18 @@ void FlightController::setup()
     if (!_imu_sensor->begin(MPU6050_I2C_CLOCK_SPEED, IMU_DMP_ENABLED_DEFAULT, ImuGyroRangeIndex::GYRO_RANGE_2000DPS, ImuAccelRangeIndex::ACCEL_RANGE_16G, lpf_bandwidth))
     {
         // Error message is already printed in the sensor's begin() method.
-        // Handle error, maybe loop forever.
-        return;
+        setSystemState(SystemState::ERROR);
+        com_send_log(ComMessageType::LOG_ERROR, "IMU initialization failed. Halting execution.");
+        while (true)
+        {
+            vTaskDelay(portMAX_DELAY);
+        } // Halt
     }
 
     ImuAxisData gyro_offsets = _settings_manager.getGyroOffsets();
     ImuAxisData accel_offsets = _settings_manager.getAccelOffsets();
 
-    com_send_log(ComMessageType::LOG_INFO, "Starting IMU calibration...");
+    setSystemState(SystemState::CALIBRATING);
     _imu_sensor->calibrate();
     // Save new offsets to settings.
     _settings_manager.setGyroOffsets(_imu_sensor->getGyroscopeOffset());
@@ -129,6 +180,8 @@ void FlightController::setup()
     com_send_log(ComMessageType::LOG_INFO, "Welcome, type 'help' for a list of commands.");
     com_flush_output();
     _serial_manager_task->showPrompt();
+
+    setSystemState(SystemState::READY);
 
     _scheduler.start(); // Start the FreeRTOS scheduler, beginning task execution.
 }
