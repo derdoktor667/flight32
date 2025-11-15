@@ -7,6 +7,8 @@
 
 #pragma once
 
+#include <memory>
+
 #include <Arduino.h>
 #include "../settings_manager.h"
 #include "../config/terminal_config.h"

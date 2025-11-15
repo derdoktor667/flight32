@@ -10,7 +10,7 @@
 #include <cstdint>
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
-#include "ESP32_MPU6050.h"
+
 #include "../config/imu_config.h"
 
 // A structure to hold IMU data
@@ -37,7 +37,7 @@ public:
     virtual ~ImuSensor() = default;
 
     // Initializes the sensor. Returns true if successful.
-    virtual bool begin(uint32_t i2cClockSpeed = MPU6050_I2C_CLOCK_SPEED, bool useDMP = false, GyroRange gyroRange = GYRO_RANGE_250DPS, AccelRange accelRange = ACCEL_RANGE_2G, LpfBandwidth lpf = LPF_256HZ_N_0MS) = 0;
+    virtual bool begin(uint32_t i2cClockSpeed = MPU6050_I2C_CLOCK_SPEED, bool useDMP = false, ImuGyroRangeIndex gyroRange = ImuGyroRangeIndex::GYRO_RANGE_250DPS, ImuAccelRangeIndex accelRange = ImuAccelRangeIndex::ACCEL_RANGE_2G, ImuLpfBandwidthIndex lpf = ImuLpfBandwidthIndex::LPF_256HZ_N_0MS) = 0;
 
     // Calibrates the sensor.
     virtual void calibrate() = 0;

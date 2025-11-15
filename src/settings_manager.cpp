@@ -76,7 +76,7 @@ SettingsManager::SettingsManager()
 // Initializes the SettingsManager, starting NVS and loading/initializing settings.
 void SettingsManager::begin()
 {
-    com_send_log(LOG_INFO, "SettingsManager: begin()");
+    com_send_log(ComMessageType::LOG_INFO, "SettingsManager: begin()");
     _preferences.begin(SETTINGS_NAMESPACE, false);
     _is_begun = true;
     loadOrInitSettings();
@@ -89,36 +89,36 @@ void SettingsManager::loadOrInitSettings()
         return;
 
     uint16_t saved_version = _preferences.getUShort(KEY_SCHEMA_VERSION, DEFAULT_SCHEMA_VERSION);
-    com_send_log(LOG_INFO, "SettingsManager: NVS Schema Version - Saved: %u, Current: %u", saved_version, CURRENT_SCHEMA_VERSION);
+    com_send_log(ComMessageType::LOG_INFO, "SettingsManager: NVS Schema Version - Saved: %u, Current: %u", saved_version, CURRENT_SCHEMA_VERSION);
 
     // Compare saved schema version with the current version.
     if (saved_version != CURRENT_SCHEMA_VERSION)
     {
-        com_send_log(LOG_WARN, "Settings: Schema mismatch or first run. Applying defaults.");
+        com_send_log(ComMessageType::LOG_WARN, "Settings: Schema mismatch or first run. Applying defaults.");
         factoryReset();
     }
     else
     {
-        com_send_log(LOG_INFO, "Settings: Loading existing configuration.");
+        com_send_log(ComMessageType::LOG_INFO, "Settings: Loading existing configuration.");
     }
 }
 
 // Resets all settings to their factory defaults and saves them to NVS.
 void SettingsManager::factoryReset()
 {
-    com_send_log(LOG_INFO, "SettingsManager: factoryReset() - Clearing NVS namespace '%s'", SETTINGS_NAMESPACE);
+    com_send_log(ComMessageType::LOG_INFO, "SettingsManager: factoryReset() - Clearing NVS namespace '%s'", SETTINGS_NAMESPACE);
     if (!_is_begun)
         return;
     _preferences.clear();
     _write_defaults();
     saveSettings();
-    com_send_log(LOG_INFO, "SettingsManager: factoryReset() - Defaults applied and saved.");
+    com_send_log(ComMessageType::LOG_INFO, "SettingsManager: factoryReset() - Defaults applied and saved.");
 }
 
 // Writes default values for all defined settings to NVS.
 void SettingsManager::_write_defaults()
 {
-    com_send_log(LOG_INFO, "SettingsManager: _write_defaults() - Writing default settings to NVS.");
+    com_send_log(ComMessageType::LOG_INFO, "SettingsManager: _write_defaults() - Writing default settings to NVS.");
     for (int i = 0; i < _num_settings; ++i)
     {
         const char *key = _settings_metadata[i].key;
@@ -126,25 +126,25 @@ void SettingsManager::_write_defaults()
         {
         case UINT8:
             _preferences.putUChar(key, (uint8_t)_settings_metadata[i].default_value);
-            com_send_log(LOG_INFO, "  Default UINT8: %s = %u", key, (uint8_t)_settings_metadata[i].default_value);
+            com_send_log(ComMessageType::LOG_INFO, "  Default UINT8: %s = %u", key, (uint8_t)_settings_metadata[i].default_value);
             break;
         case INT32:
             _preferences.putInt(key, _settings_metadata[i].default_value);
-            com_send_log(LOG_INFO, "  Default INT32: %s = %d", key, _settings_metadata[i].default_value);
+            com_send_log(ComMessageType::LOG_INFO, "  Default INT32: %s = %d", key, _settings_metadata[i].default_value);
             break;
         case FLOAT:
             _preferences.putFloat(key, _settings_metadata[i].default_float_value);
-            com_send_log(LOG_INFO, "  Default FLOAT: %s = %.3f", key, _settings_metadata[i].default_float_value);
+            com_send_log(ComMessageType::LOG_INFO, "  Default FLOAT: %s = %.3f", key, _settings_metadata[i].default_float_value);
             break;
         case STRING:
             if (_settings_metadata[i].string_default != nullptr)
             {
-                com_send_log(LOG_INFO, "  Default STRING: %s = %s", key, _settings_metadata[i].string_default);
+                com_send_log(ComMessageType::LOG_INFO, "  Default STRING: %s = %s", key, _settings_metadata[i].string_default);
                 _preferences.putString(key, _settings_metadata[i].string_default);
             }
             else
             {
-                com_send_log(LOG_INFO, "  Default STRING: %s = (empty)", key);
+                com_send_log(ComMessageType::LOG_INFO, "  Default STRING: %s = (empty)", key);
                 _preferences.putString(key, "");
             }
             break;
@@ -218,25 +218,25 @@ void SettingsManager::listSettings(CommandCategory category)
     if (settings_in_category_count == 0)
         return;
 
-    com_send_log(TERMINAL_OUTPUT, "  %-*s %s", SETTING_NAME_DISPLAY_WIDTH, "Setting", "Description");
+    com_send_log(ComMessageType::TERMINAL_OUTPUT, "  %-*s %s", SETTING_NAME_DISPLAY_WIDTH, "Setting", "Description");
     String separator = "  ";
     for (int i = 0; i < SETTING_NAME_DISPLAY_WIDTH; ++i)
     {
         separator += "-";
     }
     separator += "--------------------------------";
-    com_send_log(TERMINAL_OUTPUT, separator.c_str());
+    com_send_log(ComMessageType::TERMINAL_OUTPUT, separator.c_str());
 
     // Second pass: Print settings and their descriptions.
     for (int i = 0; i < _num_settings; i++)
     {
         if (Terminal::_get_setting_category(_settings_metadata[i].display_key) == category)
         {
-            com_send_log(TERMINAL_OUTPUT, "  %-*s - %s", SETTING_NAME_DISPLAY_WIDTH, _settings_metadata[i].display_key, _settings_metadata[i].description);
+            com_send_log(ComMessageType::TERMINAL_OUTPUT, "  %-*s - %s", SETTING_NAME_DISPLAY_WIDTH, _settings_metadata[i].display_key, _settings_metadata[i].description);
             vTaskDelay(1); // Small delay to yield to other tasks.
         }
     }
-    com_send_log(TERMINAL_OUTPUT, separator.c_str());
+    com_send_log(ComMessageType::TERMINAL_OUTPUT, separator.c_str());
 }
 
 // Dumps current values of settings belonging to a specific category to the terminal.
@@ -264,7 +264,7 @@ void SettingsManager::dumpSettings(CommandCategory category)
             const char *display_key = _settings_metadata[i].display_key;
             const char *internal_key = _settings_metadata[i].key;
             // Print setting in "set key = value" format.
-            com_send_log(TERMINAL_OUTPUT, "set %s = %s", display_key, getSettingValueHumanReadable(internal_key).c_str());
+            com_send_log(ComMessageType::TERMINAL_OUTPUT, "set %s = %s", display_key, getSettingValueHumanReadable(internal_key).c_str());
             vTaskDelay(1); // Small delay to yield to other tasks.
         }
     }
@@ -302,7 +302,7 @@ String SettingsManager::getSettingValue(const char *key)
             }
         }
     }
-    com_send_log(LOG_WARN, "SettingsManager: getSettingValue(%s) -> Key not found in metadata.", key);
+    com_send_log(ComMessageType::LOG_WARN, "SettingsManager: getSettingValue(%s) -> Key not found in metadata.", key);
     return "";
 }
 
@@ -390,7 +390,7 @@ String SettingsManager::getSettingOptionsHumanReadable(const char *key)
 // Sets the value of a setting in NVS based on a string input.
 bool SettingsManager::setSettingValue(const char *key, const String &value_str)
 {
-    com_send_log(LOG_INFO, "SettingsManager: setSettingValue(%s, %s)", key, value_str.c_str());
+    com_send_log(ComMessageType::LOG_INFO, "SettingsManager: setSettingValue(%s, %s)", key, value_str.c_str());
     for (int i = 0; i < _num_settings; ++i)
     {
         if (strcmp(_settings_metadata[i].key, key) == 0)
@@ -421,34 +421,34 @@ bool SettingsManager::setSettingValue(const char *key, const String &value_str)
                 if (parsed_value >= 0 && parsed_value <= UINT8_MAX_VALUE)
                 {
                     _preferences.putUChar(key, (uint8_t)parsed_value);
-                    com_send_log(LOG_INFO, "SettingsManager: setSettingValue - UINT8 %s set to %u", key, (uint8_t)parsed_value);
+                    com_send_log(ComMessageType::LOG_INFO, "SettingsManager: setSettingValue - UINT8 %s set to %u", key, (uint8_t)parsed_value);
                     return true;
                 }
-                com_send_log(LOG_WARN, "SettingsManager: setSettingValue - UINT8 %s failed, parsed_value %d out of range.", key, parsed_value);
+                com_send_log(ComMessageType::LOG_WARN, "SettingsManager: setSettingValue - UINT8 %s failed, parsed_value %d out of range.", key, parsed_value);
                 return false;
             }
             case INT32:
             {
                 _preferences.putInt(key, value_str.toInt());
-                com_send_log(LOG_INFO, "SettingsManager: setSettingValue - INT32 %s set to %d", key, value_str.toInt());
+                com_send_log(ComMessageType::LOG_INFO, "SettingsManager: setSettingValue - INT32 %s set to %d", key, value_str.toInt());
                 return true;
             }
             case FLOAT:
             {
                 _preferences.putFloat(key, value_str.toFloat());
-                com_send_log(LOG_INFO, "SettingsManager: setSettingValue - FLOAT %s set to %.3f", key, value_str.toFloat());
+                com_send_log(ComMessageType::LOG_INFO, "SettingsManager: setSettingValue - FLOAT %s set to %.3f", key, value_str.toFloat());
                 return true;
             }
             case STRING:
             {
                 _preferences.putString(key, value_str);
-                com_send_log(LOG_INFO, "SettingsManager: setSettingValue - STRING %s set to %s", key, value_str.c_str());
+                com_send_log(ComMessageType::LOG_INFO, "SettingsManager: setSettingValue - STRING %s set to %s", key, value_str.c_str());
                 return true;
             }
             }
         }
     }
-    com_send_log(LOG_WARN, "SettingsManager: setSettingValue - Key %s not found in metadata.", key);
+    com_send_log(ComMessageType::LOG_WARN, "SettingsManager: setSettingValue - Key %s not found in metadata.", key);
     return false;
 }
 

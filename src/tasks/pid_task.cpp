@@ -17,8 +17,8 @@
 #include "imu_task.h"
 #include "rx_task.h"
 
-#include <Arduino.h> // For constrain()
-#include <stdint.h>  // For uint32_t
+#include <Arduino.h>
+#include <cstdint>
 
 PidTask::PidTask(const char *name, uint32_t stack_size, UBaseType_t priority, BaseType_t core_id, uint32_t task_delay_ms,
                  ImuTask *imu_task,
@@ -108,7 +108,7 @@ void PidTask::_load_gains()
         _settings_manager->getSettingValue(KEY_PID_YAW_I).toFloat(),
         _settings_manager->getSettingValue(KEY_PID_YAW_D).toFloat());
 
-    com_send_log(LOG_INFO, "PidTask: Loaded PID gains from settings.");
+    com_send_log(ComMessageType::LOG_INFO, "PidTask: Loaded PID gains from settings.");
 }
 
 void PidTask::resetToDefaults()
@@ -118,7 +118,7 @@ void PidTask::resetToDefaults()
     _set_and_save_gains(PidAxis::YAW, {DEFAULT_PID_YAW_P, DEFAULT_PID_YAW_I, DEFAULT_PID_YAW_D});
 
     _settings_manager->saveSettings();
-    com_send_log(LOG_INFO, "PidTask: Reset PID gains to defaults and saved.");
+    com_send_log(ComMessageType::LOG_INFO, "PidTask: Reset PID gains to defaults and saved.");
 }
 
 void PidTask::_set_and_save_gains(PidAxis axis, PidGains gains)

@@ -11,75 +11,54 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
 
-LpfBandwidth ImuMpu6050::getLpfBandwidthFromIndex(uint8_t index)
-{
-    switch (index) // Assuming index directly maps to LpfBandwidth enum values
-    {
-    case 0:
-        return LPF_256HZ_N_0MS;
-    case 1:
-        return LPF_188HZ_N_2MS;
-    case 2:
-        return LPF_98HZ_N_3MS;
-    case 3:
-        return LPF_42HZ_N_5MS;
-    case 4:
-        return LPF_20HZ_N_10MS;
-    case 5:
-        return LPF_10HZ_N_13MS;
-    case 6:
-        return LPF_5HZ_N_18MS;
-    default:
-        return LPF_256HZ_N_0MS; // Default to highest bandwidth (least filtering)
-    }
-}
+
 
 ImuMpu6050::ImuMpu6050() : _sensor()
 {
     _data_mutex = xSemaphoreCreateMutex();
-    if (_data_mutex == NULL)
+    if (_data_mutex == nullptr)
     {
-        com_send_log(LOG_ERROR, "Failed to create IMU data mutex");
+        com_send_log(ComMessageType::LOG_ERROR, "Failed to create IMU data mutex");
     }
 }
 
 ImuMpu6050::~ImuMpu6050()
 {
-    if (_data_mutex != NULL)
+    if (_data_mutex != nullptr)
     {
         vSemaphoreDelete(_data_mutex);
     }
 }
 
-bool ImuMpu6050::begin(uint32_t i2cClockSpeed, bool useDMP, GyroRange gyroRange, AccelRange accelRange, LpfBandwidth lpf)
+bool ImuMpu6050::begin(uint32_t i2cClockSpeed, bool useDMP, ImuGyroRangeIndex gyroRange, ImuAccelRangeIndex accelRange, ImuLpfBandwidthIndex lpf)
 {
     _useDMP = useDMP;
-    if (!_sensor.begin(gyroRange, accelRange, lpf, i2cClockSpeed, MPU6050_I2C_ADDRESS))
+    if (!_sensor.begin(static_cast<GyroRange>(gyroRange), static_cast<AccelRange>(accelRange), static_cast<LpfBandwidth>(lpf), i2cClockSpeed, MPU6050_I2C_ADDRESS))
     {
-        com_send_log(LOG_ERROR, "Failed to find MPU6050 chip");
+        com_send_log(ComMessageType::LOG_ERROR, "Failed to find MPU6050 chip");
         return false;
     }
 
     if (_useDMP)
     {
-        com_send_log(LOG_INFO, "Initializing MPU6050 DMP...");
+        com_send_log(ComMessageType::LOG_INFO, "Initializing MPU6050 DMP...");
         uint8_t dmpStatus = _sensor.dmpInitialize();
         if (dmpStatus != 0)
         {
-            com_send_log(LOG_ERROR, "Failed to initialize DMP. DMP Status: %d", dmpStatus);
+            com_send_log(ComMessageType::LOG_ERROR, "Failed to initialize DMP. DMP Status: %d", dmpStatus);
             return false;
         }
-        com_send_log(LOG_INFO, "MPU6050 DMP initialized.");
+        com_send_log(ComMessageType::LOG_INFO, "MPU6050 DMP initialized.");
     }
-    com_send_log(LOG_INFO, "MPU6050 Found!");
+    com_send_log(ComMessageType::LOG_INFO, "MPU6050 Found!");
     return true;
 }
 
 void ImuMpu6050::calibrate()
 {
-    com_send_log(LOG_INFO, "Calibrating MPU6050...");
+    com_send_log(ComMessageType::LOG_INFO, "Calibrating MPU6050...");
     _sensor.calibrate();
-    com_send_log(LOG_INFO, "MPU6050 Calibration complete.");
+    com_send_log(ComMessageType::LOG_INFO, "MPU6050 Calibration complete.");
 }
 
 void ImuMpu6050::read()

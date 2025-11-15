@@ -23,13 +23,29 @@ constexpr bool IMU_DMP_ENABLED_DEFAULT = false;   // Default setting for enablin
 
 // --- IMU Protocol Configuration ---
 enum class ImuType : uint8_t
-    {
-        MPU6050 = 0,
-        NONE = 255
-    };
+{
+    MPU6050 = 0,
+    NONE = 255
+};
 
 constexpr const char *KEY_IMU_TYPE = "imu.type";
 constexpr ImuType DEFAULT_IMU_TYPE = ImuType::MPU6050;
+
+enum class ImuGyroRangeIndex : uint8_t
+{
+    GYRO_RANGE_250DPS = 0,
+    GYRO_RANGE_500DPS = 1,
+    GYRO_RANGE_1000DPS = 2,
+    GYRO_RANGE_2000DPS = 3
+};
+
+enum class ImuAccelRangeIndex : uint8_t
+{
+    ACCEL_RANGE_2G = 0,
+    ACCEL_RANGE_4G = 1,
+    ACCEL_RANGE_8G = 2,
+    ACCEL_RANGE_16G = 3
+};
 
 enum class ImuLpfBandwidthIndex : uint8_t
 {

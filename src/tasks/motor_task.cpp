@@ -67,16 +67,7 @@ MotorTask::MotorTask(const char *name, uint32_t stack_size, UBaseType_t priority
     }
 }
 
-MotorTask::~MotorTask()
-{
-    for (int i = 0; i < NUM_MOTORS; ++i)
-    {
-        if (_dshot_drivers[i])
-        {
-            delete _dshot_drivers[i];
-        }
-    }
-}
+
 
 void MotorTask::setup()
 {
@@ -85,16 +76,16 @@ void MotorTask::setup()
 
     for (int i = 0; i < NUM_MOTORS; ++i)
     {
-        _dshot_drivers[i] = new DShotRMT(_motor_pins[i], dshot_protocol);
+        _dshot_drivers[i] = std::make_unique<DShotRMT>(_motor_pins[i], dshot_protocol);
         _dshot_drivers[i]->begin();
     }
 
-    com_send_log(LOG_INFO, "MotorTask: DShotRMT drivers initialized for %d motors on protocol %s.", NUM_MOTORS, _settings_manager->getSettingValueHumanReadable(KEY_MOTOR_PROTOCOL).c_str());
+    com_send_log(ComMessageType::LOG_INFO, "MotorTask: DShotRMT drivers initialized for %d motors on protocol %s.", NUM_MOTORS, _settings_manager->getSettingValueHumanReadable(KEY_MOTOR_PROTOCOL).c_str());
 }
 
 void MotorTask::run()
 {
-    if (!_dshot_drivers[FIRST_MOTOR_INDEX])
+    if (!_dshot_drivers[FIRST_MOTOR_INDEX].get())
         return;
 
     if (_motorTestState != IDLE)
@@ -115,7 +106,7 @@ void MotorTask::run()
                 {
                     // Convert normalized throttle (0-1) to raw DShot throttle (MOTOR_MIN_THROTTLE_RAW to MOTOR_MAX_THROTTLE_RAW)
                     uint16_t raw_throttle = (uint16_t)constrain(_testThrottle * (MOTOR_MAX_THROTTLE_RAW - MOTOR_MIN_THROTTLE_RAW) + MOTOR_MIN_THROTTLE_RAW, MOTOR_MIN_THROTTLE_RAW, MOTOR_MAX_THROTTLE_RAW);
-                    _dshot_drivers[i]->sendThrottle(raw_throttle);
+                    _dshot_drivers[i].get()->sendThrottle(raw_throttle);
                 }
                 else
                 {
@@ -154,7 +145,7 @@ void MotorTask::run()
     {
         if (_dshot_drivers[i])
         {
-            _dshot_drivers[i]->sendThrottle(_motor_throttles[i]);
+            _dshot_drivers[i].get()->sendThrottle(_motor_throttles[i]);
         }
     }
 }
@@ -171,7 +162,7 @@ void MotorTask::setThrottle(uint8_t motor_id, uint16_t throttle)
 {
     if (motor_id < NUM_MOTORS && _dshot_drivers[motor_id])
     {
-        _dshot_drivers[motor_id]->sendThrottle(throttle);
+        _dshot_drivers[motor_id].get()->sendThrottle(throttle);
         _motor_throttles[motor_id] = throttle;
     }
 }
@@ -180,7 +171,7 @@ void MotorTask::startMotorTest(uint8_t motorNum, float throttle, uint32_t durati
 {
     if (motorNum >= NUM_MOTORS)
     {
-        com_send_log(LOG_ERROR, "MotorTest: Invalid motor number %d.", motorNum);
+        com_send_log(ComMessageType::LOG_ERROR, "MotorTest: Invalid motor number %d.", motorNum);
         return;
     }
     if (!_is_valid_throttle_percentage(throttle))
@@ -195,14 +186,14 @@ void MotorTask::startMotorTest(uint8_t motorNum, float throttle, uint32_t durati
     _testDuration = duration_ms;
     _testStartTime = millis();
     _motorTestState = SPINNING_TIMED;
-    com_send_log(LOG_INFO, "MotorTest: Motor %d spinning at %.1f%% throttle for %lu ms.", motorNum + 1, throttle * PERCENTAGE_TO_NORMALIZED_FACTOR, duration_ms);
+    com_send_log(ComMessageType::LOG_INFO, "MotorTest: Motor %d spinning at %.1f%% throttle for %lu ms.", motorNum + 1, throttle * PERCENTAGE_TO_NORMALIZED_FACTOR, duration_ms);
 }
 
 void MotorTask::startContinuousMotorTest(uint8_t motorNum, float throttle)
 {
     if (motorNum >= NUM_MOTORS)
     {
-        com_send_log(LOG_ERROR, "MotorTest: Invalid motor number %d.", motorNum);
+        com_send_log(ComMessageType::LOG_ERROR, "MotorTest: Invalid motor number %d.", motorNum);
         return;
     }
     if (!_is_valid_throttle_percentage(throttle))
@@ -215,7 +206,7 @@ void MotorTask::startContinuousMotorTest(uint8_t motorNum, float throttle)
     _testMotorNum = motorNum;
     _testThrottle = throttle;
     _motorTestState = SPINNING_CONTINUOUS;
-    com_send_log(LOG_INFO, "MotorTest: Motor %d spinning continuously at %.1f%% throttle. Send 'motor stop' to stop.", motorNum + 1, throttle * PERCENTAGE_TO_NORMALIZED_FACTOR);
+    com_send_log(ComMessageType::LOG_INFO, "MotorTest: Motor %d spinning continuously at %.1f%% throttle. Send 'motor stop' to stop.", motorNum + 1, throttle * PERCENTAGE_TO_NORMALIZED_FACTOR);
 }
 
 void MotorTask::stopMotorTest()
@@ -231,10 +222,10 @@ void MotorTask::stopMotorTest()
         {
             if (_dshot_drivers[i])
             {
-                _dshot_drivers[i]->sendThrottle(0); // Stop all motors
+                _dshot_drivers[i].get()->sendThrottle(0); // Stop all motors
             }
         }
-        com_send_log(LOG_INFO, "MotorTest: All motors stopped.");
+        com_send_log(ComMessageType::LOG_INFO, "MotorTest: All motors stopped.");
     }
 }
 
@@ -242,7 +233,7 @@ bool MotorTask::_is_valid_throttle_percentage(float throttle)
 {
     if (throttle < 0.0f || throttle > 1.0f)
     {
-        com_send_log(LOG_ERROR, "MotorTest: Invalid throttle percentage %f. Must be between 0 and 1.", throttle);
+        com_send_log(ComMessageType::LOG_ERROR, "MotorTest: Invalid throttle percentage %f. Must be between 0 and 1.", throttle);
         return false;
     }
     return true;

@@ -8,6 +8,7 @@
 #pragma once
 
 #include <Arduino.h>
+#include <memory>
 #include "../scheduler/task_base.h"
 #include "DShotRMT.h"
 #include "../config/motor_config.h"
@@ -27,8 +28,6 @@ public:
     void setThrottle(uint8_t motor_id, uint16_t throttle);
     uint16_t getMotorOutput(uint8_t motor_id) const;
 
-    ~MotorTask();
-
 public:
     enum MotorTestState
     {
@@ -43,7 +42,7 @@ public:
     bool isInTestMode() const { return _motorTestState != IDLE; }
 
 private:
-    DShotRMT *_dshot_drivers[NUM_MOTORS];
+    std::unique_ptr<DShotRMT> _dshot_drivers[NUM_MOTORS];
     uint16_t _motor_throttles[NUM_MOTORS];
     const int *_motor_pins;
     SettingsManager *_settings_manager;

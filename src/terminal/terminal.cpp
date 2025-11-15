@@ -138,7 +138,7 @@ void Terminal::handleInput(char incoming_char)
 void Terminal::showPrompt()
 {
     com_flush_output();
-    com_send_log(TERMINAL_OUTPUT, "");
+    com_send_log(ComMessageType::TERMINAL_OUTPUT, "");
     String system_name = _settings_manager->getSettingValue(KEY_SYSTEM_NAME);
     String prompt = "[" + system_name + " ~]";
     com_send_prompt(prompt.c_str());
@@ -184,7 +184,7 @@ void Terminal::_parse_command(String &command_line)
         return;
     }
 
-    com_send_log(LOG_ERROR, "Unknown command: %s", command_line.c_str());
+    com_send_log(ComMessageType::LOG_ERROR, "Unknown command: %s", command_line.c_str());
 }
 
 const char *Terminal::_get_category_string(CommandCategory category)
@@ -329,16 +329,16 @@ bool Terminal::_category_has_settings(CommandCategory category)
 // Command Handlers
 void Terminal::_handle_help(String &args)
 {
-    com_send_log(TERMINAL_OUTPUT, "");
+    com_send_log(ComMessageType::TERMINAL_OUTPUT, "");
 
     if (args.length() == 0)
     {
-        com_send_log(TERMINAL_OUTPUT, "--- Flight32 Terminal Help ---");
-        com_send_log(TERMINAL_OUTPUT, "");
-        com_send_log(TERMINAL_OUTPUT, "Usage: help <category>");
-        com_send_log(TERMINAL_OUTPUT, "");
+        com_send_log(ComMessageType::TERMINAL_OUTPUT, "--- Flight32 Terminal Help ---");
+        com_send_log(ComMessageType::TERMINAL_OUTPUT, "");
+        com_send_log(ComMessageType::TERMINAL_OUTPUT, "Usage: help <category>");
+        com_send_log(ComMessageType::TERMINAL_OUTPUT, "");
 
-        com_send_log(TERMINAL_OUTPUT, "Core Commands:");
+        com_send_log(ComMessageType::TERMINAL_OUTPUT, "Core Commands:");
 
         int max_core_cmd_len = 0;
         for (int i = 0; i < _num_commands; ++i)
@@ -354,21 +354,21 @@ void Terminal::_handle_help(String &args)
         }
         max_core_cmd_len += TERMINAL_COLUMN_BUFFER_WIDTH;
 
-        com_send_log(TERMINAL_OUTPUT, "  %-*s %s", max_core_cmd_len, "Command", "Description");
+        com_send_log(ComMessageType::TERMINAL_OUTPUT, "  %-*s %s", max_core_cmd_len, "Command", "Description");
         String core_separator_str = _generate_separator(max_core_cmd_len, strlen("Description"));
-        com_send_log(TERMINAL_OUTPUT, core_separator_str.c_str());
+        com_send_log(ComMessageType::TERMINAL_OUTPUT, core_separator_str.c_str());
 
         for (int i = 0; i < _num_commands; ++i)
         {
             if (_commands[i].category == CommandCategory::SYSTEM)
             {
-                com_send_log(TERMINAL_OUTPUT, "  %-*s %s", max_core_cmd_len, _commands[i].name, _commands[i].help);
+                com_send_log(ComMessageType::TERMINAL_OUTPUT, "  %-*s %s", max_core_cmd_len, _commands[i].name, _commands[i].help);
             }
         }
-        com_send_log(TERMINAL_OUTPUT, core_separator_str.c_str());
-        com_send_log(TERMINAL_OUTPUT, "");
+        com_send_log(ComMessageType::TERMINAL_OUTPUT, core_separator_str.c_str());
+        com_send_log(ComMessageType::TERMINAL_OUTPUT, "");
 
-        com_send_log(TERMINAL_OUTPUT, "Available Command Categories:");
+        com_send_log(ComMessageType::TERMINAL_OUTPUT, "Available Command Categories:");
 
         int max_category_prefix_len = 0;
         for (int i = 0; i < _num_categories; ++i)
@@ -381,17 +381,17 @@ void Terminal::_handle_help(String &args)
         }
         max_category_prefix_len += TERMINAL_COLUMN_BUFFER_WIDTH;
 
-        com_send_log(TERMINAL_OUTPUT, "  %-*s %s", max_category_prefix_len, "Category", "Description");
+        com_send_log(ComMessageType::TERMINAL_OUTPUT, "  %-*s %s", max_category_prefix_len, "Category", "Description");
         String category_separator_str = _generate_separator(max_category_prefix_len, strlen("Description"));
-        com_send_log(TERMINAL_OUTPUT, category_separator_str.c_str());
+        com_send_log(ComMessageType::TERMINAL_OUTPUT, category_separator_str.c_str());
 
         for (int i = 0; i < _num_categories; ++i)
         {
-            com_send_log(TERMINAL_OUTPUT, "  %-*s %s", max_category_prefix_len, _category_info[i].prefix, _category_info[i].description);
+            com_send_log(ComMessageType::TERMINAL_OUTPUT, "  %-*s %s", max_category_prefix_len, _category_info[i].prefix, _category_info[i].description);
             vTaskDelay(1); // Added delay for verbosity
         }
-        com_send_log(TERMINAL_OUTPUT, category_separator_str.c_str());
-        com_send_log(TERMINAL_OUTPUT, "\n------------------------------");
+        com_send_log(ComMessageType::TERMINAL_OUTPUT, category_separator_str.c_str());
+        com_send_log(ComMessageType::TERMINAL_OUTPUT, "\n------------------------------");
     }
     else
     {
@@ -399,12 +399,12 @@ void Terminal::_handle_help(String &args)
 
         if (requested_category == CommandCategory::UNKNOWN)
         {
-            com_send_log(LOG_ERROR, "Unknown help category: '%s'. Type 'help' for a list of categories.", args.c_str());
+            com_send_log(ComMessageType::LOG_ERROR, "Unknown help category: '%s'. Type 'help' for a list of categories.", args.c_str());
             return;
         }
 
-        com_send_log(TERMINAL_OUTPUT, "--- %s Commands ---", _get_category_string(requested_category));
-        com_send_log(TERMINAL_OUTPUT, "");
+        com_send_log(ComMessageType::TERMINAL_OUTPUT, "--- %s Commands ---", _get_category_string(requested_category));
+        com_send_log(ComMessageType::TERMINAL_OUTPUT, "");
 
         int max_command_name_len = 0;
         for (int i = 0; i < _num_commands; ++i)
@@ -438,34 +438,34 @@ void Terminal::_handle_help(String &args)
             }
         }
 
-        com_send_log(TERMINAL_OUTPUT, "  %-*s %s", max_command_name_len, "Command", "Description");
+        com_send_log(ComMessageType::TERMINAL_OUTPUT, "  %-*s %s", max_command_name_len, "Command", "Description");
         String separator_str = _generate_separator(max_command_name_len, max_description_len);
-        com_send_log(TERMINAL_OUTPUT, separator_str.c_str());
+        com_send_log(ComMessageType::TERMINAL_OUTPUT, separator_str.c_str());
 
         for (int i = 0; i < _num_commands; ++i)
         {
             if (_commands[i].category == requested_category)
             {
-                com_send_log(TERMINAL_OUTPUT, "  %-*s %s", max_command_name_len, _commands[i].name, _commands[i].help);
+                com_send_log(ComMessageType::TERMINAL_OUTPUT, "  %-*s %s", max_command_name_len, _commands[i].name, _commands[i].help);
                 vTaskDelay(1); // Added delay for verbosity
             }
         }
-        com_send_log(TERMINAL_OUTPUT, separator_str.c_str());
-        com_send_log(TERMINAL_OUTPUT, "\n--------------------------");
+        com_send_log(ComMessageType::TERMINAL_OUTPUT, separator_str.c_str());
+        com_send_log(ComMessageType::TERMINAL_OUTPUT, "\n--------------------------");
     }
 }
 
 void Terminal::_handle_status(String &args)
 {
-    com_send_log(TERMINAL_OUTPUT, "");
-    com_send_log(TERMINAL_OUTPUT, "Flight32 Firmware v%s", FIRMWARE_VERSION);
+    com_send_log(ComMessageType::TERMINAL_OUTPUT, "");
+    com_send_log(ComMessageType::TERMINAL_OUTPUT, "Flight32 Firmware v%s", FIRMWARE_VERSION);
 }
 
 void Terminal::_handle_tasks(String &args)
 {
     if (!_scheduler)
     {
-        com_send_log(LOG_ERROR, "Scheduler not available.");
+        com_send_log(ComMessageType::LOG_ERROR, "Scheduler not available.");
         return;
     }
 
@@ -473,18 +473,18 @@ void Terminal::_handle_tasks(String &args)
     TaskStatus_t *freertos_task_status_array = (TaskStatus_t *)pvPortMalloc(num_freertos_tasks * sizeof(TaskStatus_t));
     uint32_t total_run_time = 0;
 
-    if (freertos_task_status_array == NULL)
+    if (freertos_task_status_array == nullptr)
     {
-        com_send_log(LOG_ERROR, "Failed to allocate memory for FreeRTOS task list.");
+        com_send_log(ComMessageType::LOG_ERROR, "Failed to allocate memory for FreeRTOS task list.");
         return;
     }
 
     num_freertos_tasks = uxTaskGetSystemState(freertos_task_status_array, num_freertos_tasks, &total_run_time);
 
-    com_send_log(TERMINAL_OUTPUT, "");
-    com_send_log(TERMINAL_OUTPUT, "% -16s %-10s %-6s %-8s %-10s %-10s %-10s %s",
+    com_send_log(ComMessageType::TERMINAL_OUTPUT, "");
+    com_send_log(ComMessageType::TERMINAL_OUTPUT, "% -16s %-10s %-6s %-8s %-10s %-10s %-10s %s",
                  "Task Name", "State", "Prio", "CPU %", "Loop (us)", "Avg (us)", "Max (us)", "Stack HWM (bytes)");
-    com_send_log(TERMINAL_OUTPUT, "---------------------------------------------------------------------------------------------------");
+    com_send_log(ComMessageType::TERMINAL_OUTPUT, "---------------------------------------------------------------------------------------------------");
 
     for (uint8_t i = 0; i < _scheduler->getTaskCount(); i++)
     {
@@ -530,17 +530,17 @@ void Terminal::_handle_tasks(String &args)
                  TASK_AVG_LOOP_COLUMN_WIDTH, current_task->getAvgLoopTime(),
                  TASK_MAX_LOOP_COLUMN_WIDTH, current_task->getMaxLoopTime(),
                  freertos_status.usStackHighWaterMark);
-        com_send_log(TERMINAL_OUTPUT, output_buffer);
+        com_send_log(ComMessageType::TERMINAL_OUTPUT, output_buffer);
     }
-    com_send_log(TERMINAL_OUTPUT, "---------------------------------------------------------------------------------------------------");
+    com_send_log(ComMessageType::TERMINAL_OUTPUT, "---------------------------------------------------------------------------------------------------");
 
     vPortFree(freertos_task_status_array);
 }
 
 void Terminal::_handle_mem(String &args)
 {
-    com_send_log(TERMINAL_OUTPUT, "");
-    com_send_log(TERMINAL_OUTPUT, "Memory (Heap):");
+    com_send_log(ComMessageType::TERMINAL_OUTPUT, "");
+    com_send_log(ComMessageType::TERMINAL_OUTPUT, "Memory (Heap):");
 
     int max_label_len = 0;
     const char *labels[] = {"Total:", "Free:", "Min Free:"};
@@ -554,33 +554,33 @@ void Terminal::_handle_mem(String &args)
     }
     max_label_len += TERMINAL_COLUMN_BUFFER_WIDTH;
 
-    com_send_log(TERMINAL_OUTPUT, "  %-*s %s", max_label_len, "Total:", com_format_bytes(ESP.getHeapSize()));
-    com_send_log(TERMINAL_OUTPUT, "  %-*s %s", max_label_len, "Free:", com_format_bytes(ESP.getFreeHeap()));
-    com_send_log(TERMINAL_OUTPUT, "  %-*s %s", max_label_len, "Min Free:", com_format_bytes(ESP.getMinFreeHeap()));
+    com_send_log(ComMessageType::TERMINAL_OUTPUT, "  %-*s %s", max_label_len, "Total:", com_format_bytes(ESP.getHeapSize()));
+    com_send_log(ComMessageType::TERMINAL_OUTPUT, "  %-*s %s", max_label_len, "Free:", com_format_bytes(ESP.getFreeHeap()));
+    com_send_log(ComMessageType::TERMINAL_OUTPUT, "  %-*s %s", max_label_len, "Min Free:", com_format_bytes(ESP.getMinFreeHeap()));
 }
 
 void Terminal::_handle_reboot(String &args)
 {
-    com_send_log(TERMINAL_OUTPUT, "");
-    com_send_log(TERMINAL_OUTPUT, "Rebooting...");
+    com_send_log(ComMessageType::TERMINAL_OUTPUT, "");
+    com_send_log(ComMessageType::TERMINAL_OUTPUT, "Rebooting...");
 
     delayMicroseconds(ONE_SECOND_MICROSECONDS);
 
-    com_send_log(TERMINAL_OUTPUT, "");
-    com_send_log(TERMINAL_OUTPUT, "");
+    com_send_log(ComMessageType::TERMINAL_OUTPUT, "");
+    com_send_log(ComMessageType::TERMINAL_OUTPUT, "");
 
     ESP.restart();
 }
 
 void Terminal::_handle_quit(String &args)
 {
-    com_send_log(TERMINAL_OUTPUT, "Saving settings and exiting...");
+    com_send_log(ComMessageType::TERMINAL_OUTPUT, "Saving settings and exiting...");
     if (_motor_task && _motor_task->isInTestMode())
     {
         _motor_task->stopMotorTest();
     }
     _settings_manager->saveSettings(); // Save settings before quitting
-    com_send_log(TERMINAL_OUTPUT, "Goodbye!");
+    com_send_log(ComMessageType::TERMINAL_OUTPUT, "Goodbye!");
     _should_quit = true;
 }
 
@@ -588,12 +588,12 @@ void Terminal::_handle_imu_data(String &args)
 {
     if (!_imu_task)
     {
-        com_send_log(LOG_ERROR, "IMU task not available.");
+        com_send_log(ComMessageType::LOG_ERROR, "IMU task not available.");
         return;
     }
 
     const ImuData &data = _imu_task->getImuSensor().getData();
-    com_send_log(TERMINAL_OUTPUT, "Acc: x=%.2f, y=%.2f, z=%.2f | Gyro: x=%.2f, y=%.2f, z=%.2f | Temp: %.2f C",
+    com_send_log(ComMessageType::TERMINAL_OUTPUT, "Acc: x=%.2f, y=%.2f, z=%.2f | Gyro: x=%.2f, y=%.2f, z=%.2f | Temp: %.2f C",
                  data.accelX, data.accelY, data.accelZ,
                  data.gyroX, data.gyroY, data.gyroZ,
                  data.temp);
@@ -603,20 +603,20 @@ void Terminal::_handle_imu_calibrate(String &args)
 {
     if (!_imu_task)
     {
-        com_send_log(LOG_ERROR, "IMU task not available.");
+        com_send_log(ComMessageType::LOG_ERROR, "IMU task not available.");
         return;
     }
 
-    com_send_log(LOG_INFO, "Calibrating IMU sensor...");
+    com_send_log(ComMessageType::LOG_INFO, "Calibrating IMU sensor...");
     _imu_task->getImuSensor().calibrate();
-    com_send_log(LOG_INFO, "IMU sensor calibration complete.");
+    com_send_log(ComMessageType::LOG_INFO, "IMU sensor calibration complete.");
 }
 
 void Terminal::_handle_imu_lpf_bandwidth(String &args)
 {
     if (!_imu_task)
     {
-        com_send_log(LOG_ERROR, "IMU task not available.");
+        com_send_log(ComMessageType::LOG_ERROR, "IMU task not available.");
         return;
     }
 
@@ -625,8 +625,8 @@ void Terminal::_handle_imu_lpf_bandwidth(String &args)
         // Get current LPF bandwidth
         String current_lpf_bandwidth_index_str = _settings_manager->getSettingValue(KEY_IMU_LPF_BANDWIDTH);
         String current_lpf_bandwidth_str = _settings_manager->getSettingValueHumanReadable(KEY_IMU_LPF_BANDWIDTH);
-        com_send_log(TERMINAL_OUTPUT, "Current IMU LPF Bandwidth: %s (Index: %s)", current_lpf_bandwidth_str.c_str(), current_lpf_bandwidth_index_str.c_str());
-        com_send_log(TERMINAL_OUTPUT, "Available options:");
+        com_send_log(ComMessageType::TERMINAL_OUTPUT, "Current IMU LPF Bandwidth: %s (Index: %s)", current_lpf_bandwidth_str.c_str(), current_lpf_bandwidth_index_str.c_str());
+        com_send_log(ComMessageType::TERMINAL_OUTPUT, "Available options:");
         String options_str = _settings_manager->getSettingOptionsHumanReadable(KEY_IMU_LPF_BANDWIDTH);
         int start_index = 0;
         int end_index = options_str.indexOf(',');
@@ -634,24 +634,24 @@ void Terminal::_handle_imu_lpf_bandwidth(String &args)
         {
             String option = options_str.substring(start_index, end_index);
             option.trim();
-            com_send_log(TERMINAL_OUTPUT, "  - %s", option.c_str());
+            com_send_log(ComMessageType::TERMINAL_OUTPUT, "  - %s", option.c_str());
             start_index = end_index + 1;
             end_index = options_str.indexOf(',', start_index);
         }
         String last_option = options_str.substring(start_index);
         last_option.trim();
-        com_send_log(TERMINAL_OUTPUT, "  - %s", last_option.c_str());
+        com_send_log(ComMessageType::TERMINAL_OUTPUT, "  - %s", last_option.c_str());
     }
     else
     {
         // Set LPF bandwidth
         if (_settings_manager->setSettingValue(KEY_IMU_LPF_BANDWIDTH, args))
         {
-            com_send_log(LOG_INFO, "IMU LPF Bandwidth set to %s. Reboot to apply changes.", _settings_manager->getSettingValueHumanReadable(KEY_IMU_LPF_BANDWIDTH).c_str());
+            com_send_log(ComMessageType::LOG_INFO, "IMU LPF Bandwidth set to %s. Reboot to apply changes.", _settings_manager->getSettingValueHumanReadable(KEY_IMU_LPF_BANDWIDTH).c_str());
         }
         else
         {
-            com_send_log(LOG_ERROR, "Failed to set IMU LPF Bandwidth to %s. Invalid option.", args.c_str());
+            com_send_log(ComMessageType::LOG_ERROR, "Failed to set IMU LPF Bandwidth to %s. Invalid option.", args.c_str());
         }
     }
 }
@@ -660,11 +660,11 @@ void Terminal::_handle_rx_data(String &args)
 {
     if (!_rx_task)
     {
-        com_send_log(LOG_ERROR, "RX task not available.");
+        com_send_log(ComMessageType::LOG_ERROR, "RX task not available.");
         return;
     }
 
-    com_send_log(TERMINAL_OUTPUT, "RX Channels:");
+    com_send_log(ComMessageType::TERMINAL_OUTPUT, "RX Channels:");
 
     int max_ch_len = 0;
     for (int i = 0; i < TERMINAL_RX_DATA_DISPLAY_CHANNELS; ++i)
@@ -677,28 +677,28 @@ void Terminal::_handle_rx_data(String &args)
     }
     max_ch_len += TERMINAL_COLUMN_BUFFER_WIDTH;
 
-    com_send_log(TERMINAL_OUTPUT, "  %-*s %s", max_ch_len, "Channel", "Value");
+    com_send_log(ComMessageType::TERMINAL_OUTPUT, "  %-*s %s", max_ch_len, "Channel", "Value");
     String separator_str = _generate_separator(max_ch_len, strlen("Value"));
-    com_send_log(TERMINAL_OUTPUT, separator_str.c_str());
+    com_send_log(ComMessageType::TERMINAL_OUTPUT, separator_str.c_str());
 
     for (int i = 0; i < TERMINAL_RX_DATA_DISPLAY_CHANNELS; ++i)
     {
         String ch_str = "CH" + String(i + RC_CHANNEL_INDEX_OFFSET);
-        com_send_log(TERMINAL_OUTPUT, "  %-*s %d", max_ch_len, ch_str.c_str(), _rx_task->getChannel(i));
+        com_send_log(ComMessageType::TERMINAL_OUTPUT, "  %-*s %d", max_ch_len, ch_str.c_str(), _rx_task->getChannel(i));
         vTaskDelay(1); // Added delay for verbosity
     }
-    com_send_log(TERMINAL_OUTPUT, separator_str.c_str());
+    com_send_log(ComMessageType::TERMINAL_OUTPUT, separator_str.c_str());
 }
 
 void Terminal::_handle_rx_status(String &args)
 {
     if (!_rx_task)
     {
-        com_send_log(LOG_ERROR, "RX task not available.");
+        com_send_log(ComMessageType::LOG_ERROR, "RX task not available.");
         return;
     }
 
-    com_send_log(TERMINAL_OUTPUT, "RX Status: Task Available");
+    com_send_log(ComMessageType::TERMINAL_OUTPUT, "RX Status: Task Available");
 }
 
 void Terminal::_handle_rx_protocol(String &args)
@@ -706,18 +706,18 @@ void Terminal::_handle_rx_protocol(String &args)
     if (args.length() == 0)
     {
         String current_protocol = _settings_manager->getSettingValueHumanReadable(KEY_RC_PROTOCOL_TYPE);
-        com_send_log(TERMINAL_OUTPUT, "Current RC Protocol: %s", current_protocol.c_str());
-        com_send_log(TERMINAL_OUTPUT, "Available protocols: IBUS, PPM");
+        com_send_log(ComMessageType::TERMINAL_OUTPUT, "Current RC Protocol: %s", current_protocol.c_str());
+        com_send_log(ComMessageType::TERMINAL_OUTPUT, "Available protocols: IBUS, PPM");
     }
     else
     {
         if (_settings_manager->setSettingValue(KEY_RC_PROTOCOL_TYPE, args))
         {
-            com_send_log(LOG_INFO, "RC Protocol set to %s. Reboot to apply changes.", _settings_manager->getSettingValueHumanReadable(KEY_RC_PROTOCOL_TYPE).c_str());
+            com_send_log(ComMessageType::LOG_INFO, "RC Protocol set to %s. Reboot to apply changes.", _settings_manager->getSettingValueHumanReadable(KEY_RC_PROTOCOL_TYPE).c_str());
         }
         else
         {
-            com_send_log(LOG_ERROR, "Failed to set RC Protocol to %s. Invalid protocol or value.", args.c_str());
+            com_send_log(ComMessageType::LOG_ERROR, "Failed to set RC Protocol to %s. Invalid protocol or value.", args.c_str());
         }
     }
 }
@@ -726,7 +726,7 @@ void Terminal::_handle_rx_value_single(String &args)
 {
     if (!_rx_task)
     {
-        com_send_log(LOG_ERROR, "RX task not available.");
+        com_send_log(ComMessageType::LOG_ERROR, "RX task not available.");
         return;
     }
 
@@ -745,7 +745,7 @@ void Terminal::_handle_rx_value_single(String &args)
 
     if (key == nullptr)
     {
-        com_send_log(LOG_ERROR, "Unknown RX channel: %s", channel_name.c_str());
+        com_send_log(ComMessageType::LOG_ERROR, "Unknown RX channel: %s", channel_name.c_str());
         return;
     }
 
@@ -755,18 +755,18 @@ void Terminal::_handle_rx_value_single(String &args)
     const int fixed_desc_width = TERMINAL_RX_SINGLE_DESC_WIDTH;
 
     String desc_str = "RX " + channel_name + " (CH" + String(channel_index + RC_CHANNEL_INDEX_OFFSET) + ")";
-    com_send_log(TERMINAL_OUTPUT, "  %-*s %d", fixed_desc_width, desc_str.c_str(), value);
+    com_send_log(ComMessageType::TERMINAL_OUTPUT, "  %-*s %d", fixed_desc_width, desc_str.c_str(), value);
 }
 
 void Terminal::_handle_rx_value_all(String &args)
 {
     if (!_rx_task)
     {
-        com_send_log(LOG_ERROR, "RX task not available.");
+        com_send_log(ComMessageType::LOG_ERROR, "RX task not available.");
         return;
     }
 
-    com_send_log(TERMINAL_OUTPUT, "All Mapped RX Channels:");
+    com_send_log(ComMessageType::TERMINAL_OUTPUT, "All Mapped RX Channels:");
 
     int max_desc_len = 0;
     for (const auto &mapping : _channel_map)
@@ -780,9 +780,9 @@ void Terminal::_handle_rx_value_all(String &args)
     }
     max_desc_len += TERMINAL_COLUMN_BUFFER_WIDTH;
 
-    com_send_log(TERMINAL_OUTPUT, "  %-*s %s", max_desc_len, "Channel", "Value");
+    com_send_log(ComMessageType::TERMINAL_OUTPUT, "  %-*s %s", max_desc_len, "Channel", "Value");
     String separator_str = _generate_separator(max_desc_len, strlen("Value"));
-    com_send_log(TERMINAL_OUTPUT, separator_str.c_str());
+    com_send_log(ComMessageType::TERMINAL_OUTPUT, separator_str.c_str());
 
     for (const auto &mapping : _channel_map)
     {
@@ -790,10 +790,10 @@ void Terminal::_handle_rx_value_all(String &args)
         int channel_index_1_based = channel_index_0_based + RC_CHANNEL_INDEX_OFFSET;
         int16_t value = _rx_task->getChannel(channel_index_0_based);
         String desc_str = String(mapping.name) + " (CH" + String(channel_index_1_based) + ")";
-        com_send_log(TERMINAL_OUTPUT, "  %-*s %d", max_desc_len, desc_str.c_str(), value);
+        com_send_log(ComMessageType::TERMINAL_OUTPUT, "  %-*s %d", max_desc_len, desc_str.c_str(), value);
         vTaskDelay(1); // Added delay for verbosity
     }
-    com_send_log(TERMINAL_OUTPUT, separator_str.c_str());
+    com_send_log(ComMessageType::TERMINAL_OUTPUT, separator_str.c_str());
 }
 
 void Terminal::_handle_rx_channel_mapping(String &args)
@@ -801,7 +801,7 @@ void Terminal::_handle_rx_channel_mapping(String &args)
     int space_index = args.indexOf(' ');
     if (space_index == -1)
     {
-        com_send_log(LOG_ERROR, "Usage: set rx.channel.<name> <1-based_index>");
+        com_send_log(ComMessageType::LOG_ERROR, "Usage: set rx.channel.<name> <1-based_index>");
         return;
     }
 
@@ -811,7 +811,7 @@ void Terminal::_handle_rx_channel_mapping(String &args)
 
     if (channel_index_1_based < TERMINAL_MIN_CHANNEL_INDEX || channel_index_1_based > TERMINAL_MAX_CHANNEL_INDEX)
     {
-        com_send_log(LOG_ERROR, "Invalid channel index: %d. Must be between %d and %d.", channel_index_1_based, TERMINAL_MIN_CHANNEL_INDEX, TERMINAL_MAX_CHANNEL_INDEX);
+        com_send_log(ComMessageType::LOG_ERROR, "Invalid channel index: %d. Must be between %d and %d.", channel_index_1_based, TERMINAL_MIN_CHANNEL_INDEX, TERMINAL_MAX_CHANNEL_INDEX);
         return;
     }
 
@@ -829,17 +829,17 @@ void Terminal::_handle_rx_channel_mapping(String &args)
 
     if (key == nullptr)
     {
-        com_send_log(LOG_ERROR, "Unknown RX channel name for mapping: %s", channel_name_arg.c_str());
+        com_send_log(ComMessageType::LOG_ERROR, "Unknown RX channel name for mapping: %s", channel_name_arg.c_str());
         return;
     }
 
     if (_settings_manager->setSettingValue(key, String(channel_index_0_based)))
     {
-        com_send_log(LOG_INFO, "RX channel '%s' mapped to physical channel %d. Reboot to apply changes.", channel_name_arg.c_str(), channel_index_1_based);
+        com_send_log(ComMessageType::LOG_INFO, "RX channel '%s' mapped to physical channel %d. Reboot to apply changes.", channel_name_arg.c_str(), channel_index_1_based);
     }
     else
     {
-        com_send_log(LOG_ERROR, "Failed to map RX channel '%s' to physical channel %d.", channel_name_arg.c_str(), channel_index_1_based);
+        com_send_log(ComMessageType::LOG_ERROR, "Failed to map RX channel '%s' to physical channel %d.", channel_name_arg.c_str(), channel_index_1_based);
     }
 }
 
@@ -847,14 +847,14 @@ void Terminal::_handle_motor_throttle(String &args)
 {
     if (!_motor_task)
     {
-        com_send_log(LOG_ERROR, "Motor task not available.");
+        com_send_log(ComMessageType::LOG_ERROR, "Motor task not available.");
         return;
     }
 
     int space_index = args.indexOf(' ');
     if (space_index == -1)
     {
-        com_send_log(LOG_ERROR, "Usage: motor.throttle <motor_name> <throttle_value>");
+        com_send_log(ComMessageType::LOG_ERROR, "Usage: motor.throttle <motor_name> <throttle_value>");
         return;
     }
 
@@ -866,30 +866,30 @@ void Terminal::_handle_motor_throttle(String &args)
 
     if (motor_id == -1)
     {
-        com_send_log(LOG_ERROR, "Invalid motor name: %s. Must be FL, FR, RL, or RR.", motor_name_str.c_str());
+        com_send_log(ComMessageType::LOG_ERROR, "Invalid motor name: %s. Must be FL, FR, RL, or RR.", motor_name_str.c_str());
         return;
     }
 
     if (throttle_value > MAX_THROTTLE_VALUE)
     {
-        com_send_log(LOG_ERROR, "Invalid throttle value: %d. Must be between 0 and %d.", throttle_value, MAX_THROTTLE_VALUE);
+        com_send_log(ComMessageType::LOG_ERROR, "Invalid throttle value: %d. Must be between 0 and %d.", throttle_value, MAX_THROTTLE_VALUE);
         return;
     }
 
     _motor_task->setThrottle(motor_id, throttle_value);
-    com_send_log(TERMINAL_OUTPUT, "Motor %s throttle set to %d.", _get_motor_name(motor_id), throttle_value);
+    com_send_log(ComMessageType::TERMINAL_OUTPUT, "Motor %s throttle set to %d.", _get_motor_name(motor_id), throttle_value);
 }
 
 void Terminal::_handle_motor_test(String &args)
 {
     if (!_motor_task)
     {
-        com_send_log(LOG_ERROR, "Motor task not available.");
+        com_send_log(ComMessageType::LOG_ERROR, "Motor task not available.");
         return;
     }
     if (_pid_task && _pid_task->isArmed())
     {
-        com_send_log(LOG_ERROR, "Cannot run motor test while armed. Disarm first.");
+        com_send_log(ComMessageType::LOG_ERROR, "Cannot run motor test while armed. Disarm first.");
         return;
     }
 
@@ -901,7 +901,7 @@ void Terminal::_handle_motor_test(String &args)
     int first_space = args.indexOf(' ');
     if (first_space == -1)
     {
-        com_send_log(LOG_ERROR, "Usage: motor test <motor_name> <throttle_percentage> [duration_ms]");
+        com_send_log(ComMessageType::LOG_ERROR, "Usage: motor test <motor_name> <throttle_percentage> [duration_ms]");
         return;
     }
 
@@ -922,12 +922,12 @@ void Terminal::_handle_motor_test(String &args)
 
     if (motor_id == -1)
     {
-        com_send_log(LOG_ERROR, "Invalid motor name: %s. Must be FL, FR, RL, or RR.", motor_name_str.c_str());
+        com_send_log(ComMessageType::LOG_ERROR, "Invalid motor name: %s. Must be FL, FR, RL, or RR.", motor_name_str.c_str());
         return;
     }
     if (throttle_percentage < 0.0f || throttle_percentage > MAX_THROTTLE_PERCENTAGE)
     {
-        com_send_log(LOG_ERROR, "Invalid throttle percentage. Must be between 0 and %d.", (int)MAX_THROTTLE_PERCENTAGE);
+        com_send_log(ComMessageType::LOG_ERROR, "Invalid throttle percentage. Must be between 0 and %d.", (int)MAX_THROTTLE_PERCENTAGE);
         return;
     }
 
@@ -948,7 +948,7 @@ void Terminal::_handle_motor_stop(String &args)
 {
     if (!_motor_task)
     {
-        com_send_log(LOG_ERROR, "Motor task not available.");
+        com_send_log(ComMessageType::LOG_ERROR, "Motor task not available.");
         return;
     }
     _motor_task->stopMotorTest();
@@ -958,7 +958,7 @@ void Terminal::_handle_get_setting(String &args)
 {
     if (args.length() == 0)
     {
-        com_send_log(LOG_ERROR, "Usage: get <key>");
+        com_send_log(ComMessageType::LOG_ERROR, "Usage: get <key>");
         return;
     }
 
@@ -966,7 +966,7 @@ void Terminal::_handle_get_setting(String &args)
 
     if (internal_key == nullptr)
     {
-        com_send_log(LOG_ERROR, "Unknown setting: %s", args.c_str());
+        com_send_log(ComMessageType::LOG_ERROR, "Unknown setting: %s", args.c_str());
         return;
     }
 
@@ -974,11 +974,11 @@ void Terminal::_handle_get_setting(String &args)
     const char *description = _settings_manager->getSettingDescription(internal_key);
     if (value.length() > 0)
     {
-        com_send_log(TERMINAL_OUTPUT, "%s (%s): %s", args.c_str(), description, value.c_str());
+        com_send_log(ComMessageType::TERMINAL_OUTPUT, "%s (%s): %s", args.c_str(), description, value.c_str());
     }
     else
     {
-        com_send_log(LOG_ERROR, "Could not retrieve value for setting: %s", args.c_str());
+        com_send_log(ComMessageType::LOG_ERROR, "Could not retrieve value for setting: %s", args.c_str());
     }
 }
 
@@ -987,7 +987,7 @@ void Terminal::_handle_set_setting(String &args)
     int equals_index = args.indexOf('=');
     if (equals_index == -1)
     {
-        com_send_log(LOG_ERROR, "Usage: set <key> = <value>");
+        com_send_log(ComMessageType::LOG_ERROR, "Usage: set <key> = <value>");
         return;
     }
 
@@ -1000,24 +1000,24 @@ void Terminal::_handle_set_setting(String &args)
 
     if (internal_key == nullptr)
     {
-        com_send_log(LOG_ERROR, "Unknown setting: %s", display_key.c_str());
+        com_send_log(ComMessageType::LOG_ERROR, "Unknown setting: %s", display_key.c_str());
         return;
     }
 
     if (_settings_manager->setSettingValue(internal_key, value_str))
     {
-        com_send_log(LOG_INFO, "Set %s to %s", display_key.c_str(), _settings_manager->getSettingValueHumanReadable(internal_key).c_str());
+        com_send_log(ComMessageType::LOG_INFO, "Set %s to %s", display_key.c_str(), _settings_manager->getSettingValueHumanReadable(internal_key).c_str());
     }
     else
     {
-        com_send_log(LOG_ERROR, "Failed to set %s (%s) to %s. Invalid value or out of range.", display_key.c_str(), _settings_manager->getSettingDescription(internal_key), value_str.c_str());
+        com_send_log(ComMessageType::LOG_ERROR, "Failed to set %s (%s) to %s. Invalid value or out of range.", display_key.c_str(), _settings_manager->getSettingDescription(internal_key), value_str.c_str());
     }
 }
 
 void Terminal::_handle_save_settings(String &args)
 {
     _settings_manager->saveSettings();
-    com_send_log(LOG_INFO, "Settings saved to NVS.");
+    com_send_log(ComMessageType::LOG_INFO, "Settings saved to NVS.");
 }
 
 void Terminal::_handle_factory_reset(String &args)
@@ -1025,18 +1025,18 @@ void Terminal::_handle_factory_reset(String &args)
     if (args.equalsIgnoreCase("confirm"))
     {
         _settings_manager->factoryReset();
-        com_send_log(LOG_INFO, "Settings reset to default values. Rebooting...");
+        com_send_log(ComMessageType::LOG_INFO, "Settings reset to default values. Rebooting...");
         ESP.restart();
     }
     else
     {
-        com_send_log(LOG_WARN, "Factory reset will erase all settings. To confirm, type 'factory_reset confirm'");
+        com_send_log(ComMessageType::LOG_WARN, "Factory reset will erase all settings. To confirm, type 'factory_reset confirm'");
     }
 }
 
 void Terminal::_handle_list_settings(String &args)
 {
-    com_send_log(TERMINAL_OUTPUT, "\n--- Available Settings ---");
+    com_send_log(ComMessageType::TERMINAL_OUTPUT, "\n--- Available Settings ---");
 
     for (int cat_idx = 0; cat_idx < _num_categories; ++cat_idx)
     {
@@ -1048,16 +1048,16 @@ void Terminal::_handle_list_settings(String &args)
 
         if (_category_has_settings(current_category))
         {
-            com_send_log(TERMINAL_OUTPUT, "\n--- %s Settings ---", category_name);
+            com_send_log(ComMessageType::TERMINAL_OUTPUT, "\n--- %s Settings ---", category_name);
             _settings_manager->listSettings(current_category);
         }
     }
-    com_send_log(TERMINAL_OUTPUT, "--------------------------");
+    com_send_log(ComMessageType::TERMINAL_OUTPUT, "--------------------------");
 }
 
 void Terminal::_handle_dump_settings(String &args)
 {
-    com_send_log(TERMINAL_OUTPUT, "\n# Settings Dump");
+    com_send_log(ComMessageType::TERMINAL_OUTPUT, "\n# Settings Dump");
 
     for (int cat_idx = 0; cat_idx < _num_categories; ++cat_idx)
     {
@@ -1069,22 +1069,22 @@ void Terminal::_handle_dump_settings(String &args)
 
         if (_category_has_settings(current_category))
         {
-            com_send_log(TERMINAL_OUTPUT, "\n--- %s Settings ---", category_name);
+            com_send_log(ComMessageType::TERMINAL_OUTPUT, "\n--- %s Settings ---", category_name);
             _settings_manager->dumpSettings(current_category);
         }
     }
-    com_send_log(TERMINAL_OUTPUT, "\n# End of Dump");
+    com_send_log(ComMessageType::TERMINAL_OUTPUT, "\n# End of Dump");
 }
 
 void Terminal::_handle_pid_get(String &args)
 {
     if (!_pid_task)
     {
-        com_send_log(LOG_ERROR, "PID task not available.");
+        com_send_log(ComMessageType::LOG_ERROR, "PID task not available.");
         return;
     }
 
-    com_send_log(TERMINAL_OUTPUT, "PID Gains (scaled by %d):", (int)PID_SCALE_FACTOR);
+    com_send_log(ComMessageType::TERMINAL_OUTPUT, "PID Gains (scaled by %d):", (int)PID_SCALE_FACTOR);
 
     int max_label_len = 0;
     const char *labels[] = {"Roll:", "Pitch:", "Yaw:"};
@@ -1098,43 +1098,43 @@ void Terminal::_handle_pid_get(String &args)
     }
     max_label_len += TERMINAL_COLUMN_BUFFER_WIDTH;
 
-    com_send_log(TERMINAL_OUTPUT, "  %-*s %s", max_label_len, "Axis", "Gains (P, I, D)");
+    com_send_log(ComMessageType::TERMINAL_OUTPUT, "  %-*s %s", max_label_len, "Axis", "Gains (P, I, D)");
     String separator_str = _generate_separator(max_label_len, strlen("Gains (P, I, D)"));
-    com_send_log(TERMINAL_OUTPUT, separator_str.c_str());
+    com_send_log(ComMessageType::TERMINAL_OUTPUT, separator_str.c_str());
 
-    com_send_log(TERMINAL_OUTPUT, "  %-*s P=%d, I=%d, D=%d", max_label_len, "Roll:",
+    com_send_log(ComMessageType::TERMINAL_OUTPUT, "  %-*s P=%d, I=%d, D=%d", max_label_len, "Roll:",
                  (int)(_pid_task->getGains(PidAxis::ROLL).p * PID_SCALE_FACTOR),
                  (int)(_pid_task->getGains(PidAxis::ROLL).i * PID_SCALE_FACTOR),
                  (int)(_pid_task->getGains(PidAxis::ROLL).d * PID_SCALE_FACTOR));
-    com_send_log(TERMINAL_OUTPUT, "  %-*s P=%d, I=%d, D=%d", max_label_len, "Pitch:",
+    com_send_log(ComMessageType::TERMINAL_OUTPUT, "  %-*s P=%d, I=%d, D=%d", max_label_len, "Pitch:",
                  (int)(_pid_task->getGains(PidAxis::PITCH).p * PID_SCALE_FACTOR),
                  (int)(_pid_task->getGains(PidAxis::PITCH).i * PID_SCALE_FACTOR),
                  (int)(_pid_task->getGains(PidAxis::PITCH).d * PID_SCALE_FACTOR));
-    com_send_log(TERMINAL_OUTPUT, "  %-*s P=%d, I=%d, D=%d", max_label_len, "Yaw:",
+    com_send_log(ComMessageType::TERMINAL_OUTPUT, "  %-*s P=%d, I=%d, D=%d", max_label_len, "Yaw:",
                  (int)(_pid_task->getGains(PidAxis::YAW).p * PID_SCALE_FACTOR),
                  (int)(_pid_task->getGains(PidAxis::YAW).i * PID_SCALE_FACTOR),
                  (int)(_pid_task->getGains(PidAxis::YAW).d * PID_SCALE_FACTOR));
-    com_send_log(TERMINAL_OUTPUT, separator_str.c_str());
+    com_send_log(ComMessageType::TERMINAL_OUTPUT, separator_str.c_str());
 }
 
 void Terminal::_handle_pid_set(String &args)
 {
     if (!_pid_task)
     {
-        com_send_log(LOG_ERROR, "PID task not available.");
+        com_send_log(ComMessageType::LOG_ERROR, "PID task not available.");
         return;
     }
 
     int first_space = args.indexOf(' ');
     if (first_space == -1)
     {
-        com_send_log(LOG_ERROR, "Usage: set pid <axis> <p|i|d> <value> (value is scaled by %d)", (int)PID_SCALE_FACTOR);
+        com_send_log(ComMessageType::LOG_ERROR, "Usage: set pid <axis> <p|i|d> <value> (value is scaled by %d)", (int)PID_SCALE_FACTOR);
         return;
     }
     int second_space = args.indexOf(' ', first_space + 1);
     if (second_space == -1)
     {
-        com_send_log(LOG_ERROR, "Usage: set pid <axis> <p|i|d> <value> (value is scaled by %d)", (int)PID_SCALE_FACTOR);
+        com_send_log(ComMessageType::LOG_ERROR, "Usage: set pid <axis> <p|i|d> <value> (value is scaled by %d)", (int)PID_SCALE_FACTOR);
         return;
     }
 
@@ -1157,7 +1157,7 @@ void Terminal::_handle_pid_set(String &args)
     }
     else
     {
-        com_send_log(LOG_ERROR, "Invalid axis: %s. Must be 'roll', 'pitch', or 'yaw'.", axis_str.c_str());
+        com_send_log(ComMessageType::LOG_ERROR, "Invalid axis: %s. Must be 'roll', 'pitch', or 'yaw'.", axis_str.c_str());
         return;
     }
 
@@ -1179,29 +1179,29 @@ void Terminal::_handle_pid_set(String &args)
     }
     else
     {
-        com_send_log(LOG_ERROR, "Invalid gain: %s. Must be 'p', 'i', or 'd'.", gain_str.c_str());
+        com_send_log(ComMessageType::LOG_ERROR, "Invalid gain: %s. Must be 'p', 'i', or 'd'.", gain_str.c_str());
         return;
     }
 
     _pid_task->setGains(axis, gains);
-    com_send_log(TERMINAL_OUTPUT, "Set %s %s to %d.", axis_str.c_str(), gain_str.c_str(), int_value);
+    com_send_log(ComMessageType::TERMINAL_OUTPUT, "Set %s %s to %d.", axis_str.c_str(), gain_str.c_str(), int_value);
 }
 
 void Terminal::_handle_pid_reset_defaults(String &args)
 {
     if (!_pid_task)
     {
-        com_send_log(LOG_ERROR, "PID task not available.");
+        com_send_log(ComMessageType::LOG_ERROR, "PID task not available.");
         return;
     }
 
     if (args.equalsIgnoreCase("confirm"))
     {
         _pid_task->resetToDefaults();
-        com_send_log(LOG_INFO, "PID gains reset to default values.");
+        com_send_log(ComMessageType::LOG_INFO, "PID gains reset to default values.");
     }
     else
     {
-        com_send_log(LOG_WARN, "Reset PID gains to default values. To confirm, type 'reset pid confirm'");
+        com_send_log(ComMessageType::LOG_WARN, "Reset PID gains to default values. To confirm, type 'reset pid confirm'");
     }
 }

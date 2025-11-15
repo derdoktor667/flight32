@@ -31,7 +31,7 @@ public:
     void setHandle(TaskHandle_t handle) { _handle = handle; }
 
 private:
-    TaskHandle_t _handle = NULL;
+    TaskHandle_t _handle = nullptr;
 
 protected:
     TaskBase(const char *name, uint32_t stack_size, UBaseType_t priority, BaseType_t core_id, uint32_t task_delay_ms)

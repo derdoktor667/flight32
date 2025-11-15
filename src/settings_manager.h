@@ -38,8 +38,6 @@ public:
     ImuAxisData getAccelOffsets();
     void setAccelOffsets(const ImuAxisData &offsets);
 
-
-
     enum SettingType
     {
         UINT8,

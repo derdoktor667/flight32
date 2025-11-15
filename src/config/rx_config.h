@@ -7,8 +7,8 @@
 
 #pragma once
 
-#include <cstdint>
 #include <Arduino.h>
+#include <cstdint>
 
 // --- IBUS Task Configuration ---
 constexpr uint32_t RX_TASK_STACK_SIZE = 4096;

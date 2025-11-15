@@ -26,7 +26,7 @@ void RxPpmProtocol::begin(uint8_t rx_pin)
     _ppm_pin = rx_pin;
     pinMode(_ppm_pin, INPUT);
     attachInterrupt(digitalPinToInterrupt(_ppm_pin), RxPpmProtocol::ppmISR, CHANGE);
-    com_send_log(LOG_INFO, "PPM Protocol: Initializing on pin %d", _ppm_pin);
+    com_send_log(ComMessageType::LOG_INFO, "PPM Protocol: Initializing on pin %d", _ppm_pin);
 }
 
 bool RxPpmProtocol::updateChannels()

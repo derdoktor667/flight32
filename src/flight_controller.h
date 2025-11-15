@@ -19,21 +19,22 @@
 #include "tasks/pid_task.h"
 
 #include "settings_manager.h"
+#include <memory>
 
 class FlightController
 {
 public:
     FlightController() = default;
-    ~FlightController();
+
     void setup();
 
 private:
     SettingsManager _settings_manager;
     Scheduler _scheduler;
-    ImuSensor *_imu_sensor = nullptr;
-    ImuTask *_imu_task = nullptr;
-    RxTask *_rx_task = nullptr;
-    SerialManagerTask *_serial_manager_task = nullptr;
-    MotorTask *_motor_task = nullptr;
-    PidTask *_pid_task = nullptr;
+    std::unique_ptr<ImuSensor> _imu_sensor;
+    std::unique_ptr<ImuTask> _imu_task;
+    std::unique_ptr<RxTask> _rx_task;
+    std::unique_ptr<SerialManagerTask> _serial_manager_task;
+    std::unique_ptr<MotorTask> _motor_task;
+    std::unique_ptr<PidTask> _pid_task;
 };

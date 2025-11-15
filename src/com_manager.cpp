@@ -37,25 +37,25 @@ void com_task(void *pvParameters)
             {
                 switch (msg.type)
                 {
-                case LOG_INFO:
+                case ComMessageType::LOG_INFO:
                     Serial.print("[INFO] ");
                     Serial.println(msg.content);
                     break;
-                case LOG_WARN:
+                case ComMessageType::LOG_WARN:
                     Serial.print("[WARN] ");
                     Serial.println(msg.content);
                     break;
-                case LOG_ERROR:
+                case ComMessageType::LOG_ERROR:
                     Serial.print("[ERROR] ");
                     Serial.println(msg.content);
                     break;
-                case TERMINAL_OUTPUT:
+                case ComMessageType::TERMINAL_OUTPUT:
                     Serial.println(msg.content);
                     break;
-                case TERMINAL_PROMPT:
+                case ComMessageType::TERMINAL_PROMPT:
                     Serial.print(msg.content);
                     break;
-                case TERMINAL_FLUSH:
+                case ComMessageType::TERMINAL_FLUSH:
                     // Send a signal to acknowledge the flush operation.
                     xQueueSend(com_flush_signal_queue, &dummy, 0);
                     break;
@@ -63,7 +63,7 @@ void com_task(void *pvParameters)
                     break;
                 }
             }
-            else if (msg.type == TERMINAL_FLUSH)
+            else if (msg.type == ComMessageType::TERMINAL_FLUSH)
             {
                 // Even in MSP mode, acknowledge a flush if it was sent.
                 xQueueSend(com_flush_signal_queue, &dummy, 0);
@@ -73,7 +73,7 @@ void com_task(void *pvParameters)
 }
 
 // Sends a formatted log message to the communication queue.
-void com_send_log(com_message_type_t type, const char *format, ...)
+void com_send_log(ComMessageType type, const char *format, ...)
 {
     // Only send log messages to the queue if in TERMINAL mode.
     if (_current_com_mode == ComSerialMode::TERMINAL)
@@ -95,8 +95,8 @@ void com_send_log(com_message_type_t type, const char *format, ...)
 void com_send_prompt(const char *prompt)
 {
     com_message_t msg;
-    msg.type = TERMINAL_PROMPT;
-    strncpy(msg.content, prompt, COM_MESSAGE_MAX_LENGTH);
+    msg.type = ComMessageType::TERMINAL_PROMPT;
+    snprintf(msg.content, COM_MESSAGE_MAX_LENGTH, "%s", prompt);
     xQueueSend(com_queue, &msg, portMAX_DELAY);
 }
 
@@ -104,7 +104,7 @@ void com_send_prompt(const char *prompt)
 void com_flush_output()
 {
     com_message_t msg;
-    msg.type = TERMINAL_FLUSH;
+    msg.type = ComMessageType::TERMINAL_FLUSH;
     uint8_t dummy;
     xQueueSend(com_queue, &msg, portMAX_DELAY);
     // Wait indefinitely for the flush acknowledgment signal.

@@ -18,6 +18,7 @@
 #include "motor_task.h"
 #include "pid_task.h"
 #include "../terminal/terminal.h"
+#include <memory> // For std::unique_ptr
 
 #include "../protocols/msp_protocol.h"
 
@@ -37,12 +38,13 @@ private:
     MotorTask *_motor_task;
     PidTask *_pid_task;
     SettingsManager *_settings_manager;
-    Terminal *_terminal;
+    std::unique_ptr<Terminal> _terminal; // Use std::unique_ptr for automatic memory management
 
     // Serial Protocol State
     ComSerialMode _current_mode = ComSerialMode::TERMINAL; // Current serial communication mode
     unsigned long _last_msp_activity_ms = 0;
     static constexpr unsigned long MSP_TIMEOUT_MS = 2000; // Switch back to terminal after 2 seconds of no MSP activity
+    uint8_t _msp_handshake_state = 0; // State for MSP handshake sequence
 
     // MSP Mode Variables
     enum class MspState

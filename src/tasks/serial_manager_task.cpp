@@ -8,7 +8,7 @@
 #include "serial_manager_task.h"
 #include "../utils/version_info.h"
 #include <cmath>
-#include <math.h>
+#include <cmath>
 #include "imu_task.h"
 #include "../config/terminal_config.h"
 #include "../config/serial_config.h"
@@ -50,7 +50,7 @@ SerialManagerTask::SerialManagerTask(const char *name, uint32_t stackSize, UBase
       _pid_task(pid_task),
       _settings_manager(settings_manager)
 {
-    _terminal = new Terminal(_scheduler, _imu_task, _rx_task, _motor_task, _pid_task, _settings_manager);
+    _terminal = std::make_unique<Terminal>(_scheduler, _imu_task, _rx_task, _motor_task, _pid_task, _settings_manager);
 }
 
 void SerialManagerTask::setup()
@@ -68,25 +68,25 @@ void SerialManagerTask::run()
         if (_current_mode == ComSerialMode::TERMINAL)
         {
             // Look for '$', 'R', 'M', 'S', 'P' sequence
-            static uint8_t handshake_state = 0;
+
             const char msp_handshake[] = "$RMSP";
 
-            if (c == msp_handshake[handshake_state])
+            if (c == msp_handshake[_msp_handshake_state])
             {
-                handshake_state++;
-                if (handshake_state == strlen(msp_handshake))
+                _msp_handshake_state++;
+                if (_msp_handshake_state == strlen(msp_handshake))
                 {
                     _current_mode = ComSerialMode::MSP;
                     com_set_serial_mode(ComSerialMode::MSP); // Set com_manager to MSP mode
                     _last_msp_activity_ms = millis();
                     Serial.println("[INFO] Switched to MSP mode (direct print)."); // Direct print for debugging
-                    handshake_state = 0;                                           // Reset handshake state
-                    continue;                                                      // Don't process this char as terminal input
+                    _msp_handshake_state = 0;                                           // Reset handshake state
+                    continue;                                                      // Don\'t process this char as terminal input
                 }
             }
             else
             {
-                handshake_state = 0; // Reset if sequence is broken
+                _msp_handshake_state = 0; // Reset if sequence is broken
             }
         }
 
@@ -355,13 +355,13 @@ void SerialManagerTask::_handle_msp_get_setting()
 
     if (internal_key == nullptr)
     {
-        com_send_log(LOG_ERROR, "MSP_GET_SETTING: Unknown setting display key: %s", display_key_str.c_str());
+        com_send_log(ComMessageType::LOG_ERROR, "MSP_GET_SETTING: Unknown setting display key: %s", display_key_str.c_str());
         _send_msp_response(MSP_GET_SETTING, nullptr, 0); // Error: unknown setting
         return;
     }
 
     String value_str = _settings_manager->getSettingValueHumanReadable(internal_key);
-    com_send_log(LOG_INFO, "MSP_GET_SETTING: Retrieved %s (internal: %s) = %s", display_key_str.c_str(), internal_key, value_str.c_str());
+    com_send_log(ComMessageType::LOG_INFO, "MSP_GET_SETTING: Retrieved %s (internal: %s) = %s", display_key_str.c_str(), internal_key, value_str.c_str());
 
     // Response payload: [key_length (1 byte)] [key_string (variable)] [value_length (1 byte)] [value_string (variable)]
     // Max payload size is 128, so need to be careful with string lengths

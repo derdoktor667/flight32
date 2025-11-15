@@ -12,7 +12,7 @@
 #include <cstdarg>
 #include "config/com_manager_config.h"
 
-typedef enum
+enum class ComMessageType
 {
     LOG_INFO,
     LOG_WARN,
@@ -20,11 +20,11 @@ typedef enum
     TERMINAL_OUTPUT,
     TERMINAL_PROMPT,
     TERMINAL_FLUSH
-} com_message_type_t;
+};
 
 typedef struct
 {
-    com_message_type_t type;
+    ComMessageType type;
     union
     {
         char content[COM_MESSAGE_MAX_LENGTH];
@@ -43,7 +43,7 @@ extern QueueHandle_t com_flush_signal_queue;
 
 void com_task(void *pvParameters);
 
-void com_send_log(com_message_type_t type, const char *format, ...);
+void com_send_log(ComMessageType type, const char *format, ...);
 void com_send_prompt(const char *prompt);
 void com_flush_output();
 const char *com_format_bytes(uint32_t bytes);
