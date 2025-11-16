@@ -202,7 +202,7 @@ void Terminal::handleInput(char incoming_char)
 void Terminal::showPrompt()
 {
     com_flush_output();
-    // com_send_log(ComMessageType::TERMINAL_OUTPUT, "");
+    com_send_log(ComMessageType::TERMINAL_OUTPUT, "");
 
     // Draw some fancy prompt
     String system_name = _settings_manager->getSettingValue(KEY_SYSTEM_NAME);
@@ -567,8 +567,8 @@ void Terminal::_handle_tasks(String &args)
 
     com_send_log(ComMessageType::TERMINAL_OUTPUT, "");
     com_send_log(ComMessageType::TERMINAL_OUTPUT, "% -16s %-10s %-6s %-8s %-10s %-10s %-10s %s",
-                 "Task Name", "State", "Prio", "CPU %", "Loop (us)", "Avg (us)", "Max (us)", "Stack HWM (bytes)");
-    com_send_log(ComMessageType::TERMINAL_OUTPUT, "---------------------------------------------------------------------------------------");
+                 "Task Name", "State", "Prio", "CPU %", "Loop (us)", "Avg (us)", "Max (us)", "Stack");
+    com_send_log(ComMessageType::TERMINAL_OUTPUT, "-------------------------------------------------------------------------------------");
 
     for (uint8_t i = 0; i < _scheduler->getTaskCount(); i++)
     {
@@ -616,7 +616,7 @@ void Terminal::_handle_tasks(String &args)
                  freertos_status.usStackHighWaterMark);
         com_send_log(ComMessageType::TERMINAL_OUTPUT, output_buffer);
     }
-    com_send_log(ComMessageType::TERMINAL_OUTPUT, "---------------------------------------------------------------------------------------");
+    com_send_log(ComMessageType::TERMINAL_OUTPUT, "-------------------------------------------------------------------------------------");
 
     vPortFree(freertos_task_status_array);
 }
