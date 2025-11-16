@@ -21,12 +21,24 @@ Flight32 is a robust, extensible, and user-friendly firmware that turns any ESP3
 
 *   🚀 **Peak Performance & Stability**: Experience ultra-stable flight with a real-time FreeRTOS-based scheduler that guarantees reliable, predictable performance.
 *   🧠 **Dual-Core Powerhouse**: Harnesses the full power of the ESP32's dual-core architecture, dedicating one core to flight-critical tasks and the other to communications.
+*   🛡️ **Robust System State Machine**: A built-in state machine ensures safe and predictable behavior, from initialization to in-flight, with robust error handling and failsafe modes.
 *   🧩 **Clean & Modular Architecture**: A clean, object-oriented design makes the firmware easy to understand, modify, and extend.
 *   📊 **Real-time System Insights**: Tune and debug on the fly with a powerful, built-in terminal and MultiWii Serial Protocol (MSP) support. Monitor CPU load, loop times, and memory usage to squeeze every drop of performance out of your hardware.
 *   🎛️ **Persistent On-the-Fly Tuning**: A full PID controller and complete channel mapping are easily adjustable via the terminal, with all settings saved persistently to non-volatile storage.
 *   📡 **Extensible Receiver & IMU Support**: Built with a generic task structure to easily support new receiver protocols (currently IBUS, PPM) and IMU sensors (currently MPU6050).
-*   🔧 **Configurable MPU6050**: Fine-tune your MPU6050 with configurable gyroscope range, accelerometer range, and low-pass filter settings, along with improved temperature accuracy.
+*   **Configurable MPU6050**: Fine-tune your MPU6050 with configurable gyroscope range, accelerometer range, and low-pass filter settings, along with improved temperature accuracy.
 *   ⚙️ **DShot Motor Control**: Precise and efficient digital motor control using the ESP32's RMT peripheral.
+*   **Configurable Gyro Filtering**: A configurable Biquad filter cascade, including a low-pass filter and two notch filters, to eliminate noise for smoother flight.
+
+## 🏗️ Architecture Overview
+
+Flight32 is built on a modern, modular software architecture designed for real-time performance, safety, and extensibility.
+
+*   **FreeRTOS Task-Based Model**: The firmware's core is a set of independent, real-time tasks managed by the FreeRTOS kernel. Each critical function—such as sensor reading (`ImuTask`), receiver processing (`RxTask`), PID calculations (`PidTask`), and motor control (`MotorTask`)—runs in its own dedicated task. This ensures that a delay in one part of the system (like serial communication) does not impact flight-critical operations.
+
+*   **System State Machine**: To ensure robust and predictable operation, the firmware is governed by a central state machine (`SystemState`). The controller transitions through well-defined states like `INITIALIZING`, `CALIBRATING`, `READY`, and `FAILSAFE`. This prevents unsafe actions, such as arming the motors before the IMU is ready, and provides a clear, safe path for handling system errors.
+
+*   **Object-Oriented and Data-Driven Design**: The codebase is written in C++ with a strong emphasis on object-oriented principles. Hardware and protocols are abstracted behind common interfaces (e.g., `ImuSensor`, `RxProtocol`), making it simple to add support for new components. Configuration is managed centrally and loaded from non-volatile storage, allowing the system's behavior to be modified without recompiling the firmware.
 
 ## 🎬 Terminal in Action
 
@@ -136,6 +148,14 @@ Our interactive serial manager provides complete control over your flight contro
   *   `get pid`        - Gets the current PID gains for all axes.
   *   `set pid <axis> <p|i|d> <value>` - Sets a specific PID gain (e.g., `set pid roll p 20`).
   *   `reset pid confirm` - Resets all PID gains to their default values.
+</details>
+
+<details>
+  <summary><strong>Filter Commands</strong></summary>
+  
+  *   `get filter.<key>` - Gets a filter setting (e.g., `get filter.lpf_hz`).
+  *   `set filter.<key> = <value>` - Sets a filter setting (e.g., `set filter.notch1_hz = 250`).
+  *   `reset filter confirm` - Resets all filter settings to their default values.
 </details>
 
 <details>

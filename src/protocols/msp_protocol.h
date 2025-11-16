@@ -26,9 +26,9 @@ static constexpr uint8_t MSP_BOARD_INFO_PAYLOAD_SIZE = 8;
 static constexpr uint8_t MSP_BUILD_INFO_PAYLOAD_SIZE = 19; // "Nov 12 202512:00:00" is 19 chars
 static constexpr uint8_t MSP_MEM_STATS_PAYLOAD_SIZE = 4;
 static constexpr uint8_t MSP_RAW_IMU_PAYLOAD_SIZE = 18; // 3x Accel, 3x Gyro, 3x Mag (int16_t = 2 bytes each)
-static constexpr uint8_t MSP_ATTITUDE_PAYLOAD_SIZE = 6;  // 3x angles (int16_t = 2 bytes each)
-static constexpr uint8_t MSP_RC_PAYLOAD_SIZE = 16;       // 8x RC channels (int16_t = 2 bytes each)
-static constexpr uint8_t MSP_MOTOR_PAYLOAD_SIZE = 8;     // 4x motor outputs (int16_t = 2 bytes each)
+static constexpr uint8_t MSP_ATTITUDE_PAYLOAD_SIZE = 6; // 3x angles (int16_t = 2 bytes each)
+static constexpr uint8_t MSP_RC_PAYLOAD_SIZE = 16;      // 8x RC channels (int16_t = 2 bytes each)
+static constexpr uint8_t MSP_MOTOR_PAYLOAD_SIZE = 8;    // 4x motor outputs (int16_t = 2 bytes each)
 
 // --- MSP Scaling Factors ---
 static constexpr float MSP_ACCEL_SCALING_FACTOR = 512.0f; // 1G = 512 (approx)
@@ -57,3 +57,5 @@ static constexpr uint8_t MSP_ATTITUDE = 108;
 static constexpr uint8_t MSP_EEPROM_WRITE = 200;
 static constexpr uint8_t MSP_RESET_SETTINGS = 201;
 static constexpr uint8_t MSP_SET_PID = 202;
+static constexpr uint8_t MSP_GET_FILTER_CONFIG = 203;
+static constexpr uint8_t MSP_SET_FILTER_CONFIG = 204;

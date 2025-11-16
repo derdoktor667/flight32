@@ -12,6 +12,7 @@
 #include "imu_task.h"
 #include "../config/terminal_config.h"
 #include "../config/serial_config.h"
+#include "../config/filter_config.h"
 
 static constexpr float RADIANS_TO_DEGREES = 180.0f / M_PI;
 
@@ -39,6 +40,28 @@ void quaternionToEuler(float w, float x, float y, float z, float *roll, float *p
     float siny_cosp = 2 * (w * z + x * y);
     float cosy_cosp = 1 - 2 * (y * y + z * z);
     *yaw = atan2(siny_cosp, cosy_cosp) * RADIANS_TO_DEGREES;
+}
+
+// Helper function to write float to payload
+void SerialManagerTask::_write_float_to_payload(uint8_t *payload, int &index, float value)
+{
+    uint8_t *float_bytes = (uint8_t *)&value;
+    payload[index++] = float_bytes[0];
+    payload[index++] = float_bytes[1];
+    payload[index++] = float_bytes[2];
+    payload[index++] = float_bytes[3];
+}
+
+// Helper function to read float from payload
+float SerialManagerTask::_read_float_from_payload(const uint8_t *payload, int &index)
+{
+    float value;
+    uint8_t *float_bytes = (uint8_t *)&value;
+    float_bytes[0] = payload[index++];
+    float_bytes[1] = payload[index++];
+    float_bytes[2] = payload[index++];
+    float_bytes[3] = payload[index++];
+    return value;
 }
 
 SerialManagerTask::SerialManagerTask(const char *name, uint32_t stackSize, UBaseType_t priority, BaseType_t coreID, uint32_t task_delay_ms, Scheduler *scheduler, ImuTask *imu_task, RxTask *rx_task, MotorTask *motor_task, PidTask *pid_task, SettingsManager *settings_manager)
@@ -213,6 +236,12 @@ void SerialManagerTask::_process_msp_message()
         break;
     case MSP_SET_PID:
         _handle_msp_pid_set();
+        break;
+    case MSP_GET_FILTER_CONFIG:
+        _handle_msp_get_filter_config();
+        break;
+    case MSP_SET_FILTER_CONFIG:
+        _handle_msp_set_filter_config();
         break;
     // Add new MSP command handlers
     case MSP_RAW_IMU:
@@ -439,6 +468,40 @@ void SerialManagerTask::_handle_msp_set_setting()
         // Could send an error code in payload if MSP supports it, for now just empty response
         _send_msp_response(MSP_SET_SETTING, nullptr, 0); // Acknowledge failure
     }
+}
+
+// MSP_GET_FILTER_CONFIG handler
+void SerialManagerTask::_handle_msp_get_filter_config()
+{
+    uint8_t payload[20]; // 5 floats * 4 bytes each
+    int i = 0;
+
+    _write_float_to_payload(payload, i, _settings_manager->getFloat(NVS_KEY_GYRO_LPF_HZ));
+    _write_float_to_payload(payload, i, _settings_manager->getFloat(NVS_KEY_NOTCH1_HZ));
+    _write_float_to_payload(payload, i, _settings_manager->getFloat(NVS_KEY_NOTCH1_Q));
+    _write_float_to_payload(payload, i, _settings_manager->getFloat(NVS_KEY_NOTCH2_HZ));
+    _write_float_to_payload(payload, i, _settings_manager->getFloat(NVS_KEY_NOTCH2_Q));
+
+    _send_msp_response(MSP_GET_FILTER_CONFIG, payload, 20);
+}
+
+// MSP_SET_FILTER_CONFIG handler
+void SerialManagerTask::_handle_msp_set_filter_config()
+{
+    if (_msp_payload_size != 20) // Expect 5 floats * 4 bytes
+    {
+        _send_msp_response(MSP_SET_FILTER_CONFIG, nullptr, 0); // Error: invalid payload size
+        return;
+    }
+
+    int i = 0;
+    _settings_manager->setFloat(NVS_KEY_GYRO_LPF_HZ, _read_float_from_payload(_msp_payload_buffer, i));
+    _settings_manager->setFloat(NVS_KEY_NOTCH1_HZ, _read_float_from_payload(_msp_payload_buffer, i));
+    _settings_manager->setFloat(NVS_KEY_NOTCH1_Q, _read_float_from_payload(_msp_payload_buffer, i));
+    _settings_manager->setFloat(NVS_KEY_NOTCH2_HZ, _read_float_from_payload(_msp_payload_buffer, i));
+    _settings_manager->setFloat(NVS_KEY_NOTCH2_Q, _read_float_from_payload(_msp_payload_buffer, i));
+
+    _send_msp_response(MSP_SET_FILTER_CONFIG, nullptr, 0); // Acknowledge receipt
 }
 
 // CORRECTED: Changed PID payload from 9 bytes (uint8_t) to 18 bytes (int16_t) to prevent overflow

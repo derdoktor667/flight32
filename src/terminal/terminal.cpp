@@ -14,6 +14,7 @@
 #include "../config/rx_config.h"
 #include "../config/motor_config.h"
 #include "../config/pid_config.h"
+#include "../config/filter_config.h"
 #include "../utils/task_names.h"
 
 const ChannelMapping Terminal::_channel_map[] = {
@@ -28,6 +29,56 @@ const ChannelMapping Terminal::_channel_map[] = {
     {"aux3", KEY_RC_CHANNEL_AUX3},
     {"aux4", KEY_RC_CHANNEL_AUX4}};
 constexpr int Terminal::_num_channel_mappings = sizeof(Terminal::_channel_map) / sizeof(ChannelMapping);
+
+// Command Handlers for Filter Settings
+void Terminal::_handle_filter_get_setting(String &args)
+{
+    if (args.length() == 0)
+    {
+        com_send_log(ComMessageType::LOG_ERROR, "Usage: get filter.<setting_key>");
+        return;
+    }
+    // Construct the full display key (e.g., "filter.lpf_hz") and delegate to generic get_setting handler
+    String full_display_key = "filter." + args;
+    _handle_get_setting(full_display_key);
+}
+
+void Terminal::_handle_filter_set_setting(String &args)
+{
+    int equals_index = args.indexOf('=');
+    if (equals_index == -1)
+    {
+        com_send_log(ComMessageType::LOG_ERROR, "Usage: set filter.<setting_key> = <value>");
+        return;
+    }
+
+    String display_key_part = args.substring(0, equals_index);
+    display_key_part.trim();
+    String value_str = args.substring(equals_index + 1);
+    value_str.trim();
+
+    // Construct the full display key (e.g., "filter.lpf_hz") and delegate to generic set_setting handler
+    String full_display_key = "filter." + display_key_part;
+    _handle_set_setting(full_display_key + " = " + value_str); // _handle_set_setting expects "key = value" format
+}
+
+void Terminal::_handle_filter_reset_defaults(String &args)
+{
+    if (args.equalsIgnoreCase("confirm"))
+    {
+        // Reset all filter settings to their default values
+        _settings_manager->setFloat(NVS_KEY_GYRO_LPF_HZ, DEFAULT_GYRO_LPF_HZ);
+        _settings_manager->setFloat(NVS_KEY_NOTCH1_HZ, DEFAULT_NOTCH1_HZ);
+        _settings_manager->setFloat(NVS_KEY_NOTCH1_Q, DEFAULT_NOTCH1_Q);
+        _settings_manager->setFloat(NVS_KEY_NOTCH2_HZ, DEFAULT_NOTCH2_HZ);
+        _settings_manager->setFloat(NVS_KEY_NOTCH2_Q, DEFAULT_NOTCH2_Q);
+        com_send_log(ComMessageType::LOG_INFO, "Filter settings reset to default values. Save and reboot to apply.");
+    }
+    else
+    {
+        com_send_log(ComMessageType::LOG_WARN, "Reset filter settings to default values. To confirm, type 'reset filter confirm'");
+    }
+}
 
 const Command Terminal::_commands[] = {
     {"help", &Terminal::_handle_help, "Shows this help message.", CommandCategory::SYSTEM},
@@ -78,6 +129,19 @@ const Command Terminal::_commands[] = {
     {"set pid", &Terminal::_handle_pid_set, "Sets a PID gain (e.g., 'set pid roll p 0.1').", CommandCategory::PID},
     {"reset pid", &Terminal::_handle_pid_reset_defaults, "Resets PID gains to default values.", CommandCategory::PID},
 
+    // Filter Commands
+    {"get filter.lpf_hz", &Terminal::_handle_filter_get_setting, "Gets the Gyro LPF cutoff frequency.", CommandCategory::FILTER},
+    {"set filter.lpf_hz", &Terminal::_handle_filter_set_setting, "Sets the Gyro LPF cutoff frequency (e.g., 'set filter.lpf_hz = 150').", CommandCategory::FILTER},
+    {"get filter.notch1_hz", &Terminal::_handle_filter_get_setting, "Gets the first Notch Filter center frequency.", CommandCategory::FILTER},
+    {"set filter.notch1_hz", &Terminal::_handle_filter_set_setting, "Sets the first Notch Filter center frequency (e.g., 'set filter.notch1_hz = 250').", CommandCategory::FILTER},
+    {"get filter.notch1_q", &Terminal::_handle_filter_get_setting, "Gets the first Notch Filter Q-factor.", CommandCategory::FILTER},
+    {"set filter.notch1_q", &Terminal::_handle_filter_set_setting, "Sets the first Notch Filter Q-factor (e.g., 'set filter.notch1_q = 1.0').", CommandCategory::FILTER},
+    {"get filter.notch2_hz", &Terminal::_handle_filter_get_setting, "Gets the second Notch Filter center frequency.", CommandCategory::FILTER},
+    {"set filter.notch2_hz", &Terminal::_handle_filter_set_setting, "Sets the second Notch Filter center frequency (e.g., 'set filter.notch2_hz = 0' to disable).", CommandCategory::FILTER},
+    {"get filter.notch2_q", &Terminal::_handle_filter_get_setting, "Gets the second Notch Filter Q-factor.", CommandCategory::FILTER},
+    {"set filter.notch2_q", &Terminal::_handle_filter_set_setting, "Sets the second Notch Filter Q-factor (e.g., 'set filter.notch2_q = 1.0').", CommandCategory::FILTER},
+    {"reset filter", &Terminal::_handle_filter_reset_defaults, "Resets filter settings to default values.", CommandCategory::FILTER},
+
     {"get", &Terminal::_handle_get_setting, "Gets a setting value (e.g., 'get gyro.resolution').", CommandCategory::SETTINGS},
     {"set", &Terminal::_handle_set_setting, "Sets a setting value (e.g., 'set gyro.resolution = 250_DPS').", CommandCategory::SETTINGS},
     {"save", &Terminal::_handle_save_settings, "Saves all settings to persistent storage.", CommandCategory::SETTINGS},
@@ -92,6 +156,7 @@ const CategoryInfo Terminal::_category_info[] = {
     {CommandCategory::RX, "rx", "Receiver commands"},
     {CommandCategory::MOTOR, "motor", "Motor control commands"},
     {CommandCategory::PID, "pid", "PID controller commands"},
+    {CommandCategory::FILTER, "filter", "Filter settings"},
     {CommandCategory::SETTINGS, "settings", "Settings management commands"},
     {CommandCategory::RC_CHANNELS, "rc.channels", "RC Channel Mapping Settings"},
 };
@@ -201,6 +266,8 @@ const char *Terminal::_get_category_string(CommandCategory category)
         return "Motor Control";
     case CommandCategory::PID:
         return "PID Controller";
+    case CommandCategory::FILTER:
+        return "Filter";
     case CommandCategory::SETTINGS:
         return "Settings Management";
     case CommandCategory::RC_CHANNELS:
@@ -222,6 +289,8 @@ CommandCategory Terminal::_get_category_from_string(String &category_str)
         return CommandCategory::MOTOR;
     if (category_str.equalsIgnoreCase("pid") || category_str.equalsIgnoreCase("controller"))
         return CommandCategory::PID;
+    if (category_str.equalsIgnoreCase("filter"))
+        return CommandCategory::FILTER;
     if (category_str.equalsIgnoreCase("settings") || category_str.equalsIgnoreCase("config"))
         return CommandCategory::SETTINGS;
     if (category_str.equalsIgnoreCase("rc.channels") || category_str.equalsIgnoreCase("channels"))
@@ -244,6 +313,8 @@ CommandCategory Terminal::_get_setting_category(const char *display_key)
         assigned_category = CommandCategory::MOTOR;
     else if (key_str.startsWith("pid."))
         assigned_category = CommandCategory::PID;
+    else if (key_str.startsWith("filter."))
+        assigned_category = CommandCategory::FILTER;
     else if (key_str.startsWith("rc.ch."))
         assigned_category = CommandCategory::RC_CHANNELS;
 

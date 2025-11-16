@@ -76,6 +76,10 @@ private:
     void _write_int16_to_payload(uint8_t *payload, int &index, int16_t value);
     int16_t _read_int16_from_payload(const uint8_t *payload, int &index);
 
+    // New helper functions for float values
+    void _write_float_to_payload(uint8_t *payload, int &index, float value);
+    float _read_float_from_payload(const uint8_t *payload, int &index);
+
     // MSP Command Handlers
     void _handle_msp_api_version();
     void _handle_msp_fc_variant();
@@ -91,6 +95,8 @@ private:
     void _handle_msp_set_setting();
     void _handle_msp_pid_get();
     void _handle_msp_pid_set();
+    void _handle_msp_get_filter_config(); // New MSP handler
+    void _handle_msp_set_filter_config(); // New MSP handler
     void _handle_msp_raw_imu();
     void _handle_msp_attitude();
     void _handle_msp_rc();

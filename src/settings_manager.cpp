@@ -11,6 +11,7 @@
 #include "config/motor_config.h"
 #include "config/pid_config.h"
 #include "config/terminal_config.h"
+#include "config/filter_config.h" // New include for filter settings
 #include "settings_manager.h"
 #include "com_manager.h"
 #include "terminal/terminal.h"
@@ -66,7 +67,13 @@ const SettingsManager::SettingMetadata SettingsManager::_settings_metadata[] = {
     {KEY_PID_PITCH_D, "pid.pitch.d", "PID Pitch Derivative Gain", SettingsManager::FLOAT, nullptr, 0, 0, DEFAULT_PID_PITCH_D, nullptr},
     {KEY_PID_YAW_P, "pid.yaw.p", "PID Yaw Proportional Gain", SettingsManager::FLOAT, nullptr, 0, 0, DEFAULT_PID_YAW_P, nullptr},
     {KEY_PID_YAW_I, "pid.yaw.i", "PID Yaw Integral Gain", SettingsManager::FLOAT, nullptr, 0, 0, DEFAULT_PID_YAW_I, nullptr},
-    {KEY_PID_YAW_D, "pid.yaw.d", "PID Yaw Derivative Gain", SettingsManager::FLOAT, nullptr, 0, 0, DEFAULT_PID_YAW_D, nullptr}};
+    {KEY_PID_YAW_D, "pid.yaw.d", "PID Yaw Derivative Gain", SettingsManager::FLOAT, nullptr, 0, 0, DEFAULT_PID_YAW_D, nullptr},
+    // Filter Settings
+    {NVS_KEY_GYRO_LPF_HZ, "filter.lpf_hz", "Gyro Low-Pass Filter Cutoff Frequency", SettingsManager::FLOAT, nullptr, 0, 0, DEFAULT_GYRO_LPF_HZ, nullptr},
+    {NVS_KEY_NOTCH1_HZ, "filter.notch1_hz", "First Notch Filter Center Frequency", SettingsManager::FLOAT, nullptr, 0, 0, DEFAULT_NOTCH1_HZ, nullptr},
+    {NVS_KEY_NOTCH1_Q, "filter.notch1_q", "First Notch Filter Q-Factor", SettingsManager::FLOAT, nullptr, 0, 0, DEFAULT_NOTCH1_Q, nullptr},
+    {NVS_KEY_NOTCH2_HZ, "filter.notch2_hz", "Second Notch Filter Center Frequency", SettingsManager::FLOAT, nullptr, 0, 0, DEFAULT_NOTCH2_HZ, nullptr},
+    {NVS_KEY_NOTCH2_Q, "filter.notch2_q", "Second Notch Filter Q-Factor", SettingsManager::FLOAT, nullptr, 0, 0, DEFAULT_NOTCH2_Q, nullptr}};
 const int SettingsManager::_num_settings = sizeof(SettingsManager::_settings_metadata) / sizeof(SettingsManager::SettingMetadata);
 
 SettingsManager::SettingsManager()
@@ -194,6 +201,37 @@ void SettingsManager::setAccelOffsets(const ImuAxisData &offsets)
     _preferences.putFloat(KEY_MPU_ACCEL_OFF_X, offsets.x);
     _preferences.putFloat(KEY_MPU_ACCEL_OFF_Y, offsets.y);
     _preferences.putFloat(KEY_MPU_ACCEL_OFF_Z, offsets.z);
+}
+
+// Retrieves a float value from NVS using the internal key.
+float SettingsManager::getFloat(const char *key)
+{
+    // Find the setting metadata to get the default float value
+    for (int i = 0; i < _num_settings; ++i)
+    {
+        if (strcmp(_settings_metadata[i].key, key) == 0 && _settings_metadata[i].type == FLOAT)
+        {
+            return _preferences.getFloat(key, _settings_metadata[i].default_float_value);
+        }
+    }
+    com_send_log(ComMessageType::LOG_WARN, "SettingsManager: getFloat(%s) -> Key not found or not a float type.", key);
+    return 0.0f; // Default to 0.0f if key not found or not float
+}
+
+// Sets a float value in NVS using the internal key.
+void SettingsManager::setFloat(const char *key, float value)
+{
+    // Find the setting metadata to ensure it's a float type
+    for (int i = 0; i < _num_settings; ++i)
+    {
+        if (strcmp(_settings_metadata[i].key, key) == 0 && _settings_metadata[i].type == FLOAT)
+        {
+            _preferences.putFloat(key, value);
+            com_send_log(ComMessageType::LOG_INFO, "SettingsManager: setFloat - FLOAT %s set to %.3f", key, value);
+            return;
+        }
+    }
+    com_send_log(ComMessageType::LOG_WARN, "SettingsManager: setFloat(%s, %.3f) -> Key not found or not a float type.", key, value);
 }
 
 // Lists settings belonging to a specific category to the terminal.

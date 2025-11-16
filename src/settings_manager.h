@@ -33,6 +33,10 @@ public:
     String getSettingOptionsHumanReadable(const char *key);
     const char *getInternalKeyFromDisplayKey(const char *display_key);
 
+    // Generic float getters/setters for NVS keys
+    float getFloat(const char *key);
+    void setFloat(const char *key, float value);
+
     ImuAxisData getGyroOffsets();
     void setGyroOffsets(const ImuAxisData &offsets);
     ImuAxisData getAccelOffsets();

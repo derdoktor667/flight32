@@ -27,6 +27,7 @@ enum class CommandCategory
     RX,
     MOTOR,
     PID,
+    FILTER,
     SETTINGS,
     RC_CHANNELS,
     UNKNOWN
@@ -113,6 +114,9 @@ public:
     void _handle_pid_get(String &args);
     void _handle_pid_set(String &args);
     void _handle_pid_reset_defaults(String &args);
+    void _handle_filter_get_setting(String &args);
+    void _handle_filter_set_setting(String &args);
+    void _handle_filter_reset_defaults(String &args);
     void _handle_get_setting(String &args);
     void _handle_set_setting(String &args);
     void _handle_save_settings(String &args);
