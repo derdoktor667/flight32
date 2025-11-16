@@ -168,6 +168,25 @@ Our interactive serial manager provides complete control over your flight contro
   *   `settings`       - Lists all available settings.
 </details>
 
+### 🧪 MSP Compatibility Testing
+
+To ensure full compatibility with MultiWii Serial Protocol (MSP) tools and ground stations, the Flight32 firmware includes a dedicated Python testing script: `flight32_msp_tester.py`. This script verifies that the firmware correctly responds to a set of standard MSP commands, ensuring seamless integration with external configurators and monitoring tools.
+
+**How to Run the MSP Tester:**
+
+1.  **Ensure Python 3 is installed** on your system.
+2.  **Install PySerial**: If you don't have it already, install the `pyserial` library:
+    ```bash
+    pip install pyserial
+    ```
+3.  **Connect your ESP32**: Connect your Flight32-powered ESP32 to your computer via USB. Ensure it's recognized as a serial port (e.g., `/dev/ttyUSB0` on Linux, `COMx` on Windows).
+4.  **Run the tester script**: Navigate to the project's root directory in your terminal and execute the script:
+    ```bash
+    python3 flight32_msp_tester.py
+    ```
+
+The script will connect to the ESP32, send various MSP commands, and report on the success or failure of each test, providing detailed feedback on the MSP implementation's compatibility.
+
 ---
 
 ## ESP32 Devkit Pinout (Common)
