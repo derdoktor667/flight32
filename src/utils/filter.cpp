@@ -7,6 +7,7 @@
 
 #include "filter.h"
 #include <cmath>
+#include "../config/filter_config.h"
 
 // Resets the filter's internal state to zero.
 void BiquadFilter::reset()
@@ -35,7 +36,7 @@ void BiquadFilter::configureLowpass(float sample_freq_hz, float cutoff_freq_hz)
     float omega = 2.0f * M_PI * cutoff_freq_hz / sample_freq_hz;
     float sn = std::sin(omega);
     float cs = std::cos(omega);
-    float alpha = sn / (2.0f * 0.707f); // Q = 0.707 for Butterworth
+    float alpha = sn / (BIQUAD_ALPHA_DENOMINATOR_FACTOR * BUTTERWORTH_Q_FACTOR); // Q = 0.707 for Butterworth
 
     float a0 = 1.0f + alpha;
     _b0 = (1.0f - cs) / (2.0f * a0);

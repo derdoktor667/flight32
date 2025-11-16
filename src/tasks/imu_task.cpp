@@ -16,7 +16,7 @@ ImuTask::ImuTask(const char *name, uint32_t stack_size, UBaseType_t priority, Ba
 
 void ImuTask::setup()
 {
-    float sample_freq = 1000.0f / IMU_TASK_DELAY_MS; // Assuming IMU_TASK_DELAY_MS is in ms
+    float sample_freq = MS_PER_SECOND / IMU_TASK_DELAY_MS; // Assuming IMU_TASK_DELAY_MS is in ms
 
     // Get filter settings from SettingsManager
     float gyro_lpf_hz = _settings_manager->getFloat(NVS_KEY_GYRO_LPF_HZ);

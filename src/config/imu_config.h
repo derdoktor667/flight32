@@ -8,6 +8,7 @@
 #pragma once
 
 #include <cstdint>
+#include <cmath>
 
 // --- IMU Task Configuration ---
 constexpr uint32_t IMU_TASK_STACK_SIZE = 4096;
@@ -60,6 +61,7 @@ enum class ImuLpfBandwidthIndex : uint8_t
 
 // --- IMU LPF Bandwidth Configuration ---
 constexpr const char *KEY_IMU_LPF_BANDWIDTH = "imu.lpf_bw";
+constexpr const char *KEY_IMU_DMP_ENABLED = "imu.dmp_enabled";
 constexpr uint8_t DEFAULT_IMU_LPF_BANDWIDTH = static_cast<uint8_t>(ImuLpfBandwidthIndex::LPF_256HZ_N_0MS); // Corresponds to LPF_256HZ_N_0MS
 constexpr const char *IMU_LPF_BANDWIDTH_STRINGS[] = {
     "LPF_256HZ_N_0MS", "LPF_188HZ_N_2MS", "LPF_98HZ_N_3MS",
@@ -68,3 +70,5 @@ constexpr uint8_t NUM_IMU_LPF_BANDWIDTHS = sizeof(IMU_LPF_BANDWIDTH_STRINGS) / s
 
 // --- Sensor ---
 constexpr uint16_t SENSOR_POWER_UP_DELAY_MS = 100;
+constexpr float MS_PER_SECOND = 1000.0f;
+constexpr float HALF_PI_RADIANS = M_PI / 2.0f;

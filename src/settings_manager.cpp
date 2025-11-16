@@ -39,7 +39,7 @@ const SettingsManager::SettingMetadata SettingsManager::_settings_metadata[] = {
     {KEY_MPU_GYRO_RANGE, "gyro.resolution", "MPU6050 Gyroscope Range", SettingsManager::UINT8, GYRO_RANGE_STRINGS, NUM_GYRO_RANGES, DEFAULT_GYRO_RANGE, 0.0f, nullptr},
     {KEY_IMU_TYPE, "imu.type", "IMU Sensor Type", SettingsManager::UINT8, IMU_TYPE_STRINGS, NUM_IMU_TYPES, (uint8_t)DEFAULT_IMU_TYPE, 0.0f, nullptr},
     {KEY_IMU_LPF_BANDWIDTH, "imu.lpf_bw", "IMU Low-Pass Filter Bandwidth", SettingsManager::UINT8, IMU_LPF_BANDWIDTH_STRINGS, NUM_IMU_LPF_BANDWIDTHS, DEFAULT_IMU_LPF_BANDWIDTH, 0.0f, nullptr},
-    {"imu.dmp_enabled", "imu.dmp_enabled", "IMU Digital Motion Processor (DMP) Enabled", SettingsManager::UINT8, BOOLEAN_STRINGS, NUM_BOOLEAN_STRINGS, IMU_DMP_ENABLED_DEFAULT, 0.0f, nullptr},
+    {KEY_IMU_DMP_ENABLED, "imu.dmp_enabled", "IMU Digital Motion Processor (DMP) Enabled", SettingsManager::UINT8, BOOLEAN_STRINGS, NUM_BOOLEAN_STRINGS, IMU_DMP_ENABLED_DEFAULT, 0.0f, nullptr},
     {KEY_MPU_GYRO_OFF_X, "mpu.g_off.x", "Gyroscope X-axis offset", SettingsManager::FLOAT, nullptr, 0, 0, 0.0f, nullptr},
     {KEY_MPU_GYRO_OFF_Y, "mpu.g_off.y", "Gyroscope Y-axis offset", SettingsManager::FLOAT, nullptr, 0, 0, 0.0f, nullptr},
     {KEY_MPU_GYRO_OFF_Z, "mpu.g_off.z", "Gyroscope Z-axis offset", SettingsManager::FLOAT, nullptr, 0, 0, 0.0f, nullptr},

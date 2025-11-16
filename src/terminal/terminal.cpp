@@ -584,7 +584,7 @@ void Terminal::_handle_tasks(String &args)
         float cpu_percentage = 0.0f;
         if (found_freertos_status && total_run_time > 0)
         {
-            cpu_percentage = (float)freertos_status.ulRunTimeCounter / total_run_time * 100.0f;
+            cpu_percentage = (float)freertos_status.ulRunTimeCounter / total_run_time * CPU_PERCENTAGE_FACTOR;
         }
 
         char cpu_str[8];

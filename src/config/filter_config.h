@@ -15,3 +15,7 @@ constexpr float DEFAULT_NOTCH1_HZ = 250.0f;  // First Notch Filter Center Freque
 constexpr float DEFAULT_NOTCH1_Q = 1.0f;     // First Notch Filter Q-Factor
 constexpr float DEFAULT_NOTCH2_HZ = 0.0f;    // Second Notch Filter Center Frequency in Hz (0.0f disables it)
 constexpr float DEFAULT_NOTCH2_Q = 1.0f;     // Second Notch Filter Q-Factor
+
+// Filter Calculation Constants
+constexpr float BUTTERWORTH_Q_FACTOR = 0.707f;
+constexpr float BIQUAD_ALPHA_DENOMINATOR_FACTOR = 2.0f;

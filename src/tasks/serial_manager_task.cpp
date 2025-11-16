@@ -29,7 +29,7 @@ void quaternionToEuler(float w, float x, float y, float z, float *roll, float *p
     float sinp = 2 * (w * y - z * x);
     if (fabs(sinp) >= 1)
     {                                                           // Check for singularity
-        *pitch = copysign(M_PI / 2, sinp) * RADIANS_TO_DEGREES; // Use 90 degrees if out of range
+        *pitch = copysign(HALF_PI_RADIANS, sinp) * RADIANS_TO_DEGREES; // Use 90 degrees if out of range
     }
     else
     {
@@ -313,7 +313,7 @@ void SerialManagerTask::_handle_msp_board_info()
 
 void SerialManagerTask::_handle_msp_build_info()
 {
-    uint8_t payload[20] = "Nov 12 202512:00:00";
+    uint8_t payload[MSP_BUILD_INFO_PAYLOAD_SIZE] = "Nov 12 202512:00:00";
     _send_msp_response(MSP_BUILD_INFO, payload, MSP_BUILD_INFO_PAYLOAD_SIZE);
 }
 
@@ -473,7 +473,7 @@ void SerialManagerTask::_handle_msp_set_setting()
 // MSP_GET_FILTER_CONFIG handler
 void SerialManagerTask::_handle_msp_get_filter_config()
 {
-    uint8_t payload[20]; // 5 floats * 4 bytes each
+    uint8_t payload[MSP_FILTER_CONFIG_PAYLOAD_SIZE]; // 5 floats * 4 bytes each
     int i = 0;
 
     _write_float_to_payload(payload, i, _settings_manager->getFloat(NVS_KEY_GYRO_LPF_HZ));
@@ -482,13 +482,13 @@ void SerialManagerTask::_handle_msp_get_filter_config()
     _write_float_to_payload(payload, i, _settings_manager->getFloat(NVS_KEY_NOTCH2_HZ));
     _write_float_to_payload(payload, i, _settings_manager->getFloat(NVS_KEY_NOTCH2_Q));
 
-    _send_msp_response(MSP_GET_FILTER_CONFIG, payload, 20);
+    _send_msp_response(MSP_GET_FILTER_CONFIG, payload, MSP_FILTER_CONFIG_PAYLOAD_SIZE);
 }
 
 // MSP_SET_FILTER_CONFIG handler
 void SerialManagerTask::_handle_msp_set_filter_config()
 {
-    if (_msp_payload_size != 20) // Expect 5 floats * 4 bytes
+    if (_msp_payload_size != MSP_FILTER_CONFIG_PAYLOAD_SIZE) // Expect 5 floats * 4 bytes
     {
         _send_msp_response(MSP_SET_FILTER_CONFIG, nullptr, 0); // Error: invalid payload size
         return;
@@ -516,7 +516,7 @@ void SerialManagerTask::_handle_msp_pid_get()
 
     // CORRECTION: Use int16_t instead of uint8_t for better range (prevents overflow)
     // Payload: 9 values × 2 bytes = 18 bytes total
-    uint8_t payload[18];
+    uint8_t payload[MSP_PID_PAYLOAD_SIZE];
     int i = 0;
 
     PidGains roll_gains = _pid_task->getGains(PidAxis::ROLL);
@@ -534,13 +534,13 @@ void SerialManagerTask::_handle_msp_pid_get()
     _write_int16_to_payload(payload, i, (int16_t)(yaw_gains.i * PID_SCALE_FACTOR));
     _write_int16_to_payload(payload, i, (int16_t)(yaw_gains.d * PID_SCALE_FACTOR));
 
-    _send_msp_response(MSP_PID, payload, 18); // CORRECTION: Changed from 9 to 18
+    _send_msp_response(MSP_PID, payload, MSP_PID_PAYLOAD_SIZE); // CORRECTION: Changed from 9 to 18
 }
 
 // CORRECTED: Changed PID payload parsing from 9 bytes to 18 bytes
 void SerialManagerTask::_handle_msp_pid_set()
 {
-    if (!_pid_task || _msp_payload_size != 18) // CORRECTION: Changed from 9 to 18
+    if (!_pid_task || _msp_payload_size != MSP_PID_PAYLOAD_SIZE) // CORRECTION: Changed from 9 to 18
     {
         _send_msp_response(MSP_SET_PID, nullptr, 0); // Error or invalid payload size
         return;
@@ -591,7 +591,7 @@ void SerialManagerTask::_handle_msp_raw_imu()
 
     int16_t magX = 0, magY = 0, magZ = 0; // MPU6050 does not have magnetometer
 
-    uint8_t payload[18]; // 3x Accel, 3x Gyro, 3x Mag (int16_t = 2 bytes each)
+    uint8_t payload[MSP_RAW_IMU_PAYLOAD_SIZE]; // 3x Accel, 3x Gyro, 3x Mag (int16_t = 2 bytes each)
     int i = 0;
 
     _write_int16_to_payload(payload, i, accX);
@@ -643,7 +643,7 @@ void SerialManagerTask::_handle_msp_rc()
         return;
     }
 
-    uint8_t payload[16]; // 8x RC channels (int16_t = 2 bytes each)
+    uint8_t payload[MSP_RC_PAYLOAD_SIZE]; // 8x RC channels (int16_t = 2 bytes each)
     int i = 0;
 
     for (int j = 0; j < PPM_MAX_CHANNELS; j++)
@@ -679,7 +679,7 @@ void SerialManagerTask::_handle_msp_motor()
         return;
     }
 
-    uint8_t payload[8]; // 4x motor outputs (int16_t = 2 bytes each)
+    uint8_t payload[MSP_MOTOR_PAYLOAD_SIZE]; // 4x motor outputs (int16_t = 2 bytes each)
     int i = 0;
 
     for (int j = 0; j < NUM_MOTORS; j++)

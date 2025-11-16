@@ -48,3 +48,4 @@ constexpr uint16_t TASK_STATUS_OUTPUT_BUFFER_SIZE = 256;
 
 // --- Time Constants ---
 constexpr float MS_TO_SECONDS_FACTOR = 1000.0f;
+constexpr float CPU_PERCENTAGE_FACTOR = 100.0f;
