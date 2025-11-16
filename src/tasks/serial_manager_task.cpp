@@ -1,3 +1,4 @@
+#include <esp_system.h> // For esp_efuse_mac_get_default
 /**
  * @file serial_manager_task.cpp
  * @brief Implements the SerialManagerTask class for managing serial communication.
@@ -13,6 +14,8 @@
 #include "../config/terminal_config.h"
 #include "../config/serial_config.h"
 #include "../config/filter_config.h"
+#include <cstring>      // For strlen and memcpy
+#include <cstdio>       // For snprintf
 
 static constexpr float RADIANS_TO_DEGREES = 180.0f / M_PI;
 
@@ -160,7 +163,7 @@ void SerialManagerTask::_parse_msp_char(uint8_t c)
         if (c == '<') // Expecting '<' for incoming commands
         {
             _msp_state = MspState::HEADER_SIZE;
-            _msp_crc ^= c; // Include direction byte in CRC
+            // _msp_crc ^= c; // Direction byte is not part of CRC for incoming message
             if (_current_mode == ComSerialMode::TERMINAL)
             {
                 _current_mode = ComSerialMode::MSP;
@@ -219,7 +222,7 @@ void SerialManagerTask::_parse_msp_char(uint8_t c)
 
 void SerialManagerTask::_process_msp_message()
 {
-    Serial.printf("[DEBUG] _process_msp_message called for command: 0x%02X\n", _msp_command_id);
+    // Serial.printf("[DEBUG] _process_msp_message called for command: 0x%02X\n", _msp_command_id);
     switch (_msp_command_id)
     {
     case MSP_API_VERSION:
@@ -293,12 +296,12 @@ void SerialManagerTask::_process_msp_message()
 // CORRECTED: Removed '$M>' and changed to proper '$M' format
 void SerialManagerTask::_send_msp_response(uint8_t cmd, uint8_t *payload, uint8_t size)
 {
-    Serial.printf("[DEBUG] _send_msp_response called for cmd: 0x%02X, size: %d\n", cmd, size);
+    // Serial.printf("[DEBUG] _send_msp_response called for cmd: 0x%02X, size: %d\n", cmd, size);
     Serial.write('$');
     Serial.write('M');
     Serial.write('>'); // Direction byte for response
 
-    uint8_t crc = '>'; // Initialize CRC with direction byte
+    uint8_t crc = 0; // Initialize CRC with 0
     Serial.write(size);
     crc ^= size;
     Serial.write(cmd);
@@ -336,8 +339,41 @@ void SerialManagerTask::_handle_msp_fc_version()
 void SerialManagerTask::_handle_msp_board_info()
 {
     uint8_t payload[MSP_BOARD_INFO_PAYLOAD_SIZE] = {0};
-    strncpy((char *)payload, MSP_BOARD_NAME, MSP_BOARD_INFO_PAYLOAD_SIZE);
-    _send_msp_response(MSP_BOARD_INFO, payload, MSP_BOARD_INFO_PAYLOAD_SIZE);
+    int idx = 0;
+
+    // Board Name
+    size_t len = strlen(MSP_BOARD_NAME);
+    memcpy(&payload[idx], MSP_BOARD_NAME, len);
+    idx += len;
+    payload[idx++] = '\0'; // NUL-terminate
+
+    // Manufacturer ID
+    len = strlen(MSP_MANUFACTURER_ID);
+    memcpy(&payload[idx], MSP_MANUFACTURER_ID, len);
+    idx += len;
+    payload[idx++] = '\0'; // NUL-terminate
+
+    // Board Type
+    len = strlen(MSP_BOARD_TYPE);
+    memcpy(&payload[idx], MSP_BOARD_TYPE, len);
+    idx += len;
+    payload[idx++] = '\0'; // NUL-terminate
+
+    // Hardware Revision
+    len = strlen(MSP_HARDWARE_REVISION);
+    memcpy(&payload[idx], MSP_HARDWARE_REVISION, len);
+    idx += len;
+    payload[idx++] = '\0'; // NUL-terminate
+
+    // Unique Device ID (derived from firmware version and build date/time)
+    char unique_id_str[32]; // "FL32-vX.Y.Z-YYYYMMDD-HHMMSS" + null terminator
+    snprintf(unique_id_str, sizeof(unique_id_str), "FL32-%s-%s-%s", FIRMWARE_VERSION, __DATE__, __TIME__);
+    len = strlen(unique_id_str);
+    memcpy(&payload[idx], unique_id_str, len);
+    idx += len;
+    payload[idx++] = '\0'; // NUL-terminate
+
+    _send_msp_response(MSP_BOARD_INFO, payload, idx);
 }
 
 void SerialManagerTask::_handle_msp_build_info()

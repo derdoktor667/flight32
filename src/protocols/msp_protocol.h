@@ -10,7 +10,7 @@
 #include <cstdint>
 
 // --- MSP Protocol Constants ---
-static constexpr uint8_t MSP_PROTOCOL_VERSION = 0;
+static constexpr uint8_t MSP_PROTOCOL_VERSION = 1;
 static constexpr uint8_t MSP_API_VERSION_MAJOR = 1;
 static constexpr uint8_t MSP_API_VERSION_MINOR = 0;
 
@@ -22,7 +22,7 @@ static constexpr uint8_t MSP_PID_PAYLOAD_SIZE = 18;
 static constexpr uint8_t MSP_API_VERSION_PAYLOAD_SIZE = 3;
 static constexpr uint8_t MSP_FC_VARIANT_PAYLOAD_SIZE = 4;
 static constexpr uint8_t MSP_FC_VERSION_PAYLOAD_SIZE = 3;
-static constexpr uint8_t MSP_BOARD_INFO_PAYLOAD_SIZE = 8;
+static constexpr uint8_t MSP_BOARD_INFO_PAYLOAD_SIZE = 64;
 static constexpr uint8_t MSP_BUILD_INFO_PAYLOAD_SIZE = 20; // "Nov 12 202512:00:00" is 19 chars + null terminator
 static constexpr uint8_t MSP_MEM_STATS_PAYLOAD_SIZE = 4;
 static constexpr uint8_t MSP_RAW_IMU_PAYLOAD_SIZE = 18; // 3x Accel, 3x Gyro, 3x Mag (int16_t = 2 bytes each)

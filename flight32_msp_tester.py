@@ -349,11 +349,11 @@ class MSPTester:
             self.test_results.append(("Raw IMU", False, ""))
             return False
 
-        acc_x, acc_y, acc_z, gyro_x, gyro_y, gyro_z = struct.unpack(
-            "<hhhhhh", response.payload[:12]
+        acc_x, acc_y, acc_z, gyro_x, gyro_y, gyro_z, mag_x, mag_y, mag_z = struct.unpack(
+            "<hhhhhhhhh", response.payload[:18]
         )
         details = (
-            f"Acc: ({acc_x}, {acc_y}, {acc_z}), Gyro: ({gyro_x}, {gyro_y}, {gyro_z})"
+            f"Acc: ({acc_x}, {acc_y}, {acc_z}), Gyro: ({gyro_x}, {gyro_y}, {gyro_z}), Mag: ({mag_x}, {mag_y}, {mag_z})"
         )
         self.test_results.append(("Raw IMU", True, details))
         return True
