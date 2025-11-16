@@ -16,3 +16,5 @@ constexpr uint8_t COM_QUEUE_LENGTH = 50;
 constexpr uint8_t COM_FLUSH_QUEUE_LENGTH = 1;
 constexpr uint16_t COM_MESSAGE_MAX_LENGTH = 512;
 constexpr uint32_t COM_TASK_STARTUP_DELAY_MS = 10;
+constexpr uint16_t MSP_RESPONSE_DELAY_US = 100;
+constexpr uint8_t UNIQUE_ID_BUFFER_SIZE = 32;

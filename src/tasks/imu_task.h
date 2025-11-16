@@ -26,9 +26,9 @@ public:
 private:
     ImuSensor &_imu_sensor;
     SettingsManager *_settings_manager;
-    BiquadFilter _gyro_lpf[3];    // Low-pass filter for gyro (X, Y, Z)
-    BiquadFilter _gyro_notch1[3]; // First notch filter for gyro (X, Y, Z)
-    BiquadFilter _gyro_notch2[3]; // Second notch filter for gyro (X, Y, Z)
+    BiquadFilter _gyro_lpf[NUM_AXES];    // Low-pass filter for gyro (X, Y, Z)
+    BiquadFilter _gyro_notch1[NUM_AXES]; // First notch filter for gyro (X, Y, Z)
+    BiquadFilter _gyro_notch2[NUM_AXES]; // Second notch filter for gyro (X, Y, Z)
 
     ImuData _filtered_imu_data; // Stores filtered IMU data
 };

@@ -13,6 +13,8 @@
 static constexpr uint8_t MSP_PROTOCOL_VERSION = 1;
 static constexpr uint8_t MSP_API_VERSION_MAJOR = 1;
 static constexpr uint8_t MSP_API_VERSION_MINOR = 0;
+static constexpr uint8_t MSP_RESPONSE_OVERHEAD_BYTES = 2; // 1 byte for payload size, 1 byte for command ID
+static constexpr uint8_t MSP_MIN_PAYLOAD_SIZE = 3;        // Minimum payload size for MSP commands (e.g., API_VERSION)
 
 // --- MSP Constants ---
 static constexpr uint8_t MSP_MAX_PAYLOAD_SIZE = 128;
@@ -32,8 +34,6 @@ static constexpr uint8_t MSP_MOTOR_PAYLOAD_SIZE = 8;    // 4x motor outputs (int
 static constexpr uint8_t MSP_FILTER_CONFIG_PAYLOAD_SIZE = 20; // 5 floats * 4 bytes each
 
 // --- MSP Scaling Factors ---
-static constexpr float MSP_ACCEL_SCALING_FACTOR = 512.0f; // 1G = 512 (approx)
-static constexpr float MSP_GYRO_SCALING_FACTOR = 4.0f;    // 1 deg/s = 4 (approx)
 static constexpr float MSP_ATTITUDE_SCALE_FACTOR = 10.0f; // Roll/Pitch scaled by 10
 
 // --- MSP Setting Payload Overheads ---

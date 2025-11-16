@@ -8,6 +8,7 @@
 #pragma once
 
 #include <cstdint>
+#include <limits>
 
 // --- Serial Manager Task Configuration ---
 constexpr uint32_t SERIAL_MANAGER_TASK_STACK_SIZE = 8192;
@@ -18,11 +19,11 @@ constexpr uint16_t TERMINAL_INPUT_BUFFER_SIZE = 128;
 
 // --- Terminal/Utility ---
 constexpr uint32_t ONE_SECOND_MICROSECONDS = 1000000;
-constexpr uint32_t TWO_SECOND_MICROSECONDS = 2000000;
+constexpr uint32_t TWO_SECOND_MICROSECONDS = ONE_SECOND_MICROSECONDS * 2;
 constexpr uint16_t MAX_THROTTLE_VALUE = 2047;
 constexpr uint8_t ASCII_BACKSPACE = 127;
 constexpr int8_t INVALID_SETTING_VALUE = -1;
-constexpr uint8_t UINT8_MAX_VALUE = 255;
+constexpr uint8_t UINT8_MAX_VALUE = std::numeric_limits<uint8_t>::max();
 constexpr uint8_t BYTE_BUFFER_SIZE = 15;
 constexpr uint16_t BYTES_IN_KB = 1024;
 constexpr uint32_t BYTES_IN_MB = (1024 * 1024);

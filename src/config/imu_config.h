@@ -72,3 +72,8 @@ constexpr uint8_t NUM_IMU_LPF_BANDWIDTHS = sizeof(IMU_LPF_BANDWIDTH_STRINGS) / s
 constexpr uint16_t SENSOR_POWER_UP_DELAY_MS = 100;
 constexpr float MS_PER_SECOND = 1000.0f;
 constexpr float HALF_PI_RADIANS = M_PI / 2.0f;
+
+// --- IMU General Constants ---
+constexpr uint8_t NUM_AXES = 3;
+constexpr float MSP_ACCEL_SCALING_FACTOR = 512.0f; // 1G = 512 (approx)
+constexpr float MSP_GYRO_SCALING_FACTOR = 4.0f;    // 1 deg/s = 4 (approx)

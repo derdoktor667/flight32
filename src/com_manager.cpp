@@ -38,7 +38,8 @@ void com_task(void *pvParameters)
             if (_current_com_mode == ComSerialMode::TERMINAL)
             {
                 // If a prompt was just printed, any log message should start on a new line.
-                if (_line_needs_clearing && msg.type != ComMessageType::TERMINAL_PROMPT) {
+                if (_line_needs_clearing && msg.type != ComMessageType::TERMINAL_PROMPT)
+                {
                     Serial.println();
                     _line_needs_clearing = false;
                 }

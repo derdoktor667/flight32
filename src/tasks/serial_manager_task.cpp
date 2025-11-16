@@ -9,15 +9,16 @@
 #include "serial_manager_task.h"
 #include "../utils/version_info.h"
 #include <cmath>
-#include <cmath>
 #include "imu_task.h"
 #include "../config/terminal_config.h"
 #include "../config/serial_config.h"
 #include "../config/filter_config.h"
-#include <cstring>      // For strlen and memcpy
-#include <cstdio>       // For snprintf
+#include "../config/com_manager_config.h" // Include for MSP_RESPONSE_DELAY_US and UNIQUE_ID_BUFFER_SIZE
+#include "../config/imu_config.h"         // Include for MSP_ACCEL_SCALING_FACTOR and MSP_GYRO_SCALING_FACTOR
+#include <cstring>                        // For strlen and memcpy
+#include <cstdio>                         // For snprintf
 
-static constexpr float RADIANS_TO_DEGREES = 180.0f / M_PI;
+static constexpr float RADIANS_TO_DEGREES = (180.0f / M_PI);
 
 // Helper function to convert quaternion to Euler angles (roll, pitch, yaw)
 // Angles are in degrees
@@ -312,13 +313,13 @@ void SerialManagerTask::_send_msp_response(uint8_t cmd, uint8_t *payload, uint8_
         crc ^= payload[i];
     }
     Serial.write(crc);
-    delayMicroseconds(100); // Small delay to ensure the entire response is sent
+    delayMicroseconds(MSP_RESPONSE_DELAY_US); // Small delay to ensure the entire response is sent
 }
 
 // MSP Command Handlers
 void SerialManagerTask::_handle_msp_api_version()
 {
-    uint8_t payload[3];
+    uint8_t payload[MSP_API_VERSION_PAYLOAD_SIZE];
     payload[0] = MSP_PROTOCOL_VERSION;
     payload[1] = MSP_API_VERSION_MAJOR;
     payload[2] = MSP_API_VERSION_MINOR;
@@ -366,7 +367,7 @@ void SerialManagerTask::_handle_msp_board_info()
     payload[idx++] = '\0'; // NUL-terminate
 
     // Unique Device ID (derived from firmware version and build date/time)
-    char unique_id_str[32]; // "FL32-vX.Y.Z-YYYYMMDD-HHMMSS" + null terminator
+    char unique_id_str[UNIQUE_ID_BUFFER_SIZE]; // "FL32-vX.Y.Z-YYYYMMDD-HHMMSS" + null terminator
     snprintf(unique_id_str, sizeof(unique_id_str), "FL32-%s-%s-%s", FIRMWARE_VERSION, __DATE__, __TIME__);
     len = strlen(unique_id_str);
     memcpy(&payload[idx], unique_id_str, len);
@@ -418,7 +419,7 @@ void SerialManagerTask::_handle_msp_mem_stats()
 {
     // Send free heap size (4 bytes)
     uint32_t free_heap = ESP.getFreeHeap();
-    uint8_t payload[4];
+    uint8_t payload[MSP_MEM_STATS_PAYLOAD_SIZE];
     payload[0] = (free_heap >> 0) & 0xFF;
     payload[1] = (free_heap >> 8) & 0xFF;
     payload[2] = (free_heap >> 16) & 0xFF;
@@ -470,7 +471,7 @@ void SerialManagerTask::_handle_msp_get_setting()
         return;
     }
 
-    uint8_t response_payload[response_key_len + response_value_len + 2];
+    uint8_t response_payload[response_key_len + response_value_len + MSP_RESPONSE_OVERHEAD_BYTES];
     int idx = 0;
     response_payload[idx++] = response_key_len;
     memcpy(&response_payload[idx], display_key_str.c_str(), response_key_len);
@@ -484,7 +485,7 @@ void SerialManagerTask::_handle_msp_get_setting()
 
 void SerialManagerTask::_handle_msp_set_setting()
 {
-    if (_msp_payload_size < 3)
+    if (_msp_payload_size < MSP_MIN_PAYLOAD_SIZE)
     {                                                    // Need at least key_len, key, value_len, value
         _send_msp_response(MSP_SET_SETTING, nullptr, 0); // Error: invalid payload
         return;
@@ -690,7 +691,7 @@ void SerialManagerTask::_handle_msp_attitude()
     int16_t msp_pitch = (int16_t)(pitch_f * MSP_ATTITUDE_SCALE_FACTOR);
     int16_t msp_yaw = (int16_t)yaw_f; // Yaw is typically not scaled by 10 in MSP
 
-    uint8_t payload[6]; // 3x angles (int16_t = 2 bytes each)
+    uint8_t payload[MSP_ATTITUDE_PAYLOAD_SIZE]; // 3x angles (int16_t = 2 bytes each)
     int i = 0;
 
     _write_int16_to_payload(payload, i, msp_roll);

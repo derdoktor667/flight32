@@ -25,7 +25,7 @@ void ImuTask::setup()
     float notch2_hz = _settings_manager->getFloat(NVS_KEY_NOTCH2_HZ);
     float notch2_q = _settings_manager->getFloat(NVS_KEY_NOTCH2_Q);
 
-    for (int i = 0; i < 3; ++i)
+    for (int i = 0; i < NUM_AXES; ++i)
     {
         _gyro_lpf[i].configureLowpass(sample_freq, gyro_lpf_hz);
         _gyro_notch1[i].configureNotch(sample_freq, notch1_hz, notch1_q);
