@@ -44,7 +44,6 @@ private:
     ComSerialMode _current_mode = ComSerialMode::TERMINAL; // Current serial communication mode
     unsigned long _last_msp_activity_ms = 0;
     static constexpr unsigned long MSP_TIMEOUT_MS = 2000; // Switch back to terminal after 2 seconds of no MSP activity
-    uint8_t _msp_handshake_state = 0; // State for MSP handshake sequence
 
     // MSP Mode Variables
     enum class MspState
@@ -57,6 +56,7 @@ private:
         PAYLOAD,
         CRC
     };
+    
     MspState _msp_state = MspState::IDLE;
     uint8_t _msp_payload_size = 0;
     uint8_t _msp_command_id = 0;
@@ -71,7 +71,7 @@ private:
     void _parse_msp_char(uint8_t c);
     void _process_msp_message();
     void _send_msp_response(uint8_t cmd, uint8_t *payload, uint8_t size);
-    
+
     // Added new helper function for reading int16_t values
     void _write_int16_to_payload(uint8_t *payload, int &index, int16_t value);
     int16_t _read_int16_from_payload(const uint8_t *payload, int &index);

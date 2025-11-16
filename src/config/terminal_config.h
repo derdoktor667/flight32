@@ -18,6 +18,7 @@ constexpr uint16_t TERMINAL_INPUT_BUFFER_SIZE = 128;
 
 // --- Terminal/Utility ---
 constexpr uint32_t ONE_SECOND_MICROSECONDS = 1000000;
+constexpr uint32_t TWO_SECOND_MICROSECONDS = 2000000;
 constexpr uint16_t MAX_THROTTLE_VALUE = 2047;
 constexpr uint8_t ASCII_BACKSPACE = 127;
 constexpr int8_t INVALID_SETTING_VALUE = -1;
@@ -41,6 +42,7 @@ constexpr uint8_t TERMINAL_DISPLAY_KEY_BUFFER = 2;
 constexpr uint8_t TERMINAL_MIN_CHANNEL_INDEX = 1;
 constexpr uint8_t TERMINAL_MAX_CHANNEL_INDEX = 14;
 constexpr uint8_t TERMINAL_COLUMN_BUFFER_WIDTH = 2;
+constexpr uint8_t TERMINAL_COLUMN_MAX_WIDTH = 12;
 constexpr uint8_t TERMINAL_RX_DATA_DISPLAY_CHANNELS = 10;
 constexpr uint8_t TERMINAL_RX_SINGLE_DESC_WIDTH = 25; // "RX Flight Mode (CH14)" is 22 chars, plus buffer
 constexpr uint8_t SETTING_NAME_DISPLAY_WIDTH = 20;

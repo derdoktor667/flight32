@@ -29,7 +29,6 @@ enum class CommandCategory
     PID,
     FILTER,
     SETTINGS,
-    RC_CHANNELS,
     UNKNOWN
 };
 
@@ -66,6 +65,7 @@ public:
     void handleInput(char incoming_char);
     void showPrompt();
     bool shouldQuit() const { return _should_quit; }
+    void clearInputBuffer() { _input_buffer = ""; }
 
 private:
     Scheduler *_scheduler;

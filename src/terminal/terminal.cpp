@@ -95,8 +95,8 @@ const Command Terminal::_commands[] = {
 
     {"get rx.data", &Terminal::_handle_rx_data, "Shows the latest RX channel data.", CommandCategory::RX},
     {"get rx.status", &Terminal::_handle_rx_status, "Shows the RX connection status.", CommandCategory::RX},
-    {"get ppm.pin", &Terminal::_handle_get_setting, "Gets the PPM input pin.", CommandCategory::RX},
-    {"set ppm.pin", &Terminal::_handle_set_setting, "Sets the PPM input pin (GPIO number).", CommandCategory::RX},
+    {"get rx.pin", &Terminal::_handle_get_setting, "Gets the RX input pin.", CommandCategory::RX},
+    {"set rx.pin", &Terminal::_handle_set_setting, "Sets the RX input pin (GPIO number).", CommandCategory::RX},
     {"set rx.protocol", &Terminal::_handle_rx_protocol, "Sets the RX protocol (e.g., 'set rx.protocol IBUS'). Available: IBUS, PPM.", CommandCategory::RX},
     {"get rx.value.all", &Terminal::_handle_rx_value_all, "Shows all mapped RX channel values.", CommandCategory::RX},
     {"get rx.value.roll", &Terminal::_handle_rx_value_single, "Shows the RX Roll channel value.", CommandCategory::RX},
@@ -158,7 +158,6 @@ const CategoryInfo Terminal::_category_info[] = {
     {CommandCategory::PID, "pid", "PID controller commands"},
     {CommandCategory::FILTER, "filter", "Filter settings"},
     {CommandCategory::SETTINGS, "settings", "Settings management commands"},
-    {CommandCategory::RC_CHANNELS, "rc.channels", "RC Channel Mapping Settings"},
 };
 constexpr int Terminal::_num_categories = sizeof(Terminal::_category_info) / sizeof(CategoryInfo);
 
@@ -203,9 +202,12 @@ void Terminal::handleInput(char incoming_char)
 void Terminal::showPrompt()
 {
     com_flush_output();
-    com_send_log(ComMessageType::TERMINAL_OUTPUT, "");
+    // com_send_log(ComMessageType::TERMINAL_OUTPUT, "");
+
+    // Draw some fancy prompt
     String system_name = _settings_manager->getSettingValue(KEY_SYSTEM_NAME);
-    String prompt = "[" + system_name + " ~]";
+    String prompt = "[" + system_name + " ~]" + " ";
+
     com_send_prompt(prompt.c_str());
 }
 
@@ -257,21 +259,19 @@ const char *Terminal::_get_category_string(CommandCategory category)
     switch (category)
     {
     case CommandCategory::SYSTEM:
-        return "System";
+        return "System Configuration";
     case CommandCategory::IMU:
-        return "IMU Sensor";
+        return "IMU Sensor Configuration";
     case CommandCategory::RX:
-        return "Receiver";
+        return "Receiver Configuration";
     case CommandCategory::MOTOR:
-        return "Motor Control";
+        return "Motor Configuation";
     case CommandCategory::PID:
-        return "PID Controller";
+        return "PID Configuration";
     case CommandCategory::FILTER:
-        return "Filter";
+        return "Filter Configuration";
     case CommandCategory::SETTINGS:
         return "Settings Management";
-    case CommandCategory::RC_CHANNELS:
-        return "RC Channel Mapping";
     default:
         return "Unknown";
     }
@@ -293,8 +293,6 @@ CommandCategory Terminal::_get_category_from_string(String &category_str)
         return CommandCategory::FILTER;
     if (category_str.equalsIgnoreCase("settings") || category_str.equalsIgnoreCase("config"))
         return CommandCategory::SETTINGS;
-    if (category_str.equalsIgnoreCase("rc.channels") || category_str.equalsIgnoreCase("channels"))
-        return CommandCategory::RC_CHANNELS;
     return CommandCategory::UNKNOWN;
 }
 
@@ -307,7 +305,7 @@ CommandCategory Terminal::_get_setting_category(const char *display_key)
         assigned_category = CommandCategory::SYSTEM;
     else if (key_str.startsWith("gyro.") || key_str.startsWith("imu.") || key_str.startsWith("mpu."))
         assigned_category = CommandCategory::IMU;
-    else if (key_str.startsWith("rx.") || key_str.startsWith("rc.protocol"))
+    else if (key_str.startsWith("rx.") || key_str.startsWith("rc."))
         assigned_category = CommandCategory::RX;
     else if (key_str.startsWith("motor."))
         assigned_category = CommandCategory::MOTOR;
@@ -315,8 +313,6 @@ CommandCategory Terminal::_get_setting_category(const char *display_key)
         assigned_category = CommandCategory::PID;
     else if (key_str.startsWith("filter."))
         assigned_category = CommandCategory::FILTER;
-    else if (key_str.startsWith("rc.ch."))
-        assigned_category = CommandCategory::RC_CHANNELS;
 
     return assigned_category;
 }
@@ -400,8 +396,6 @@ bool Terminal::_category_has_settings(CommandCategory category)
 // Command Handlers
 void Terminal::_handle_help(String &args)
 {
-    com_send_log(ComMessageType::TERMINAL_OUTPUT, "");
-
     if (args.length() == 0)
     {
         com_send_log(ComMessageType::TERMINAL_OUTPUT, "--- Flight32 Terminal Help ---");
@@ -409,9 +403,11 @@ void Terminal::_handle_help(String &args)
         com_send_log(ComMessageType::TERMINAL_OUTPUT, "Usage: help <category>");
         com_send_log(ComMessageType::TERMINAL_OUTPUT, "");
 
-        com_send_log(ComMessageType::TERMINAL_OUTPUT, "Core Commands:");
+        com_send_log(ComMessageType::TERMINAL_OUTPUT, "Available Commands:");
 
         int max_core_cmd_len = 0;
+
+        // search the longest word
         for (int i = 0; i < _num_commands; ++i)
         {
             if (_commands[i].category == CommandCategory::SYSTEM)
@@ -423,10 +419,18 @@ void Terminal::_handle_help(String &args)
                 }
             }
         }
+
         max_core_cmd_len += TERMINAL_COLUMN_BUFFER_WIDTH;
 
+        // workround for alignment
+        if (max_core_cmd_len < TERMINAL_COLUMN_MAX_WIDTH)
+        {
+            max_core_cmd_len = TERMINAL_COLUMN_MAX_WIDTH;
+        }
+
         com_send_log(ComMessageType::TERMINAL_OUTPUT, "  %-*s %s", max_core_cmd_len, "Command", "Description");
-        String core_separator_str = _generate_separator(max_core_cmd_len, strlen("Description"));
+
+        String core_separator_str = _generate_separator(max_core_cmd_len, strlen("-----------------------------------------")); // length: 42
         com_send_log(ComMessageType::TERMINAL_OUTPUT, core_separator_str.c_str());
 
         for (int i = 0; i < _num_commands; ++i)
@@ -436,10 +440,12 @@ void Terminal::_handle_help(String &args)
                 com_send_log(ComMessageType::TERMINAL_OUTPUT, "  %-*s %s", max_core_cmd_len, _commands[i].name, _commands[i].help);
             }
         }
+
         com_send_log(ComMessageType::TERMINAL_OUTPUT, core_separator_str.c_str());
+
         com_send_log(ComMessageType::TERMINAL_OUTPUT, "");
 
-        com_send_log(ComMessageType::TERMINAL_OUTPUT, "Available Command Categories:");
+        com_send_log(ComMessageType::TERMINAL_OUTPUT, "Available Categories:");
 
         int max_category_prefix_len = 0;
         for (int i = 0; i < _num_categories; ++i)
@@ -450,10 +456,18 @@ void Terminal::_handle_help(String &args)
                 max_category_prefix_len = len;
             }
         }
+
         max_category_prefix_len += TERMINAL_COLUMN_BUFFER_WIDTH;
 
+        // workround for alignment
+        if (max_category_prefix_len < TERMINAL_COLUMN_MAX_WIDTH)
+        {
+            max_category_prefix_len = TERMINAL_COLUMN_MAX_WIDTH;
+        }
+
         com_send_log(ComMessageType::TERMINAL_OUTPUT, "  %-*s %s", max_category_prefix_len, "Category", "Description");
-        String category_separator_str = _generate_separator(max_category_prefix_len, strlen("Description"));
+
+        String category_separator_str = _generate_separator(max_category_prefix_len, strlen("-----------------------------------------")); // length: 42
         com_send_log(ComMessageType::TERMINAL_OUTPUT, category_separator_str.c_str());
 
         for (int i = 0; i < _num_categories; ++i)
@@ -461,8 +475,8 @@ void Terminal::_handle_help(String &args)
             com_send_log(ComMessageType::TERMINAL_OUTPUT, "  %-*s %s", max_category_prefix_len, _category_info[i].prefix, _category_info[i].description);
             vTaskDelay(1); // Added delay for verbosity
         }
-        com_send_log(ComMessageType::TERMINAL_OUTPUT, category_separator_str.c_str());
-        com_send_log(ComMessageType::TERMINAL_OUTPUT, "\n------------------------------");
+
+        com_send_log(ComMessageType::TERMINAL_OUTPUT, core_separator_str.c_str());
     }
     else
     {
@@ -522,7 +536,6 @@ void Terminal::_handle_help(String &args)
             }
         }
         com_send_log(ComMessageType::TERMINAL_OUTPUT, separator_str.c_str());
-        com_send_log(ComMessageType::TERMINAL_OUTPUT, "\n--------------------------");
     }
 }
 
@@ -555,7 +568,7 @@ void Terminal::_handle_tasks(String &args)
     com_send_log(ComMessageType::TERMINAL_OUTPUT, "");
     com_send_log(ComMessageType::TERMINAL_OUTPUT, "% -16s %-10s %-6s %-8s %-10s %-10s %-10s %s",
                  "Task Name", "State", "Prio", "CPU %", "Loop (us)", "Avg (us)", "Max (us)", "Stack HWM (bytes)");
-    com_send_log(ComMessageType::TERMINAL_OUTPUT, "---------------------------------------------------------------------------------------------------");
+    com_send_log(ComMessageType::TERMINAL_OUTPUT, "---------------------------------------------------------------------------------------");
 
     for (uint8_t i = 0; i < _scheduler->getTaskCount(); i++)
     {
@@ -603,7 +616,7 @@ void Terminal::_handle_tasks(String &args)
                  freertos_status.usStackHighWaterMark);
         com_send_log(ComMessageType::TERMINAL_OUTPUT, output_buffer);
     }
-    com_send_log(ComMessageType::TERMINAL_OUTPUT, "---------------------------------------------------------------------------------------------------");
+    com_send_log(ComMessageType::TERMINAL_OUTPUT, "---------------------------------------------------------------------------------------");
 
     vPortFree(freertos_task_status_array);
 }
@@ -635,7 +648,7 @@ void Terminal::_handle_reboot(String &args)
     com_send_log(ComMessageType::TERMINAL_OUTPUT, "");
     com_send_log(ComMessageType::TERMINAL_OUTPUT, "Rebooting...");
 
-    delayMicroseconds(ONE_SECOND_MICROSECONDS);
+    delayMicroseconds(TWO_SECOND_MICROSECONDS);
 
     com_send_log(ComMessageType::TERMINAL_OUTPUT, "");
     com_send_log(ComMessageType::TERMINAL_OUTPUT, "");
@@ -645,11 +658,15 @@ void Terminal::_handle_reboot(String &args)
 
 void Terminal::_handle_quit(String &args)
 {
+    com_send_log(ComMessageType::TERMINAL_OUTPUT, "");
     com_send_log(ComMessageType::TERMINAL_OUTPUT, "Saving settings and exiting...");
+
+    // Make sure Motors are not running
     if (_motor_task && _motor_task->isInTestMode())
     {
         _motor_task->stopMotorTest();
     }
+
     _settings_manager->saveSettings(); // Save settings before quitting
     com_send_log(ComMessageType::TERMINAL_OUTPUT, "Goodbye!");
     _should_quit = true;
@@ -756,7 +773,9 @@ void Terminal::_handle_rx_data(String &args)
     {
         String ch_str = "CH" + String(i + RC_CHANNEL_INDEX_OFFSET);
         com_send_log(ComMessageType::TERMINAL_OUTPUT, "  %-*s %d", max_ch_len, ch_str.c_str(), _rx_task->getChannel(i));
-        vTaskDelay(1); // Added delay for verbosity
+
+        // Added delay for verbosity
+        vTaskDelay(1);
     }
     com_send_log(ComMessageType::TERMINAL_OUTPUT, separator_str.c_str());
 }
@@ -769,7 +788,8 @@ void Terminal::_handle_rx_status(String &args)
         return;
     }
 
-    com_send_log(ComMessageType::TERMINAL_OUTPUT, "RX Status: Task Available");
+    String current_protocol = _settings_manager->getSettingValueHumanReadable(KEY_RC_PROTOCOL_TYPE);
+    com_send_log(ComMessageType::TERMINAL_OUTPUT, "RX Status: Enabled %s", current_protocol.c_str());
 }
 
 void Terminal::_handle_rx_protocol(String &args)

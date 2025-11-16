@@ -28,7 +28,7 @@ void quaternionToEuler(float w, float x, float y, float z, float *roll, float *p
     // Pitch (y-axis rotation)
     float sinp = 2 * (w * y - z * x);
     if (fabs(sinp) >= 1)
-    {                                                           // Check for singularity
+    {                                                                  // Check for singularity
         *pitch = copysign(HALF_PI_RADIANS, sinp) * RADIANS_TO_DEGREES; // Use 90 degrees if out of range
     }
     else
@@ -86,50 +86,22 @@ void SerialManagerTask::run()
     while (Serial.available() > 0)
     {
         uint8_t c = Serial.read();
-
-        // Handshake logic: Check for MSP preamble
-        if (_current_mode == ComSerialMode::TERMINAL)
-        {
-            // Look for '$', 'R', 'M', 'S', 'P' sequence
-
-            const char msp_handshake[] = "$RMSP";
-
-            if (c == msp_handshake[_msp_handshake_state])
-            {
-                _msp_handshake_state++;
-                if (_msp_handshake_state == strlen(msp_handshake))
-                {
-                    _current_mode = ComSerialMode::MSP;
-                    com_set_serial_mode(ComSerialMode::MSP); // Set com_manager to MSP mode
-                    _last_msp_activity_ms = millis();
-                    Serial.println("[INFO] Switched to MSP mode (direct print)."); // Direct print for debugging
-                    _msp_handshake_state = 0;                                      // Reset handshake state
-                    continue;                                                      // Don't process this char as terminal input
-                }
-            }
-            else
-            {
-                _msp_handshake_state = 0; // Reset if sequence is broken
-            }
-        }
-
-        if (_current_mode == ComSerialMode::TERMINAL)
-        {
-            _terminal->handleInput(c);
-        }
-        else // MSP Mode
-        {
-            _parse_msp_char(c);
-            _last_msp_activity_ms = millis(); // Update activity on any MSP char
-        }
+        _parse_msp_char(c); // Unified parser
     }
 
     // MSP Timeout logic
     if (_current_mode == ComSerialMode::MSP && (millis() - _last_msp_activity_ms > MSP_TIMEOUT_MS))
     {
         _current_mode = ComSerialMode::TERMINAL;
-        com_set_serial_mode(ComSerialMode::TERMINAL);                                         // Set com_manager back to TERMINAL mode
-        Serial.println("[INFO] MSP timeout. Switched back to Terminal mode (direct print)."); // Direct print for debugging
+        com_set_serial_mode(ComSerialMode::TERMINAL);
+
+        // Reset MSP parser state
+        _msp_state = MspState::IDLE;
+
+        // Clear any partial input
+        _terminal->clearInputBuffer();
+        Serial.println("[INFO] MSP timeout. Switched back to Terminal mode."); // Direct print for debugging
+
         showPrompt();
     }
 
@@ -155,20 +127,54 @@ void SerialManagerTask::_parse_msp_char(uint8_t c)
         {
             _msp_state = MspState::HEADER_START;
         }
+        else
+        {
+            // Not starting an MSP message, so it's for the terminal
+            if (_current_mode == ComSerialMode::TERMINAL)
+            {
+                _terminal->handleInput(c);
+            }
+        }
         break;
     case MspState::HEADER_START:
-        _msp_state = (c == 'M') ? MspState::HEADER_SIZE : MspState::IDLE;
+        if (c == 'M')
+        {
+            _msp_state = MspState::HEADER_SIZE;
+            // We are now in an MSP message. Switch to MSP mode if not already.
+            if (_current_mode == ComSerialMode::TERMINAL)
+            {
+                _current_mode = ComSerialMode::MSP;
+                com_set_serial_mode(ComSerialMode::MSP);
+                // No log here, as it would be suppressed by the mode change.
+                // A direct print is okay for debugging this transition.
+                Serial.println("\n[INFO] Switched to MSP mode.");
+            }
+            _last_msp_activity_ms = millis();
+        }
+        else
+        {
+            // False alarm. It was not "$M".
+            // We need to send the '$' and the current char 'c' to the terminal.
+            if (_current_mode == ComSerialMode::TERMINAL)
+            {
+                _terminal->handleInput('$');
+                _terminal->handleInput(c);
+            }
+            _msp_state = MspState::IDLE; // Reset state
+        }
         break;
     case MspState::HEADER_SIZE:
         _msp_payload_size = c;
         _msp_crc = c;
         _msp_payload_index = 0;
         _msp_state = MspState::HEADER_CMD;
+        _last_msp_activity_ms = millis();
         break;
     case MspState::HEADER_CMD:
         _msp_command_id = c;
         _msp_crc ^= c;
         _msp_state = (_msp_payload_size > 0) ? MspState::PAYLOAD : MspState::CRC;
+        _last_msp_activity_ms = millis();
         break;
     case MspState::PAYLOAD:
         _msp_payload_buffer[_msp_payload_index++] = c;
@@ -177,6 +183,7 @@ void SerialManagerTask::_parse_msp_char(uint8_t c)
         {
             _msp_state = MspState::CRC;
         }
+        _last_msp_activity_ms = millis();
         break;
     case MspState::CRC:
         if (_msp_crc == c)
@@ -184,6 +191,7 @@ void SerialManagerTask::_parse_msp_char(uint8_t c)
             _process_msp_message();
         }
         _msp_state = MspState::IDLE;
+        _last_msp_activity_ms = millis();
         break;
     default:
         _msp_state = MspState::IDLE;
