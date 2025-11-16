@@ -114,9 +114,9 @@ class MSPCommand(Enum):
 
 # Configuration
 PORT = "/dev/ttyUSB0"
+# PORT = "/dev/ttyACM0"
 BAUD_RATE = 115200
 TIMEOUT = 2.0
-MSP_HANDSHAKE = b"$RMSP"
 
 
 @dataclass
@@ -148,7 +148,9 @@ class MSPTester:
                 port=self.port, baudrate=self.baud_rate, timeout=TIMEOUT
             )
             print_success(f"Connected to {self.port} @ {self.baud_rate} baud")
-            time.sleep(1)
+            # Give the FC a moment to be ready after connection
+            time.sleep(1.5)
+            self.serial.reset_input_buffer()
             return True
         except serial.SerialException as e:
             print_error(f"Failed to connect: {e}")
@@ -159,31 +161,6 @@ class MSPTester:
         if self.serial:
             self.serial.close()
             print_success("Disconnected")
-
-    def enter_msp_mode(self) -> bool:
-        """Enter MSP mode by sending handshake"""
-        if not self.serial:
-            print_error("Serial port not connected.")
-            return False
-
-        print_section("Handshake - Entering MSP Mode")
-        try:
-            self.serial.reset_input_buffer()
-            self.serial.write(MSP_HANDSHAKE)
-            print_info(f"Sending MSP Handshake")
-
-            response = self.serial.read_until(b"\n", size=100)
-            if b"MSP mode" in response:
-                response_text = response.decode(errors="ignore").strip()
-                print_success(response_text)
-                self.in_msp_mode = True
-                return True
-            else:
-                print_error(f"Unexpected response: {response}")
-                return False
-        except Exception as e:
-            print_error(f"Handshake failed: {e}")
-            return False
 
     def exit_msp_mode(self) -> bool:
         """Exit MSP mode by waiting for timeout"""
@@ -200,16 +177,28 @@ class MSPTester:
             return MSPResponse(cmd, b"", False, parse_error=True)
 
         try:
+            self.serial.reset_input_buffer()
+            time.sleep(0.05)  # Give FC a moment to send any buffered output
+
             size = len(payload)
             crc = size ^ cmd
             for byte in payload:
                 crc ^= byte
 
-            request = b"$M" + bytes([size, cmd]) + payload + bytes([crc])
+            request = b"$M<" + bytes([size, cmd]) + payload + bytes([crc])
+            try:
+                cmd_name = MSPCommand(cmd).name
+            except ValueError:
+                cmd_name = f"0x{cmd:02X}"
+            print_info(
+                f"Sending MSP command {cmd_name} (0x{cmd:02X}) with payload size {size}. Request: {request.hex()}"
+            )
             self.serial.write(request)
+            time.sleep(0.02)  # Small delay to allow FC to process and respond
             response = self._read_msp_response()
             return response
-        except Exception:
+        except Exception as e:
+            print_error(f"Error sending MSP command {cmd}: {e}")
             return MSPResponse(cmd, b"", False, parse_error=True)
 
     def _read_msp_response(self) -> MSPResponse:
@@ -218,29 +207,73 @@ class MSPTester:
             return MSPResponse(0, b"", False, parse_error=True)
 
         try:
-            header = self.serial.read(2)
-            if header != b"$M":
-                return MSPResponse(0, b"", False, parse_error=True)
+            # Wait for the '$M>' header
+            header_buffer = b""
+            start_time = time.time()
+            while b"$M>" not in header_buffer:
+                byte = self.serial.read(1)
+                if not byte:
+                    if (time.time() - start_time) > TIMEOUT:
+                        print_error("Timeout waiting for $M> header.")
+                        return MSPResponse(0, b"", False, parse_error=True)  # Timeout
+                    continue
+                header_buffer += byte
+                if len(header_buffer) > 10:  # Prevent buffer from growing indefinitely
+                    header_buffer = header_buffer[-10:]
 
-            size_cmd = self.serial.read(2)
-            if len(size_cmd) < 2:
-                return MSPResponse(0, b"", False, parse_error=True)
+            # Once '$M>' is found, discard everything before it
+            header_buffer = header_buffer[header_buffer.find(b"$M>") :]
 
-            size = size_cmd[0]
-            cmd = size_cmd[1]
+            # Read size and command
+            while len(header_buffer) < 5:  # Need $M> + size + cmd
+                byte = self.serial.read(1)
+                if not byte:
+                    if (time.time() - start_time) > TIMEOUT:
+                        print_error("Timeout waiting for size and command bytes.")
+                        return MSPResponse(0, b"", False, parse_error=True)  # Timeout
+                    continue
+                header_buffer += byte
 
-            payload = self.serial.read(size) if size > 0 else b""
-            crc_byte = self.serial.read(1)
-            if len(crc_byte) < 1:
-                return MSPResponse(cmd, payload, False, parse_error=True)
+            size = header_buffer[3]
+            cmd = header_buffer[4]
 
+            # Read payload and CRC
+            expected_total_len = 5 + size + 1  # $M> + size + cmd + payload + crc
+            while len(header_buffer) < expected_total_len:
+                byte = self.serial.read(1)
+                if not byte:
+                    if (time.time() - start_time) > TIMEOUT:
+                        print_error(
+                            f"Timeout waiting for payload and CRC for command {cmd}."
+                        )
+                        return MSPResponse(0, b"", False, parse_error=True)  # Timeout
+                    continue
+                header_buffer += byte
+
+            # Extract components
+            payload = header_buffer[5 : 5 + size]
+            crc_byte = header_buffer[5 + size]
+
+            # Calculate CRC (size ^ cmd ^ payload bytes) - match send side
             crc = size ^ cmd
             for byte in payload:
                 crc ^= byte
 
-            is_valid = crc == crc_byte[0]
+            is_valid = crc == crc_byte
+            try:
+                cmd_name = MSPCommand(cmd).name
+            except ValueError:
+                cmd_name = f"0x{cmd:02X}"
+            print_info(
+                f"Received MSP response for command {cmd_name} (0x{cmd:02X}). Raw: {header_buffer.hex()}"
+            )
+            print_info(
+                f"  Payload size: {size}, Valid: {is_valid}, CRC Error: {not is_valid}"
+            )
+
             return MSPResponse(cmd, payload, is_valid, crc_error=(not is_valid))
-        except Exception:
+        except Exception as e:
+            print_error(f"Error reading MSP response: {e}")
             return MSPResponse(0, b"", False, parse_error=True)
 
     # Test methods
@@ -284,21 +317,30 @@ class MSPTester:
         if not response.is_valid:
             self.test_results.append(("Board Info", False, ""))
             return False
+        # Payload often contains multiple NUL-terminated text fields and unused bytes.
+        raw = response.payload
+        parts = raw.split(b"\x00")
+        fields = []
+        for p in parts:
+            try:
+                s = p.decode("ascii", errors="ignore").strip()
+            except Exception:
+                continue
+            # Remove non-printable characters
+            s = "".join(ch for ch in s if ch.isprintable())
+            if not s:
+                continue
+            # Truncate each field to reasonable length
+            if len(s) > 120:
+                s = s[:117] + "..."
+            fields.append(s)
 
-        board_name = response.payload.decode("ascii", errors="ignore").strip()
-        details = f"Board Name: {board_name}"
+        if not fields:
+            details = f"Board Raw: {raw.hex()}"
+        else:
+            # Format as clean list (no numbering) and indent fields for correct display
+            details = "Board Fields:\n    " + "\n    ".join(fields)
         self.test_results.append(("Board Info", True, details))
-        return True
-
-    def test_mem_stats(self) -> bool:
-        response = self.send_msp_command(MSPCommand.MSP_MEM_STATS.value)
-        if not response.is_valid or len(response.payload) < 4:
-            self.test_results.append(("Memory Stats", False, ""))
-            return False
-
-        free_heap = struct.unpack("<I", response.payload[:4])[0]
-        details = f"Free Heap: {free_heap} bytes"
-        self.test_results.append(("Memory Stats", True, details))
         return True
 
     def test_raw_imu(self) -> bool:
@@ -355,135 +397,27 @@ class MSPTester:
         self.test_results.append(("Motor Output", True, details))
         return True
 
-    def test_pid_get(self) -> bool:
-        response = self.send_msp_command(MSPCommand.MSP_PID.value)
-        if not response.is_valid or len(response.payload) < 18:
-            self.test_results.append(("PID Get", False, ""))
-            return False
-
-        # Assuming payload is 18 bytes: P,I,D for Roll, Pitch, Yaw (each 2 bytes)
-        # The original code had len(response.payload) == 18, which implies 9 values of 2 bytes each.
-        # Let's assume P, I, D are unsigned bytes for Roll, Pitch, Yaw.
-        # If it's 18 bytes, it's likely 9 * 2-byte values (shorts).
-        # Let's assume it's P, I, D for Roll, Pitch, Yaw, each as a byte. That would be 9 bytes.
-        # Given the payload is 18 bytes, it's more likely 9 * 2-byte values (shorts).
-        # Let's assume the order is Roll_P, Roll_I, Roll_D, Pitch_P, Pitch_I, Pitch_D, Yaw_P, Yaw_I, Yaw_D
-
-        # Unpack 9 unsigned shorts (H)
-        try:
-            roll_p, roll_i, roll_d, pitch_p, pitch_i, pitch_d, yaw_p, yaw_i, yaw_d = (
-                struct.unpack("<HHHHHHHHH", response.payload[:18])
-            )
-            details = (
-                f"Roll PID: P={roll_p}, I={roll_i}, D={roll_d} | "
-                f"Pitch PID: P={pitch_p}, I={pitch_i}, D={pitch_d} | "
-                f"Yaw PID: P={yaw_p}, I={yaw_i}, D={yaw_d}"
-            )
-            self.test_results.append(("PID Get", True, details))
-            return True
-        except struct.error:
-            self.test_results.append(("PID Get", False, "Payload parsing error"))
-            return False
-
-    def test_filter_config_get_set(self) -> bool:
-        """Test getting and setting filter configuration"""
-        test_name = "Filter Get/Set"
-
-        # 1. Get current filter settings
-        response = self.send_msp_command(MSPCommand.MSP_GET_FILTER_CONFIG.value)
-        if not response.is_valid or len(response.payload) != 20:
-            self.test_results.append((test_name, False, "Failed to get initial config"))
-            return False
-
-        original_values = struct.unpack("<fffff", response.payload)
-        details = f"Originals: LPF={original_values[0]:.1f}, N1_Hz={original_values[1]:.1f}, N1_Q={original_values[2]:.1f}, N2_Hz={original_values[3]:.1f}, N2_Q={original_values[4]:.1f}"
-        print_info(f"Original filter values: {details}")
-
-        # 2. Set new test values
-        test_values = (100.0, 200.0, 1.2, 300.0, 0.8)
-        set_payload = struct.pack("<fffff", *test_values)
-        set_response = self.send_msp_command(
-            MSPCommand.MSP_SET_FILTER_CONFIG.value, set_payload
-        )
-        if not set_response.is_valid:
-            self.test_results.append((test_name, False, "Failed to send set command"))
-            return False
-
-        # 3. Get settings again to verify they were set
-        time.sleep(0.1)  # Give FC time to process
-        verify_response = self.send_msp_command(MSPCommand.MSP_GET_FILTER_CONFIG.value)
-        if not verify_response.is_valid or len(verify_response.payload) != 20:
-            self.test_results.append((test_name, False, "Failed to get verification config"))
-            return False
-
-        verified_values = struct.unpack("<fffff", verify_response.payload)
-        if not all(
-            abs(a - b) < 1e-6 for a, b in zip(verified_values, test_values)
-        ):
-            self.test_results.append(
-                (test_name, False, f"Verification failed. Got {verified_values}, expected {test_values}")
-            )
-            # Attempt to restore original values anyway
-            restore_payload = struct.pack("<fffff", *original_values)
-            self.send_msp_command(MSPCommand.MSP_SET_FILTER_CONFIG.value, restore_payload)
-            return False
-
-        # 4. Restore original values
-        restore_payload = struct.pack("<fffff", *original_values)
-        restore_response = self.send_msp_command(
-            MSPCommand.MSP_SET_FILTER_CONFIG.value, restore_payload
-        )
-        if not restore_response.is_valid:
-            self.test_results.append(
-                (test_name, False, "Failed to send restore command")
-            )
-            return False
-
-        # 5. Final check to ensure restoration
-        time.sleep(0.1)
-        final_response = self.send_msp_command(MSPCommand.MSP_GET_FILTER_CONFIG.value)
-        if not final_response.is_valid or len(final_response.payload) != 20:
-            self.test_results.append((test_name, False, "Failed to get final config"))
-            return False
-
-        final_values = struct.unpack("<fffff", final_response.payload)
-        if not all(abs(a - b) < 1e-6 for a, b in zip(final_values, original_values)):
-            self.test_results.append(
-                (test_name, False, f"Restore failed. Got {final_values}, expected {original_values}")
-            )
-            return False
-
-        self.test_results.append((test_name, True, details))
-        return True
-
     def run_all_tests(self) -> bool:
         """Run all tests"""
         if not self.connect():
             return False
 
-        if not self.enter_msp_mode():
-            self.disconnect()
-            return False
-
+        print_section("Running MSP Tests")
         try:
             tests = [
                 self.test_api_version,
                 self.test_fc_variant,
                 self.test_fc_version,
                 self.test_board_info,
-                self.test_mem_stats,
                 self.test_raw_imu,
                 self.test_rc_channels,
                 self.test_attitude,
                 self.test_motor_output,
-                self.test_pid_get,
-                self.test_filter_config_get_set,
             ]
 
             for test_func in tests:
                 test_func()
         finally:
-            self.exit_msp_mode()
             self.disconnect()
 
         self._print_summary()

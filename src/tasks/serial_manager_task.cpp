@@ -126,6 +126,7 @@ void SerialManagerTask::_parse_msp_char(uint8_t c)
         if (c == '$')
         {
             _msp_state = MspState::HEADER_START;
+            _msp_crc = 0; // Initialize CRC for incoming message
         }
         else
         {
@@ -139,16 +140,8 @@ void SerialManagerTask::_parse_msp_char(uint8_t c)
     case MspState::HEADER_START:
         if (c == 'M')
         {
-            _msp_state = MspState::HEADER_SIZE;
-            // We are now in an MSP message. Switch to MSP mode if not already.
-            if (_current_mode == ComSerialMode::TERMINAL)
-            {
-                _current_mode = ComSerialMode::MSP;
-                com_set_serial_mode(ComSerialMode::MSP);
-                // No log here, as it would be suppressed by the mode change.
-                // A direct print is okay for debugging this transition.
-                Serial.println("\n[INFO] Switched to MSP mode.");
-            }
+            _msp_state = MspState::HEADER_DIR;
+            // _msp_crc = 'M'; // CRC starts with size byte, not 'M'
             _last_msp_activity_ms = millis();
         }
         else
@@ -163,9 +156,34 @@ void SerialManagerTask::_parse_msp_char(uint8_t c)
             _msp_state = MspState::IDLE; // Reset state
         }
         break;
+    case MspState::HEADER_DIR:
+        if (c == '<') // Expecting '<' for incoming commands
+        {
+            _msp_state = MspState::HEADER_SIZE;
+            _msp_crc ^= c; // Include direction byte in CRC
+            if (_current_mode == ComSerialMode::TERMINAL)
+            {
+                _current_mode = ComSerialMode::MSP;
+                com_set_serial_mode(ComSerialMode::MSP);
+                // Serial.println("\n[INFO] Switched to MSP mode."); // Removed for clean MSP communication
+            }
+        }
+        else
+        {
+            // Invalid direction byte, reset MSP state
+            if (_current_mode == ComSerialMode::TERMINAL)
+            {
+                _terminal->handleInput('$');
+                _terminal->handleInput('M');
+                _terminal->handleInput(c);
+            }
+            _msp_state = MspState::IDLE;
+        }
+        _last_msp_activity_ms = millis();
+        break;
     case MspState::HEADER_SIZE:
         _msp_payload_size = c;
-        _msp_crc = c;
+        _msp_crc ^= c;
         _msp_payload_index = 0;
         _msp_state = MspState::HEADER_CMD;
         _last_msp_activity_ms = millis();
@@ -201,6 +219,7 @@ void SerialManagerTask::_parse_msp_char(uint8_t c)
 
 void SerialManagerTask::_process_msp_message()
 {
+    Serial.printf("[DEBUG] _process_msp_message called for command: 0x%02X\n", _msp_command_id);
     switch (_msp_command_id)
     {
     case MSP_API_VERSION:
@@ -274,11 +293,12 @@ void SerialManagerTask::_process_msp_message()
 // CORRECTED: Removed '$M>' and changed to proper '$M' format
 void SerialManagerTask::_send_msp_response(uint8_t cmd, uint8_t *payload, uint8_t size)
 {
+    Serial.printf("[DEBUG] _send_msp_response called for cmd: 0x%02X, size: %d\n", cmd, size);
     Serial.write('$');
     Serial.write('M');
-    // CORRECTION: Removed Serial.write('>'); - this was causing CRC corruption
+    Serial.write('>'); // Direction byte for response
 
-    uint8_t crc = 0;
+    uint8_t crc = '>'; // Initialize CRC with direction byte
     Serial.write(size);
     crc ^= size;
     Serial.write(cmd);
@@ -289,6 +309,7 @@ void SerialManagerTask::_send_msp_response(uint8_t cmd, uint8_t *payload, uint8_
         crc ^= payload[i];
     }
     Serial.write(crc);
+    delayMicroseconds(100); // Small delay to ensure the entire response is sent
 }
 
 // MSP Command Handlers

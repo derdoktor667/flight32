@@ -51,6 +51,7 @@ private:
         IDLE,
         HEADER_START,
         HEADER_M,
+        HEADER_DIR,
         HEADER_SIZE,
         HEADER_CMD,
         PAYLOAD,
