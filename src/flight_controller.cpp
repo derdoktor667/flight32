@@ -61,7 +61,6 @@ void FlightController::setSystemState(SystemState new_state)
     if (_system_state != new_state)
     {
         _system_state = new_state;
-        com_send_log(ComMessageType::LOG_INFO, "System state changed to: %s", systemStateToString(_system_state));
     }
 }
 

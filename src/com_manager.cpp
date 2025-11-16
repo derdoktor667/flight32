@@ -17,6 +17,8 @@ QueueHandle_t com_flush_signal_queue;
 
 // Static variable to keep track of the current serial communication mode.
 static ComSerialMode _current_com_mode = ComSerialMode::TERMINAL; // Default mode is TERMINAL.
+// Static flag to ensure log messages don't print on the same line as a prompt.
+static bool _line_needs_clearing = false;
 
 // Task function for handling communication messages.
 void com_task(void *pvParameters)
@@ -35,25 +37,36 @@ void com_task(void *pvParameters)
             // Process messages only if in TERMINAL mode.
             if (_current_com_mode == ComSerialMode::TERMINAL)
             {
+                // If a prompt was just printed, any log message should start on a new line.
+                if (_line_needs_clearing && msg.type != ComMessageType::TERMINAL_PROMPT) {
+                    Serial.println();
+                    _line_needs_clearing = false;
+                }
+
                 switch (msg.type)
                 {
                 case ComMessageType::LOG_INFO:
                     Serial.print("[INFO] ");
                     Serial.println(msg.content);
+                    _line_needs_clearing = false;
                     break;
                 case ComMessageType::LOG_WARN:
                     Serial.print("[WARN] ");
                     Serial.println(msg.content);
+                    _line_needs_clearing = false;
                     break;
                 case ComMessageType::LOG_ERROR:
                     Serial.print("[ERROR] ");
                     Serial.println(msg.content);
+                    _line_needs_clearing = false;
                     break;
                 case ComMessageType::TERMINAL_OUTPUT:
                     Serial.println(msg.content);
+                    _line_needs_clearing = false;
                     break;
                 case ComMessageType::TERMINAL_PROMPT:
                     Serial.print(msg.content);
+                    _line_needs_clearing = true;
                     break;
                 case ComMessageType::TERMINAL_FLUSH:
                     // Send a signal to acknowledge the flush operation.

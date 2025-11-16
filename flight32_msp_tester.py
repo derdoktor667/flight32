@@ -108,6 +108,8 @@ class MSPCommand(Enum):
     MSP_RC = 105
     MSP_MOTOR = 104
     MSP_SET_PID = 202
+    MSP_GET_FILTER_CONFIG = 203
+    MSP_SET_FILTER_CONFIG = 204
 
 
 # Configuration
@@ -383,6 +385,77 @@ class MSPTester:
             self.test_results.append(("PID Get", False, "Payload parsing error"))
             return False
 
+    def test_filter_config_get_set(self) -> bool:
+        """Test getting and setting filter configuration"""
+        test_name = "Filter Get/Set"
+
+        # 1. Get current filter settings
+        response = self.send_msp_command(MSPCommand.MSP_GET_FILTER_CONFIG.value)
+        if not response.is_valid or len(response.payload) != 20:
+            self.test_results.append((test_name, False, "Failed to get initial config"))
+            return False
+
+        original_values = struct.unpack("<fffff", response.payload)
+        details = f"Originals: LPF={original_values[0]:.1f}, N1_Hz={original_values[1]:.1f}, N1_Q={original_values[2]:.1f}, N2_Hz={original_values[3]:.1f}, N2_Q={original_values[4]:.1f}"
+        print_info(f"Original filter values: {details}")
+
+        # 2. Set new test values
+        test_values = (100.0, 200.0, 1.2, 300.0, 0.8)
+        set_payload = struct.pack("<fffff", *test_values)
+        set_response = self.send_msp_command(
+            MSPCommand.MSP_SET_FILTER_CONFIG.value, set_payload
+        )
+        if not set_response.is_valid:
+            self.test_results.append((test_name, False, "Failed to send set command"))
+            return False
+
+        # 3. Get settings again to verify they were set
+        time.sleep(0.1)  # Give FC time to process
+        verify_response = self.send_msp_command(MSPCommand.MSP_GET_FILTER_CONFIG.value)
+        if not verify_response.is_valid or len(verify_response.payload) != 20:
+            self.test_results.append((test_name, False, "Failed to get verification config"))
+            return False
+
+        verified_values = struct.unpack("<fffff", verify_response.payload)
+        if not all(
+            abs(a - b) < 1e-6 for a, b in zip(verified_values, test_values)
+        ):
+            self.test_results.append(
+                (test_name, False, f"Verification failed. Got {verified_values}, expected {test_values}")
+            )
+            # Attempt to restore original values anyway
+            restore_payload = struct.pack("<fffff", *original_values)
+            self.send_msp_command(MSPCommand.MSP_SET_FILTER_CONFIG.value, restore_payload)
+            return False
+
+        # 4. Restore original values
+        restore_payload = struct.pack("<fffff", *original_values)
+        restore_response = self.send_msp_command(
+            MSPCommand.MSP_SET_FILTER_CONFIG.value, restore_payload
+        )
+        if not restore_response.is_valid:
+            self.test_results.append(
+                (test_name, False, "Failed to send restore command")
+            )
+            return False
+
+        # 5. Final check to ensure restoration
+        time.sleep(0.1)
+        final_response = self.send_msp_command(MSPCommand.MSP_GET_FILTER_CONFIG.value)
+        if not final_response.is_valid or len(final_response.payload) != 20:
+            self.test_results.append((test_name, False, "Failed to get final config"))
+            return False
+
+        final_values = struct.unpack("<fffff", final_response.payload)
+        if not all(abs(a - b) < 1e-6 for a, b in zip(final_values, original_values)):
+            self.test_results.append(
+                (test_name, False, f"Restore failed. Got {final_values}, expected {original_values}")
+            )
+            return False
+
+        self.test_results.append((test_name, True, details))
+        return True
+
     def run_all_tests(self) -> bool:
         """Run all tests"""
         if not self.connect():
@@ -404,6 +477,7 @@ class MSPTester:
                 self.test_attitude,
                 self.test_motor_output,
                 self.test_pid_get,
+                self.test_filter_config_get_set,
             ]
 
             for test_func in tests:
