@@ -103,7 +103,7 @@ void SerialManagerTask::run()
 
         // Clear any partial input
         _terminal->clearInputBuffer();
-        Serial.println("[INFO] MSP timeout. Switched back to Terminal mode."); // Direct print for debugging
+        // Serial.println("[INFO] MSP timeout. Switched back to Terminal mode."); // Removed to prevent interference with MSP communication
 
         showPrompt();
     }
@@ -295,12 +295,51 @@ void SerialManagerTask::_process_msp_message()
     case MSP_UID:
         _handle_msp_uid();
         break;
+    case MSP_SENSOR_STATUS:
+        _handle_msp_sensor_status();
+        break;
     default:
         // Send empty response for unsupported command
         _send_msp_response(_msp_command_id, nullptr, 0);
         break;
     }
 }
+
+void SerialManagerTask::_handle_msp_sensor_status()
+{
+    if (!_imu_task)
+    {
+        _send_msp_response(MSP_SENSOR_STATUS, nullptr, 0);
+        return;
+    }
+
+    ImuData imu_data = _imu_task->getImuSensor().getData();
+
+    // Scale factors from Betaflight for raw IMU data (these are approximate)
+    // Accel: 1G = 512 (approx, depends on sensor and range)
+    // Gyro: 1 deg/s = 4 (approx, depends on sensor and range)
+    int16_t accX = (int16_t)(imu_data.accelX * MSP_ACCEL_SCALING_FACTOR);
+    int16_t accY = (int16_t)(imu_data.accelY * MSP_ACCEL_SCALING_FACTOR);
+    int16_t accZ = (int16_t)(imu_data.accelZ * MSP_ACCEL_SCALING_FACTOR);
+
+    int16_t gyroX = (int16_t)(imu_data.gyroX * MSP_GYRO_SCALING_FACTOR);
+    int16_t gyroY = (int16_t)(imu_data.gyroY * MSP_GYRO_SCALING_FACTOR);
+    int16_t gyroZ = (int16_t)(imu_data.gyroZ * MSP_GYRO_SCALING_FACTOR);
+
+    uint8_t payload[MSP_SENSOR_STATUS_PAYLOAD_SIZE]; // 3x Accel, 3x Gyro (int16_t = 2 bytes each)
+    int i = 0;
+
+    _write_int16_to_payload(payload, i, accX);
+    _write_int16_to_payload(payload, i, accY);
+    _write_int16_to_payload(payload, i, accZ);
+
+    _write_int16_to_payload(payload, i, gyroX);
+    _write_int16_to_payload(payload, i, gyroY);
+    _write_int16_to_payload(payload, i, gyroZ);
+
+    _send_msp_response(MSP_SENSOR_STATUS, payload, MSP_SENSOR_STATUS_PAYLOAD_SIZE);
+}
+
 
 // CORRECTED: Removed '$M>' and changed to proper '$M' format
 void SerialManagerTask::_send_msp_response(uint8_t cmd, uint8_t *payload, uint8_t size)
@@ -329,8 +368,10 @@ void SerialManagerTask::_handle_msp_api_version()
 {
     uint8_t payload[MSP_API_VERSION_PAYLOAD_SIZE];
     payload[0] = MSP_PROTOCOL_VERSION;
-    payload[1] = MSP_API_VERSION_MAJOR;
-    payload[2] = MSP_API_VERSION_MINOR;
+    payload[1] = MSP_CAPABILITY;
+    payload[2] = MSP_FC_IDENTIFIER;
+    payload[3] = MSP_API_VERSION_MAJOR;
+    payload[4] = MSP_API_VERSION_MINOR;
     _send_msp_response(MSP_API_VERSION, payload, MSP_API_VERSION_PAYLOAD_SIZE);
 }
 
@@ -350,45 +391,28 @@ void SerialManagerTask::_handle_msp_board_info()
     uint8_t payload[MSP_BOARD_INFO_PAYLOAD_SIZE] = {0};
     int idx = 0;
 
-    // Board Name
-    size_t len = strlen(MSP_BOARD_NAME);
-    memcpy(&payload[idx], MSP_BOARD_NAME, len);
-    idx += len;
-    payload[idx++] = '\0'; // NUL-terminate
+    // Board Identifier (4 chars)
+    memcpy(&payload[idx], MSP_BOARD_IDENTIFIER, 4);
+    idx += 4;
 
-    // Manufacturer ID
-    len = strlen(MSP_MANUFACTURER_ID);
-    memcpy(&payload[idx], MSP_MANUFACTURER_ID, len);
-    idx += len;
-    payload[idx++] = '\0'; // NUL-terminate
+    // Hardware Revision (uint16_t)
+    payload[idx++] = (uint8_t)(MSP_HARDWARE_REVISION_VALUE & 0xFF);
+    payload[idx++] = (uint8_t)((MSP_HARDWARE_REVISION_VALUE >> 8) & 0xFF);
 
-    // Board Type
-    len = strlen(MSP_BOARD_TYPE);
-    memcpy(&payload[idx], MSP_BOARD_TYPE, len);
-    idx += len;
-    payload[idx++] = '\0'; // NUL-terminate
-
-    // Hardware Revision
-    len = strlen(MSP_HARDWARE_REVISION);
-    memcpy(&payload[idx], MSP_HARDWARE_REVISION, len);
-    idx += len;
-    payload[idx++] = '\0'; // NUL-terminate
-
-    // Unique Device ID (derived from firmware version and build date/time)
-    char unique_id_str[UNIQUE_ID_BUFFER_SIZE]; // "FL32-vX.Y.Z-YYYYMMDD-HHMMSS" + null terminator
-    snprintf(unique_id_str, sizeof(unique_id_str), "FL32-%s-%s-%s", FIRMWARE_VERSION, __DATE__, __TIME__);
-    len = strlen(unique_id_str);
-    memcpy(&payload[idx], unique_id_str, len);
-    idx += len;
-    payload[idx++] = '\0'; // NUL-terminate
+    // Board Name (length-prefixed string)
+    uint8_t board_name_len = strlen(MSP_BOARD_NAME);
+    payload[idx++] = board_name_len;
+    memcpy(&payload[idx], MSP_BOARD_NAME, board_name_len);
+    idx += board_name_len;
 
     _send_msp_response(MSP_BOARD_INFO, payload, idx);
 }
 
 void SerialManagerTask::_handle_msp_build_info()
 {
-    uint8_t payload[MSP_BUILD_INFO_PAYLOAD_SIZE] = "Nov 12 202512:00:00";
-    _send_msp_response(MSP_BUILD_INFO, payload, MSP_BUILD_INFO_PAYLOAD_SIZE);
+    char build_info_str[MSP_BUILD_INFO_PAYLOAD_SIZE];
+    snprintf(build_info_str, sizeof(build_info_str), "%s %s", __DATE__, __TIME__);
+    _send_msp_response(MSP_BUILD_INFO, (uint8_t *)build_info_str, strlen(build_info_str));
 }
 
 void SerialManagerTask::_handle_msp_reboot()
@@ -462,6 +486,7 @@ void SerialManagerTask::_handle_msp_mem_stats()
     payload[1] = (free_heap >> 8) & 0xFF;
     payload[2] = (free_heap >> 16) & 0xFF;
     payload[3] = (free_heap >> 24) & 0xFF;
+    _send_msp_response(MSP_MEM_STATS, payload, MSP_MEM_STATS_PAYLOAD_SIZE);
     _send_msp_response(MSP_MEM_STATS, payload, MSP_MEM_STATS_PAYLOAD_SIZE);
 }
 

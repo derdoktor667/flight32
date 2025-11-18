@@ -20,3 +20,5 @@ constexpr char MSP_BOARD_NAME[] = "Flight32";
 constexpr char MSP_MANUFACTURER_ID[] = "FL32";
 constexpr char MSP_BOARD_TYPE[] = "FC";
 constexpr char MSP_HARDWARE_REVISION[] = "1.0";
+constexpr char MSP_BOARD_IDENTIFIER[] = "FLT3"; // 4 chars for Flight32
+constexpr uint16_t MSP_HARDWARE_REVISION_VALUE = 100; // Example: 1.0 -> 100

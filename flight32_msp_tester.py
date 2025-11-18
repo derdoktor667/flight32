@@ -9,535 +9,400 @@
  */
 """
 
+import argparse
 import serial
 import struct
-import sys
 import time
-from enum import Enum
-from dataclasses import dataclass
 
+# --- ANSI Color Codes ---
+RED = "\033[91m"
+GREEN = "\033[92m"
+YELLOW = "\033[93m"
+BLUE = "\033[94m"
+MAGENTA = "\033[95m"
+CYAN = "\033[96m"
+BOLD = "\033[1m"
+RESET = "\033[0m"
 
-# ANSI Color Codes
-class Colors:
-    RESET = "\033[0m"
-    BOLD = "\033[1m"
-    DIM = "\033[2m"
-    GRAY = "\033[90m"
-    RED = "\033[91m"
-    GREEN = "\033[92m"
-    YELLOW = "\033[93m"
-    BLUE = "\033[94m"
-    WHITE = "\033[97m"
+# --- Icons ---
+ICON_SUCCESS = "✅"
+ICON_FAILURE = "❌"
+ICON_WARNING = "⚠️"
+ICON_INFO = "ℹ️"
+ICON_COMMAND = "⚙️"
 
-
-def colored(text: str, color: str = "", bold: bool = False) -> str:
-    """Apply color to text"""
-    if not color:
-        return text
-    prefix = Colors.BOLD if bold else ""
-    return f"{prefix}{color}{text}{Colors.RESET}"
-
-
-# Print functions
-def print_header():
-    """Print header"""
-    print(f"\n{colored('━' * 40, Colors.BLUE)}")
-    print(f"{colored('     Flight32 MSP Protocol Tester', Colors.BLUE, bold=True)}")
-    print(f"{colored('━' * 40, Colors.BLUE)}\n")
-
-
-def print_section(title: str):
-    """Print section"""
-    print(f"{colored('▸ ' + title, Colors.BLUE, bold=True)}")
-
-
-def print_success(message: str, details: str = ""):
-    """Print success message with optional details"""
-    print(f"{colored('✓', Colors.GREEN)} {message}")
-    if details:
-        print(f"    {colored(details, Colors.GRAY)}")
-
-
-def print_error(message: str):
-    """Print error message"""
-    print(f"{colored('✗', Colors.RED)} {message}")
-
-
-def print_info(message: str):
-    """Print info message"""
-    print(f"{colored('ℹ', Colors.BLUE)} {message}")
-
-
-def print_result_table(results: list):
-    """Print results in a table"""
-    print(f"\n{colored('Test Results', Colors.BLUE, bold=True)}")
-    print(colored("─" * 50, Colors.GRAY))
-
-    passed = sum(1 for _, result, _ in results if result)
-    total = len(results)
-
-    for test_name, result, details in results:
-        status = colored("✓", Colors.GREEN) if result else colored("✗", Colors.RED)
-        print(f"  {status} {test_name}")
-        if details and result:  # Only show details for passed tests
-            print(f"    {colored(details, Colors.GRAY)}")
-
-    print(colored("─" * 50, Colors.GRAY))
-    percent = (passed / total) * 100
-    status_color = Colors.GREEN if passed == total else Colors.RED
-    print(
-        f"  {colored(f'{passed}/{total} passed ({percent:.0f}%)', status_color, bold=True)}"
-    )
-
-
-# MSP Commands
-class MSPCommand(Enum):
-    MSP_API_VERSION = 1
-    MSP_FC_VARIANT = 2
-    MSP_FC_VERSION = 3
-    MSP_BOARD_INFO = 4
-    MSP_BUILD_INFO = 5
-    MSP_REBOOT = 6
-    MSP_STATUS = 101
-    MSP_MEM_STATS = 8
-    MSP_GET_SETTING = 9
-    MSP_SET_SETTING = 10
-    MSP_PID = 11
-    MSP_UID = 160
-    MSP_RAW_IMU = 102
-    MSP_ATTITUDE = 108
-    MSP_RC = 105
-    MSP_MOTOR = 104
-    MSP_SET_PID = 202
-    MSP_GET_FILTER_CONFIG = 203
-    MSP_SET_FILTER_CONFIG = 204
-
-
-# Configuration
-PORT = "/dev/ttyUSB0"
-# PORT = "/dev/ttyACM0"
+# --- Configuration ---
 BAUD_RATE = 115200
-TIMEOUT = 2.0
+TIMEOUT = 2  # seconds for serial read timeout
+
+# --- MSP Command Codes ---
+# Note: MSP_UID is not a standard direct command. MSP_IDENT (100) usually provides
+# board information including a unique ID. Using MSP_IDENT for this purpose.
+MSP_COMMANDS = {
+    "MSP_API_VERSION": 1,
+    "MSP_FC_VARIANT": 2,
+    "MSP_FC_VERSION": 3,
+    "MSP_BOARD_INFO": 4,
+    "MSP_BUILD_INFO": 5,
+    "MSP_GET_SETTING": 9,
+    "MSP_PID": 11,
+    "MSP_IDENT": 100,
+    "MSP_STATUS": 101,
+    "MSP_PID": 102,
+    "MSP_MOTOR": 104,
+    "MSP_RC_CHANNELS": 105,
+    "MSP_SENSOR_STATUS": 108,
+    "MSP_BOXNAMES": 116,
+    "MSP_BOX": 117,
+    "MSP_MODE_RANGES": 119,
+    "MSP_MOTOR_CONFIG": 124,
+    "MSP_GET_FILTER_CONFIG": 203,
+    "MSP_SET_FILTER_CONFIG": 204,
+}
 
 
-@dataclass
-class MSPResponse:
-    """Represents an MSP protocol response"""
+# --- MSP Protocol Functions ---
+def serialize_msp_command(command_code, data=b""):
+    """Constructs an MSP command packet."""
+    size = len(data)
+    checksum = size ^ command_code
+    for byte in data:
+        checksum ^= byte
 
-    command: int
-    payload: bytes
-    is_valid: bool
-    crc_error: bool = False
-    parse_error: bool = False
+    packet = b"$M<"
+    packet += struct.pack("<BB", size, command_code) + data
+    packet += struct.pack("<B", checksum)
+    return packet
 
 
-class MSPTester:
-    """MSP Protocol Tester for Flight32"""
+def deserialize_msp_response(response_bytes):
+    """Parses an MSP response packet."""
+    if not response_bytes:
+        return None, None
 
-    def __init__(self, port: str, baud_rate: int = 115200):
-        self.port = port
-        self.baud_rate = baud_rate
-        self.serial = None
-        self.in_msp_mode = False
-        self.test_results = []
-        self.fw_version = None
-
-    def connect(self) -> bool:
-        """Connect to the serial port"""
-        try:
-            self.serial = serial.Serial(
-                port=self.port, baudrate=self.baud_rate, timeout=TIMEOUT
-            )
-            print_success(f"Connected to {self.port} @ {self.baud_rate} baud")
-            # Give the FC a moment to be ready after connection
-            time.sleep(1.5)
-            self.serial.reset_input_buffer()
-            return True
-        except serial.SerialException as e:
-            print_error(f"Failed to connect: {e}")
-            return False
-
-    def disconnect(self):
-        """Disconnect from serial port"""
-        if self.serial:
-            self.serial.close()
-            print_success("Disconnected")
-
-    def exit_msp_mode(self) -> bool:
-        """Exit MSP mode by waiting for timeout"""
-        print_section("Exit - Returning to Terminal Mode")
-        print_info("Waiting for MSP timeout (2 seconds)...")
-        time.sleep(2.1)
-        self.in_msp_mode = False
-        print_success("Terminal mode restored")
-        return True
-
-    def send_msp_command(self, cmd: int, payload: bytes = b"") -> MSPResponse:
-        """Send an MSP command and receive response"""
-        if not self.serial:
-            return MSPResponse(cmd, b"", False, parse_error=True)
-
-        try:
-            self.serial.reset_input_buffer()
-            time.sleep(0.05)  # Give FC a moment to send any buffered output
-
-            size = len(payload)
-            crc = size ^ cmd
-            for byte in payload:
-                crc ^= byte
-
-            request = b"$M<" + bytes([size, cmd]) + payload + bytes([crc])
-            try:
-                cmd_name = MSPCommand(cmd).name
-            except ValueError:
-                cmd_name = f"0x{cmd:02X}"
-            print_info(
-                f"Sending MSP command {cmd_name} (0x{cmd:02X}) with payload size {size}. Request: {request.hex()}"
-            )
-            self.serial.write(request)
-            time.sleep(0.02)  # Small delay to allow FC to process and respond
-            response = self._read_msp_response()
-            return response
-        except Exception as e:
-            print_error(f"Error sending MSP command {cmd}: {e}")
-            return MSPResponse(cmd, b"", False, parse_error=True)
-
-    def _read_msp_response(self) -> MSPResponse:
-        """Read and parse MSP response"""
-        if not self.serial:
-            return MSPResponse(0, b"", False, parse_error=True)
-
-        try:
-            # Wait for the '$M>' header
-            header_buffer = b""
-            start_time = time.time()
-            while b"$M>" not in header_buffer:
-                byte = self.serial.read(1)
-                if not byte:
-                    if (time.time() - start_time) > TIMEOUT:
-                        print_error("Timeout waiting for $M> header.")
-                        return MSPResponse(0, b"", False, parse_error=True)  # Timeout
-                    continue
-                header_buffer += byte
-                if len(header_buffer) > 10:  # Prevent buffer from growing indefinitely
-                    header_buffer = header_buffer[-10:]
-
-            # Once '$M>' is found, discard everything before it
-            header_buffer = header_buffer[header_buffer.find(b"$M>") :]
-
-            # Read size and command
-            while len(header_buffer) < 5:  # Need $M> + size + cmd
-                byte = self.serial.read(1)
-                if not byte:
-                    if (time.time() - start_time) > TIMEOUT:
-                        print_error("Timeout waiting for size and command bytes.")
-                        return MSPResponse(0, b"", False, parse_error=True)  # Timeout
-                    continue
-                header_buffer += byte
-
-            size = header_buffer[3]
-            cmd = header_buffer[4]
-
-            # Read payload and CRC
-            expected_total_len = 5 + size + 1  # $M> + size + cmd + payload + crc
-            while len(header_buffer) < expected_total_len:
-                byte = self.serial.read(1)
-                if not byte:
-                    if (time.time() - start_time) > TIMEOUT:
-                        print_error(
-                            f"Timeout waiting for payload and CRC for command {cmd}."
-                        )
-                        return MSPResponse(0, b"", False, parse_error=True)  # Timeout
-                    continue
-                header_buffer += byte
-
-            # Extract components
-            payload = header_buffer[5 : 5 + size]
-            crc_byte = header_buffer[5 + size]
-
-            # Calculate CRC (size ^ cmd ^ payload bytes) - match send side
-            crc = size ^ cmd
-            for byte in payload:
-                crc ^= byte
-
-            is_valid = crc == crc_byte
-            try:
-                cmd_name = MSPCommand(cmd).name
-            except ValueError:
-                cmd_name = f"0x{cmd:02X}"
-            print_info(
-                f"Received MSP response for command {cmd_name} (0x{cmd:02X}). Raw: {header_buffer.hex()}"
-            )
-            print_info(
-                f"  Payload size: {size}, Valid: {is_valid}, CRC Error: {not is_valid}"
-            )
-
-            return MSPResponse(cmd, payload, is_valid, crc_error=(not is_valid))
-        except Exception as e:
-            print_error(f"Error reading MSP response: {e}")
-            return MSPResponse(0, b"", False, parse_error=True)
-
-    # Test methods
-    def test_api_version(self) -> bool:
-        response = self.send_msp_command(MSPCommand.MSP_API_VERSION.value)
-        if not response.is_valid or len(response.payload) < 3:
-            self.test_results.append(("API Version", False, ""))
-            return False
-
-        msp_version = response.payload[0]
-        protocol_version = response.payload[1]
-        api_version_major = response.payload[2]
-        details = f"MSP Version: {msp_version}, Protocol: {protocol_version}, API Major: {api_version_major}"
-        self.test_results.append(("API Version", True, details))
-        return True
-
-    def test_fc_variant(self) -> bool:
-        response = self.send_msp_command(MSPCommand.MSP_FC_VARIANT.value)
-        if not response.is_valid:
-            self.test_results.append(("FC Variant", False, ""))
-            return False
-
-        fc_variant = response.payload.decode("ascii", errors="ignore").strip()
-        details = f"FC Variant: {fc_variant}"
-        self.test_results.append(("FC Variant", True, details))
-        return True
-
-    def test_fc_version(self) -> bool:
-        response = self.send_msp_command(MSPCommand.MSP_FC_VERSION.value)
-        if not response.is_valid or len(response.payload) < 3:
-            self.test_results.append(("FC Version", False, ""))
-            return False
-        major, minor, patch = response.payload[:3]
-        self.fw_version = f"v{major}.{minor}.{patch}"
-        details = f"Firmware Version: {self.fw_version}"
-        self.test_results.append(("FC Version", True, details))
-        return True
-
-    def test_board_info(self) -> bool:
-        response = self.send_msp_command(MSPCommand.MSP_BOARD_INFO.value)
-        if not response.is_valid:
-            self.test_results.append(("Board Info", False, ""))
-            return False
-        # Payload often contains multiple NUL-terminated text fields and unused bytes.
-        raw = response.payload
-        parts = raw.split(b"\x00")
-        fields = []
-        for p in parts:
-            try:
-                s = p.decode("ascii", errors="ignore").strip()
-            except Exception:
-                continue
-            # Remove non-printable characters
-            s = "".join(ch for ch in s if ch.isprintable())
-            if not s:
-                continue
-            # Truncate each field to reasonable length
-            if len(s) > 120:
-                s = s[:117] + "..."
-            fields.append(s)
-
-        if not fields:
-            details = f"Board Raw: {raw.hex()}"
-        else:
-            # Format as clean list (no numbering) and indent fields for correct display
-            details = "Board Fields:\n    " + "\n    ".join(fields)
-        self.test_results.append(("Board Info", True, details))
-        return True
-
-    def test_raw_imu(self) -> bool:
-        response = self.send_msp_command(MSPCommand.MSP_RAW_IMU.value)
-        if not response.is_valid or len(response.payload) < 18:
-            self.test_results.append(("Raw IMU", False, ""))
-            return False
-
-        acc_x, acc_y, acc_z, gyro_x, gyro_y, gyro_z, mag_x, mag_y, mag_z = struct.unpack(
-            "<hhhhhhhhh", response.payload[:18]
+    # Check for valid MSP response headers: $, M (API v1), > (Slave to Master) or ! (Error)
+    if response_bytes.startswith(b"$M>"):
+        # Normal response, proceed with parsing
+        pass
+    elif response_bytes.startswith(b"$M!"):  # The FC explicitly sent an error
+        print(
+            f"{RED}{ICON_FAILURE} FC reported an error (MSP header: {response_bytes[:3]}).{RESET}"
         )
-        details = (
-            f"Acc: ({acc_x}, {acc_y}, {acc_z}), Gyro: ({gyro_x}, {gyro_y}, {gyro_z}), Mag: ({mag_x}, {mag_y}, {mag_z})"
+        # We consider this a handled failure from the FC itself.
+        # Further data in response_bytes could be an error message, but for now we just report the header.
+        return None, None
+    else:  # Truly unexpected header
+        print(
+            f"{YELLOW}{ICON_WARNING} Warning: Unexpected MSP response header: {response_bytes[:3]}{RESET}"
         )
-        self.test_results.append(("Raw IMU", True, details))
-        return True
-
-    def test_rc_channels(self) -> bool:
-        response = self.send_msp_command(MSPCommand.MSP_RC.value)
-        if (
-            not response.is_valid or len(response.payload) < 16
-        ):  # Assuming 8 channels * 2 bytes
-            self.test_results.append(("RC Channels", False, ""))
-            return False
-
-        rc_channels = struct.unpack(
-            "<HHHHHHHH", response.payload[:16]
-        )  # 8 unsigned shorts
-        details = f"RC Channels: {rc_channels}"
-        self.test_results.append(("RC Channels", True, details))
-        return True
-
-    def test_attitude(self) -> bool:
-        response = self.send_msp_command(MSPCommand.MSP_ATTITUDE.value)
-        if not response.is_valid or len(response.payload) < 6:
-            self.test_results.append(("Attitude", False, ""))
-            return False
-
-        roll, pitch, yaw = struct.unpack("<hhh", response.payload[:6])
-        details = f"Roll: {roll/10.0:.1f}°, Pitch: {pitch/10.0:.1f}°, Yaw: {yaw:.0f}°"
-        self.test_results.append(("Attitude", True, details))
-        return True
-
-    def test_motor_output(self) -> bool:
-        response = self.send_msp_command(MSPCommand.MSP_MOTOR.value)
-        if (
-            not response.is_valid or len(response.payload) < 8
-        ):  # Assuming 4 motors * 2 bytes
-            self.test_results.append(("Motor Output", False, ""))
-            return False
-
-        motor_values = struct.unpack("<HHHH", response.payload[:8])  # 4 unsigned shorts
-        details = f"Motors: {motor_values}"
-        self.test_results.append(("Motor Output", True, details))
-        return True
-
-    def test_msp_uid(self) -> bool:
-        response = self.send_msp_command(MSPCommand.MSP_UID.value)
-        if not response.is_valid or len(response.payload) < 12:
-            self.test_results.append(("MSP UID", False, ""))
-            return False
-
-        uid = response.payload.hex()
-        details = f"UID: {uid}"
-        self.test_results.append(("MSP UID", True, details))
-        return True
-
-    def test_msp_status(self) -> bool:
-        response = self.send_msp_command(MSPCommand.MSP_STATUS.value)
-        if not response.is_valid or len(response.payload) < 11:
-            self.test_results.append(("MSP Status", False, ""))
-            return False
-
-        cycle_time, i2c_errors, sensors, flight_mode_flags, profile = struct.unpack(
-            "<HHHIB", response.payload
-        )
-        details = f"Cycle Time: {cycle_time}μs, I2C Errors: {i2c_errors}, Sensors: {sensors}, Flight Modes: {flight_mode_flags}, Profile: {profile}"
-        self.test_results.append(("MSP Status", True, details))
-        return True
-
-    def run_all_tests(self) -> bool:
-        """Run all tests"""
-        if not self.connect():
-            return False
-
-        print_section("Running MSP Tests")
-        try:
-            tests = [
-                self.test_api_version,
-                self.test_fc_variant,
-                self.test_fc_version,
-                self.test_board_info,
-                self.test_raw_imu,
-                self.test_rc_channels,
-                self.test_attitude,
-                self.test_motor_output,
-                self.test_msp_uid,
-                self.test_msp_status,
-            ]
-
-            for test_func in tests:
-                test_func()
-        finally:
-            self.disconnect()
-
-        self._print_summary()
-        return all(result for _, result, _ in self.test_results)
-    
-    def run_single_test(self, test_func_name: str) -> bool:
-        """Run a single test by command name"""
-        if not self.connect():
-            return False
-
-        print_section(f"Running MSP Test for {test_func_name}")
-        try:
-            # Construct the full test function name, e.g., 'test_msp_uid'
-            test_func = getattr(self, test_func_name, None)
-            if test_func:
-                test_func()
-            else:
-                print_error(f"Test function '{test_func_name}' not found.")
-        finally:
-            self.disconnect()
-
-        self._print_summary()
-        # Check if any test was actually run and passed
-        if not self.test_results:
-            return False
-        return all(result for _, result, _ in self.test_results)
-
-    def _print_summary(self):
-        """Print test summary"""
-        if not self.test_results:
-            return
-
-        passed = sum(1 for _, result, _ in self.test_results if result)
-        total = len(self.test_results)
-
-        print_result_table(self.test_results)
-
-
-        print()
-        if self.fw_version:
-            print(
-                f"{colored('  Firmware Version:', Colors.GREEN)} {colored(self.fw_version, Colors.WHITE, bold=True)}"
-            )
-            print()
-
-        if passed == total:
-            print(
-                colored(
-                    "✓ All tests PASSED - MSP is working correctly!",
-                    Colors.GREEN,
-                    bold=True,
-                )
-            )
-        else:
-            print(
-                colored(
-                    f"✗ {total - passed} test(s) FAILED - Check firmware!",
-                    Colors.RED,
-                    bold=True,
-                )
-            )
-        print()
-
-
-def main():
-    """Main entry point"""
-    import argparse
-
-    parser = argparse.ArgumentParser(description="Flight32 MSP Tester")
-    parser.add_argument(
-        "--device",
-        type=str,
-        default=PORT,
-        help=f"Serial device path (default: {PORT})",
-    )
-    parser.add_argument("--command", type=str, help="Run a single test by MSP command name (e.g., MSP_UID)")
-    args = parser.parse_args()
+        return None, None
 
     try:
-        print_header()
-        tester = MSPTester(args.device, BAUD_RATE)
-        if args.command:
-            # The test function name is expected to be in the format 'test_msp_...'
-            # The command name from the CLI should be like 'MSP_UID'
-            test_name = f"test_{args.command.lower()}"
-            success = tester.run_single_test(test_name)
+        # Extract size, command, data, and checksum
+        size = response_bytes[3]
+        command_code = response_bytes[4]
+        data = response_bytes[5 : 5 + size]
+        received_checksum = response_bytes[5 + size]
+
+        # Calculate expected checksum
+        calculated_checksum = size ^ command_code
+        for byte in data:
+            calculated_checksum ^= byte
+
+        if calculated_checksum != received_checksum:
+            print(
+                f"{YELLOW}{ICON_WARNING} Warning: Checksum mismatch for command {command_code}. Expected {calculated_checksum}, got {received_checksum}.{RESET}"
+            )
+            return None, None
+
+        return command_code, data
+    except IndexError:
+        print(f"{RED}{ICON_FAILURE} Error: Incomplete MSP response packet.{RESET}")
+        return None, None
+    except Exception as e:
+        print(f"{RED}{ICON_FAILURE} Error parsing MSP response: {e}{RESET}")
+        return None, None
+
+
+def send_and_receive(ser, command_name, command_code, data=b"", test_counts=None):
+    """Sends an MSP command and reads the response, updating test_counts."""
+    print(
+        f"\n{BLUE}{BOLD}{ICON_COMMAND} Testing {command_name} (Code: {command_code}){RESET}"
+    )
+    command_packet = serialize_msp_command(command_code, data)
+    ser.write(command_packet)
+
+    response_buffer = b""
+    start_time = time.time()
+    while time.time() - start_time < TIMEOUT:
+        if ser.in_waiting > 0:
+            byte = ser.read(1)
+            response_buffer += byte
+            if len(response_buffer) >= 5 and response_buffer.startswith(
+                b"$M"
+            ):  # Check for header ($M) + size + command
+                # Read the third byte to determine if it's a regular response (>) or error (!)
+                header_third_byte = response_buffer[2]
+                if header_third_byte == ord(">") or header_third_byte == ord("!"):
+                    size = response_buffer[3]
+                    # If we've received enough bytes for header (3) + size (1) + command (1) + data (size) + checksum (1)
+                    if len(response_buffer) >= 6 + size:
+                        break
+        time.sleep(0.001)  # Small delay to prevent busy-waiting
+
+    if not response_buffer:
+        print(f"{RED}{ICON_FAILURE} No response received for {command_name}.{RESET}")
+        if test_counts is not None:
+            test_counts[1] += 1  # Increment failed count
+        return
+
+    command_code_rx, response_data = deserialize_msp_response(response_buffer)
+
+    if command_code_rx is not None:
+        print(f"{GREEN}{ICON_SUCCESS} Received response for {command_name}:{RESET}")
+        print(
+            f"  {CYAN}Raw Data (hex):{RESET} {response_data.hex() if response_data is not None else 'None'}"
+        )
+        # Add basic interpretation for some known commands
+        if command_code == MSP_COMMANDS["MSP_API_VERSION"]:
+            if response_data is not None and len(response_data) >= 3:
+                print(f"  {BOLD}MSP Protocol Version:{RESET} {response_data[0]}")
+                print(
+                    f"  {BOLD}Capability:{RESET} {response_data[1]} {response_data[2]}"
+                )
+            else:
+                print(
+                    f"  {YELLOW}{ICON_WARNING} Decoded (unparsed API version):{RESET} {response_data}"
+                )
+        elif command_code == MSP_COMMANDS["MSP_FC_VARIANT"]:
+            if response_data:
+                print(
+                    f"  {BOLD}FC Variant:{RESET} {response_data.decode('ascii', errors='ignore')}"
+                )
+        elif command_code == MSP_COMMANDS["MSP_FC_VERSION"]:
+            if response_data is not None and len(response_data) == 3:
+                print(
+                    f"  {BOLD}FC Version:{RESET} {response_data[0]}.{response_data[1]}.{response_data[2]}"
+                )
+        elif command_code == MSP_COMMANDS["MSP_BOARD_INFO"]:
+            if response_data is not None and len(response_data) >= 7:
+                board_identifier = response_data[0:4].decode("ascii", errors="ignore")
+                hardware_revision = struct.unpack("<H", response_data[4:6])[0]
+                board_name_len = response_data[6]
+                # Ensure we don't slice beyond the available data
+                if len(response_data) >= 7 + board_name_len:
+                    board_name = response_data[7 : 7 + board_name_len].decode(
+                        "ascii", errors="ignore"
+                    )
+                else:
+                    board_name = response_data[7:].decode("ascii", errors="ignore")
+
+                print(f"  {BOLD}Board Identifier:{RESET} {board_identifier}")
+                print(f"  {BOLD}Hardware Revision:{RESET} {hardware_revision}")
+                print(f"  {BOLD}Board Name:{RESET} {board_name}")
+        elif command_code == MSP_COMMANDS["MSP_BUILD_INFO"]:
+            if response_data:
+                build_info = response_data.decode("ascii", errors="ignore")
+                print(f"  {BOLD}Build Info:{RESET} {build_info}")
+        elif command_code == MSP_COMMANDS["MSP_STATUS"]:
+            if response_data is not None and len(response_data) >= 11:
+                flight_mode_flags = struct.unpack("<H", response_data[0:2])[0]
+                cycle_time = struct.unpack("<H", response_data[2:4])[0]
+                i2c_errors = struct.unpack("<H", response_data[4:6])[0]
+                sensor_present = response_data[6]
+                box_setup = struct.unpack("<H", response_data[7:9])[0]
+
+                sensor_names = []
+                if sensor_present & (1 << 0):
+                    sensor_names.append("ACC")
+                if sensor_present & (1 << 1):
+                    sensor_names.append("BARO")
+                if sensor_present & (1 << 2):
+                    sensor_names.append("MAG")
+                if sensor_present & (1 << 3):
+                    sensor_names.append("GPS")
+                if sensor_present & (1 << 4):
+                    sensor_names.append("SONAR")
+
+                print(f"  {BOLD}Flight Mode Flags:{RESET} {flight_mode_flags}")
+                print(f"  {BOLD}Cycle Time:{RESET} {cycle_time} us")
+                print(f"  {BOLD}I2C Errors:{RESET} {i2c_errors}")
+                print(
+                    f"  {BOLD}Sensor Present:{RESET} {', '.join(sensor_names) if sensor_names else 'None'} ({bin(sensor_present)})"
+                )
+                print(f"  {BOLD}Box Setup:{RESET} {box_setup}")
+
+        elif command_code == MSP_COMMANDS["MSP_SENSOR_STATUS"]:
+            # Ensure response_data is not None before calling len() to avoid TypeError
+            if response_data is not None and len(response_data) >= 3:
+                acc_health, gyro_health, mag_health = struct.unpack(
+                    "<BBB", response_data[0:3]
+                )
+                print(f"  {BOLD}Accelerometer Health:{RESET} {acc_health}")
+                print(f"  {BOLD}Gyroscope Health:{RESET} {gyro_health}")
+                print(f"  {BOLD}Magnetometer Health:{RESET} {mag_health}")
+            else:
+                print(
+                    f"  {YELLOW}{ICON_WARNING} Decoded (unparsed sensor status):{RESET} {response_data}"
+                )
+        elif command_code == MSP_COMMANDS["MSP_BOXNAMES"]:
+            if response_data:
+                box_names = (
+                    response_data.decode("ascii", errors="ignore").strip(";").split(";")
+                )
+                print(f"  {BOLD}Box Names:{RESET} {', '.join(box_names)}")
+        elif command_code == MSP_COMMANDS["MSP_BOX"]:
+            if response_data:
+                print(
+                    f"  {BOLD}Decoded (unparsed BOX data):{RESET} {response_data.decode('ascii', errors='ignore')}"
+                )
+        elif command_code == MSP_COMMANDS["MSP_MODE_RANGES"]:
+            if response_data is not None and len(response_data) % 6 == 0:
+                mode_ranges = []
+                for i in range(0, len(response_data), 6):
+                    mode_id, aux_channel, start_percent, end_percent, flags = (
+                        struct.unpack("<BBBBH", response_data[i : i + 6])
+                    )
+                    mode_ranges.append(
+                        f"ID:{mode_id} Aux:{aux_channel} Start:{start_percent}% End:{end_percent}% Flags:{flags}"
+                    )
+                print(f"  {BOLD}Mode Ranges:{RESET}")
+                for r in mode_ranges:
+                    print(f"    - {r}")
+            else:
+                print(
+                    f"  {YELLOW}{ICON_WARNING} Decoded (unparsed mode ranges):{RESET} {response_data}"
+                )
+        elif command_code == MSP_COMMANDS["MSP_RC_CHANNELS"]:
+            if response_data is not None and len(response_data) % 2 == 0:
+                channels = struct.unpack(
+                    "<" + "H" * (len(response_data) // 2), response_data
+                )
+                print(f"  {BOLD}RC Channels:{RESET} {', '.join(map(str, channels))}")
+            else:
+                print(
+                    f"  {YELLOW}{ICON_WARNING} Decoded (unparsed RC channels):{RESET} {response_data}"
+                )
+        elif command_code == MSP_COMMANDS["MSP_MOTOR"]:
+            if response_data is not None and len(response_data) % 2 == 0:
+                motors = struct.unpack(
+                    "<" + "H" * (len(response_data) // 2), response_data
+                )
+                print(
+                    f"  {BOLD}Motor Values (PWM/Dshot):{RESET} {', '.join(map(str, motors))}"
+                )
+            else:
+                print(
+                    f"  {YELLOW}{ICON_WARNING} Decoded (unparsed motor data):{RESET} {response_data}"
+                )
+        elif command_code == MSP_COMMANDS["MSP_PID"]:
+            if response_data is not None and len(response_data) >= 9:
+                pid_gains = struct.unpack("<BBBBBBBBB", response_data[0:9])
+                print(
+                    f"  {BOLD}PID Gains (Roll):{RESET} P:{pid_gains[0]} I:{pid_gains[1]} D:{pid_gains[2]}"
+                )
+                print(
+                    f"  {BOLD}PID Gains (Pitch):{RESET} P:{pid_gains[3]} I:{pid_gains[4]} D:{pid_gains[5]}"
+                )
+                print(
+                    f"  {BOLD}PID Gains (Yaw):{RESET} P:{pid_gains[6]} I:{pid_gains[7]} D:{pid_gains[8]}"
+                )
+            else:
+                print(
+                    f"  {YELLOW}{ICON_WARNING} Decoded (unparsed PID data):{RESET} {response_data}"
+                )
+        elif command_code == MSP_COMMANDS["MSP_MOTOR_CONFIG"]:
+            if response_data is not None and len(response_data) >= 2:
+                motor_count, motor_poles = struct.unpack("<BB", response_data[0:2])
+                print(f"  {BOLD}Motor Count:{RESET} {motor_count}")
+                print(f"  {BOLD}Motor Poles:{RESET} {motor_poles}")
+            else:
+                print(
+                    f"  {YELLOW}{ICON_WARNING} Decoded (unparsed motor config):{RESET} {response_data}"
+                )
         else:
-            success = tester.run_all_tests()
-        sys.exit(0 if success else 1)
-    except KeyboardInterrupt:
-        print(f"\n{colored('✗ Test aborted by user', Colors.RED)}")
-        sys.exit(1)
+            print(f"  {ICON_INFO} Decoded (generic):{RESET} {response_data}")
+
+        if test_counts is not None:
+            test_counts[0] += 1  # Increment successful count
+    else:
+        print(f"{RED}{ICON_FAILURE} Failed to get valid MSP response.{RESET}")
+        if test_counts is not None:
+            test_counts[1] += 1  # Increment failed count
 
 
+# --- Main Script ---
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(
+        description="Test MSP communication with the flight32 Flight Controller."
+    )
+    parser.add_argument(
+        "--port",
+        type=str,
+        default="/dev/ttyUSB0",
+        help="Serial port connected to the Flight Controller (default: /dev/ttyUSB0)",
+    )
+    parser.add_argument(
+        "--command",
+        type=str,
+        help="Test a specific MSP command by its name (e.g., MSP_BOX). If omitted, all commands are tested.",
+    )
+    args = parser.parse_args()
+
+    SERIAL_PORT_TO_USE = args.port
+    COMMAND_TO_TEST = args.command
+
+    print(
+        f"{ICON_INFO} Attempting to connect to {BOLD}{SERIAL_PORT_TO_USE}{RESET} at {BOLD}{BAUD_RATE}{RESET} baud..."
+    )
+    test_results = [0, 0]  # [successful_tests, failed_tests]
+    try:
+        ser = serial.Serial(SERIAL_PORT_TO_USE, BAUD_RATE, timeout=TIMEOUT)
+        ser.reset_input_buffer() # Clear any leftover data in the buffer
+        print(f"{GREEN}{ICON_SUCCESS} Serial port opened successfully.{RESET}")
+        time.sleep(1) # Add a delay to allow the FC to boot and send any initial debug messages
+        time.sleep(2)  # Give the FC some time to initialize after connection
+
+        commands_to_run = {}
+        if COMMAND_TO_TEST:
+            if COMMAND_TO_TEST in MSP_COMMANDS:
+                commands_to_run[COMMAND_TO_TEST] = MSP_COMMANDS[COMMAND_TO_TEST]
+            else:
+                print(
+                    f"{RED}{ICON_FAILURE} Error: Command '{COMMAND_TO_TEST}' not found in the list of available MSP commands.{RESET}"
+                )
+                test_results[1] = 1  # Mark as a failed test overall for invalid command
+                raise SystemExit  # Exit if command is not found
+        else:
+            commands_to_run = MSP_COMMANDS
+
+        for command_name, command_code in commands_to_run.items():
+            # Special handling for MSP_GET_SETTING to send a key
+            if command_name == "MSP_GET_SETTING":
+                setting_key = "pid.roll.p"
+                key_bytes = setting_key.encode('ascii')
+                # Payload: [key_length (1 byte)] [key_string (variable length)]
+                payload = bytes([len(key_bytes)]) + key_bytes
+                send_and_receive(ser, command_name, command_code, data=payload, test_counts=test_results)
+            else:
+                send_and_receive(ser, command_name, command_code, test_counts=test_results)
+            time.sleep(0.1)  # Small delay between commands
+
+    except serial.SerialException as e:
+        print(
+            f"{RED}{ICON_FAILURE} Error: Could not open serial port {BOLD}{SERIAL_PORT_TO_USE}{RESET}: {e}{RESET}"
+        )
+        print(
+            f"{YELLOW}{ICON_WARNING} Please ensure the flight controller is connected and not in use by another application.{RESET}"
+        )
+    except KeyboardInterrupt:
+        print(f"\n{YELLOW}{ICON_WARNING} Script interrupted by user.{RESET}")
+    finally:
+        if "ser" in locals() and ser.is_open:
+            ser.close()
+            print(f"\n{ICON_INFO} Serial port closed.{RESET}")
+
+        print(f"\n{BLUE}{BOLD}--- Test Summary ---{RESET}")
+        print(f"{GREEN}{ICON_SUCCESS} Successful tests: {test_results[0]}{RESET}")
+        print(f"{RED}{ICON_FAILURE} Failed tests: {test_results[1]}{RESET}")
+        print(f"{BLUE}{BOLD}--------------------{RESET}")

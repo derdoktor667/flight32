@@ -58,9 +58,9 @@ constexpr const char *KEY_RC_CHANNEL_AUX4 = "rc.ch.aux4";
 // --- Generic RC Channel Constants ---
 constexpr int16_t RC_CHANNEL_MIN_RAW = 1000;
 constexpr int16_t RC_CHANNEL_MAX_RAW = 2000;
-constexpr int16_t RC_CHANNEL_CENTER = 1500;
-constexpr float RC_CHANNEL_RANGE_SYMMETRIC = 500.0f; // (MAX - MIN) / 2
-constexpr float RC_CHANNEL_RANGE_THROTTLE = 1000.0f; // MAX - MIN
+constexpr int16_t RC_CHANNEL_CENTER = (RC_CHANNEL_MIN_RAW + RC_CHANNEL_MAX_RAW) / 2;
+constexpr float RC_CHANNEL_RANGE_SYMMETRIC = (float)(RC_CHANNEL_MAX_RAW - RC_CHANNEL_MIN_RAW) / 2.0f;
+constexpr float RC_CHANNEL_RANGE_THROTTLE = (float)(RC_CHANNEL_MAX_RAW - RC_CHANNEL_MIN_RAW);
 constexpr int16_t RC_CHANNEL_INDEX_OFFSET = 1;
 constexpr int16_t INVALID_CHANNEL_VALUE = 0;
 

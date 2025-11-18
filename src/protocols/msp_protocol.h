@@ -13,6 +13,8 @@
 static constexpr uint8_t MSP_PROTOCOL_VERSION = 1;
 static constexpr uint8_t MSP_API_VERSION_MAJOR = 1;
 static constexpr uint8_t MSP_API_VERSION_MINOR = 0;
+static constexpr uint8_t MSP_CAPABILITY = 0; // No specific capabilities yet
+static constexpr char MSP_FC_IDENTIFIER = 'F'; // 'F' for Flight32
 static constexpr uint8_t MSP_RESPONSE_OVERHEAD_BYTES = 2; // 1 byte for payload size, 1 byte for command ID
 static constexpr uint8_t MSP_MIN_PAYLOAD_SIZE = 3;        // Minimum payload size for MSP commands (e.g., API_VERSION)
 
@@ -21,11 +23,11 @@ static constexpr uint8_t MSP_MAX_PAYLOAD_SIZE = 128;
 static constexpr uint8_t MSP_PID_PAYLOAD_SIZE = 18;
 
 // --- MSP Payload Sizes ---
-static constexpr uint8_t MSP_API_VERSION_PAYLOAD_SIZE = 3;
+static constexpr uint8_t MSP_API_VERSION_PAYLOAD_SIZE = 5;
 static constexpr uint8_t MSP_FC_VARIANT_PAYLOAD_SIZE = 4;
 static constexpr uint8_t MSP_FC_VERSION_PAYLOAD_SIZE = 3;
 static constexpr uint8_t MSP_BOARD_INFO_PAYLOAD_SIZE = 64;
-static constexpr uint8_t MSP_BUILD_INFO_PAYLOAD_SIZE = 20; // "Nov 12 202512:00:00" is 19 chars + null terminator
+static constexpr uint8_t MSP_BUILD_INFO_PAYLOAD_SIZE = 21; // "MMM DD YYYY HH:MM:SS" is 20 chars + null terminator
 static constexpr uint8_t MSP_MEM_STATS_PAYLOAD_SIZE = 4;
 static constexpr uint8_t MSP_RAW_IMU_PAYLOAD_SIZE = 18; // 3x Accel, 3x Gyro, 3x Mag (int16_t = 2 bytes each)
 static constexpr uint8_t MSP_ATTITUDE_PAYLOAD_SIZE = 6; // 3x angles (int16_t = 2 bytes each)
@@ -64,6 +66,8 @@ static constexpr uint8_t MSP_RC = 105;
 static constexpr uint8_t MSP_ATTITUDE = 108;
 static constexpr uint8_t MSP_BOX = 113;
 static constexpr uint8_t MSP_UID = 160;
+static constexpr uint8_t MSP_SENSOR_STATUS = 212;
+static constexpr uint8_t MSP_SENSOR_STATUS_PAYLOAD_SIZE = 12;
 static constexpr uint8_t MSP_EEPROM_WRITE = 200;
 static constexpr uint8_t MSP_RESET_SETTINGS = 201;
 static constexpr uint8_t MSP_SET_PID = 202;
