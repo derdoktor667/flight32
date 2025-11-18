@@ -27,9 +27,13 @@ public:
     ImuQuaternionData getQuaternion() const override;
 
     static LpfBandwidth getLpfBandwidthFromIndex(uint8_t index);
+    uint16_t getI2CErrorCount() const override { return _i2c_error_count; }
+    bool isSensorHealthy() const override { return _is_healthy; }
 
 private:
     bool _useDMP;
     ImuQuaternionData _quaternion;
     ESP32_MPU6050 _sensor;
+    static uint16_t _i2c_error_count;
+    bool _is_healthy = false;
 };

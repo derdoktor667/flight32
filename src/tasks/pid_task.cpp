@@ -48,6 +48,8 @@ void PidTask::setup()
 
 void PidTask::run()
 {
+    uint32_t start_time = micros();
+
     int constrained_roll = constrain(_rx_task->getChannel(_settings_manager->getSettingValue(KEY_RC_CHANNEL_ROLL).toInt()), RC_CHANNEL_MIN_RAW, RC_CHANNEL_MAX_RAW);
     int constrained_pitch = constrain(_rx_task->getChannel(_settings_manager->getSettingValue(KEY_RC_CHANNEL_PITCH).toInt()), RC_CHANNEL_MIN_RAW, RC_CHANNEL_MAX_RAW);
     int constrained_yaw = constrain(_rx_task->getChannel(_settings_manager->getSettingValue(KEY_RC_CHANNEL_YAW).toInt()), RC_CHANNEL_MIN_RAW, RC_CHANNEL_MAX_RAW);
@@ -101,6 +103,8 @@ void PidTask::run()
     float yaw_output = _pid_yaw.update(desired_yaw_rate, actual_yaw_rate, dt);
 
     _motor_task->update(throttle, pitch_output, roll_output, yaw_output);
+
+    _cycleTime = micros() - start_time;
 }
 
 PidGains PidTask::getGains(PidAxis axis)

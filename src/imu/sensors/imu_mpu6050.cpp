@@ -11,7 +11,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
 
-
+uint16_t ImuMpu6050::_i2c_error_count = 0;
 
 ImuMpu6050::ImuMpu6050() : _sensor()
 {
@@ -36,6 +36,8 @@ bool ImuMpu6050::begin(uint32_t i2cClockSpeed, bool useDMP, ImuGyroRangeIndex gy
     if (!_sensor.begin(static_cast<GyroRange>(gyroRange), static_cast<AccelRange>(accelRange), static_cast<LpfBandwidth>(lpf), i2cClockSpeed, MPU6050_I2C_ADDRESS))
     {
         com_send_log(ComMessageType::LOG_ERROR, "Failed to find MPU6050 chip");
+        _i2c_error_count++;
+        _is_healthy = false;
         return false;
     }
 
@@ -46,11 +48,14 @@ bool ImuMpu6050::begin(uint32_t i2cClockSpeed, bool useDMP, ImuGyroRangeIndex gy
         if (dmpStatus != 0)
         {
             com_send_log(ComMessageType::LOG_ERROR, "Failed to initialize DMP. DMP Status: %d", dmpStatus);
+            _i2c_error_count++;
+            _is_healthy = false;
             return false;
         }
         com_send_log(ComMessageType::LOG_INFO, "MPU6050 DMP initialized.");
     }
     com_send_log(ComMessageType::LOG_INFO, "MPU6050 Found!");
+    _is_healthy = true;
     return true;
 }
 

@@ -1,4 +1,3 @@
-#include <esp_system.h> // For esp_efuse_mac_get_default
 /**
  * @file serial_manager_task.cpp
  * @brief Implements the SerialManagerTask class for managing serial communication.
@@ -293,6 +292,9 @@ void SerialManagerTask::_process_msp_message()
     case MSP_SET_BOX:
         _handle_msp_box_set();
         break;
+    case MSP_UID:
+        _handle_msp_uid();
+        break;
     default:
         // Send empty response for unsupported command
         _send_msp_response(_msp_command_id, nullptr, 0);
@@ -412,13 +414,43 @@ void SerialManagerTask::_handle_msp_reset_settings()
 
 void SerialManagerTask::_handle_msp_status()
 {
-    // For simplicity, just send firmware version for now
-    // More detailed status would require a custom payload structure
-    String version_str = FIRMWARE_VERSION;
-    uint8_t payload[version_str.length() + 1];
-    memcpy(payload, version_str.c_str(), version_str.length());
-    payload[version_str.length()] = 0; // Null terminator
-    _send_msp_response(MSP_STATUS, payload, version_str.length() + 1);
+    uint8_t payload[MSP_STATUS_PAYLOAD_SIZE];
+    int i = 0;
+
+    // cycleTime
+    _write_int16_to_payload(payload, i, _pid_task->getCycleTime());
+
+    // i2c_errors_count
+    _write_int16_to_payload(payload, i, _imu_task->getImuSensor().getI2CErrorCount());
+
+    // sensor
+    uint16_t sensors = 0;
+    if (_imu_task->getImuSensor().isSensorHealthy()) {
+        sensors |= 1; // ACC
+    }
+    // Gyro is implicit
+    // No baro or mag in this hardware
+    _write_int16_to_payload(payload, i, sensors);
+
+    // flightModeFlags
+    uint32_t flightModeFlags = 0;
+    if (_pid_task->isArmed()) {
+        flightModeFlags |= (1 << 0); // ARM
+    }
+    if (_pid_task->getFlightMode() == FlightMode::STABILIZED) {
+        flightModeFlags |= (1 << 1); // ANGLE
+    }
+    // Acro is the absence of other modes
+
+    payload[i++] = (flightModeFlags >> 0) & 0xFF;
+    payload[i++] = (flightModeFlags >> 8) & 0xFF;
+    payload[i++] = (flightModeFlags >> 16) & 0xFF;
+    payload[i++] = (flightModeFlags >> 24) & 0xFF;
+
+    // configProfileIndex
+    payload[i++] = 0;
+
+    _send_msp_response(MSP_STATUS, payload, MSP_STATUS_PAYLOAD_SIZE);
 }
 
 void SerialManagerTask::_handle_msp_mem_stats()
@@ -803,4 +835,27 @@ void SerialManagerTask::_handle_msp_box_set()
     }
 
     _send_msp_response(MSP_SET_BOX, nullptr, 0); // Acknowledge
+}
+
+void SerialManagerTask::_handle_msp_uid()
+{
+    uint8_t payload[MSP_UID_PAYLOAD_SIZE] = {0};
+
+    // UID is 3 x uint32_t
+    // For Betaflight compatibility, the first 4 bytes are 0.
+    // The next 8 bytes are the UID. We use a hardcoded value for now.
+    payload[0] = 0;
+    payload[1] = 0;
+    payload[2] = 0;
+    payload[3] = 0;
+    payload[4] = 'F';
+    payload[5] = 'L';
+    payload[6] = '3';
+    payload[7] = '2';
+    payload[8] = '0';
+    payload[9] = '0';
+    payload[10] = '0';
+    payload[11] = '1';
+
+    _send_msp_response(MSP_UID, payload, MSP_UID_PAYLOAD_SIZE);
 }

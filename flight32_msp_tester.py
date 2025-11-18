@@ -98,11 +98,12 @@ class MSPCommand(Enum):
     MSP_BOARD_INFO = 4
     MSP_BUILD_INFO = 5
     MSP_REBOOT = 6
-    MSP_STATUS = 7
+    MSP_STATUS = 101
     MSP_MEM_STATS = 8
     MSP_GET_SETTING = 9
     MSP_SET_SETTING = 10
     MSP_PID = 11
+    MSP_UID = 160
     MSP_RAW_IMU = 102
     MSP_ATTITUDE = 108
     MSP_RC = 105
@@ -397,6 +398,30 @@ class MSPTester:
         self.test_results.append(("Motor Output", True, details))
         return True
 
+    def test_msp_uid(self) -> bool:
+        response = self.send_msp_command(MSPCommand.MSP_UID.value)
+        if not response.is_valid or len(response.payload) < 12:
+            self.test_results.append(("MSP UID", False, ""))
+            return False
+
+        uid = response.payload.hex()
+        details = f"UID: {uid}"
+        self.test_results.append(("MSP UID", True, details))
+        return True
+
+    def test_msp_status(self) -> bool:
+        response = self.send_msp_command(MSPCommand.MSP_STATUS.value)
+        if not response.is_valid or len(response.payload) < 11:
+            self.test_results.append(("MSP Status", False, ""))
+            return False
+
+        cycle_time, i2c_errors, sensors, flight_mode_flags, profile = struct.unpack(
+            "<HHHIB", response.payload
+        )
+        details = f"Cycle Time: {cycle_time}μs, I2C Errors: {i2c_errors}, Sensors: {sensors}, Flight Modes: {flight_mode_flags}, Profile: {profile}"
+        self.test_results.append(("MSP Status", True, details))
+        return True
+
     def run_all_tests(self) -> bool:
         """Run all tests"""
         if not self.connect():
@@ -413,6 +438,8 @@ class MSPTester:
                 self.test_rc_channels,
                 self.test_attitude,
                 self.test_motor_output,
+                self.test_msp_uid,
+                self.test_msp_status,
             ]
 
             for test_func in tests:
@@ -422,13 +449,39 @@ class MSPTester:
 
         self._print_summary()
         return all(result for _, result, _ in self.test_results)
+    
+    def run_single_test(self, test_func_name: str) -> bool:
+        """Run a single test by command name"""
+        if not self.connect():
+            return False
+
+        print_section(f"Running MSP Test for {test_func_name}")
+        try:
+            # Construct the full test function name, e.g., 'test_msp_uid'
+            test_func = getattr(self, test_func_name, None)
+            if test_func:
+                test_func()
+            else:
+                print_error(f"Test function '{test_func_name}' not found.")
+        finally:
+            self.disconnect()
+
+        self._print_summary()
+        # Check if any test was actually run and passed
+        if not self.test_results:
+            return False
+        return all(result for _, result, _ in self.test_results)
 
     def _print_summary(self):
         """Print test summary"""
+        if not self.test_results:
+            return
+
         passed = sum(1 for _, result, _ in self.test_results if result)
         total = len(self.test_results)
 
         print_result_table(self.test_results)
+
 
         print()
         if self.fw_version:
@@ -458,10 +511,28 @@ class MSPTester:
 
 def main():
     """Main entry point"""
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Flight32 MSP Tester")
+    parser.add_argument(
+        "--device",
+        type=str,
+        default=PORT,
+        help=f"Serial device path (default: {PORT})",
+    )
+    parser.add_argument("--command", type=str, help="Run a single test by MSP command name (e.g., MSP_UID)")
+    args = parser.parse_args()
+
     try:
         print_header()
-        tester = MSPTester(PORT, BAUD_RATE)
-        success = tester.run_all_tests()
+        tester = MSPTester(args.device, BAUD_RATE)
+        if args.command:
+            # The test function name is expected to be in the format 'test_msp_...'
+            # The command name from the CLI should be like 'MSP_UID'
+            test_name = f"test_{args.command.lower()}"
+            success = tester.run_single_test(test_name)
+        else:
+            success = tester.run_all_tests()
         sys.exit(0 if success else 1)
     except KeyboardInterrupt:
         print(f"\n{colored('✗ Test aborted by user', Colors.RED)}")

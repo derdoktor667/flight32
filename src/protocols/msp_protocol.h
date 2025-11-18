@@ -33,6 +33,8 @@ static constexpr uint8_t MSP_RC_PAYLOAD_SIZE = 16;      // 8x RC channels (int16
 static constexpr uint8_t MSP_MOTOR_PAYLOAD_SIZE = 8;    // 4x motor outputs (int16_t = 2 bytes each)
 static constexpr uint8_t MSP_FILTER_CONFIG_PAYLOAD_SIZE = 20; // 5 floats * 4 bytes each
 static constexpr uint8_t MSP_BOX_PAYLOAD_SIZE = 2;      // 1x flight mode (int16_t = 2 bytes)
+static constexpr uint8_t MSP_UID_PAYLOAD_SIZE = 12;     // 3x uint32_t for unique ID
+static constexpr uint8_t MSP_STATUS_PAYLOAD_SIZE = 11;    // cycletime, i2c_errors, sensors, flightmode, profile
 
 // --- MSP Flight Mode IDs ---
 static constexpr uint8_t MSP_BOX_ACRO_ID = 0;
@@ -51,16 +53,17 @@ static constexpr uint8_t MSP_FC_VERSION = 3;
 static constexpr uint8_t MSP_BOARD_INFO = 4;
 static constexpr uint8_t MSP_BUILD_INFO = 5;
 static constexpr uint8_t MSP_REBOOT = 6;
-static constexpr uint8_t MSP_STATUS = 7;
 static constexpr uint8_t MSP_MEM_STATS = 8;
 static constexpr uint8_t MSP_GET_SETTING = 9;
 static constexpr uint8_t MSP_SET_SETTING = 10;
 static constexpr uint8_t MSP_PID = 11;
-static constexpr uint8_t MSP_BOX = 113;
+static constexpr uint8_t MSP_STATUS = 101;
 static constexpr uint8_t MSP_RAW_IMU = 102;
 static constexpr uint8_t MSP_MOTOR = 104;
 static constexpr uint8_t MSP_RC = 105;
 static constexpr uint8_t MSP_ATTITUDE = 108;
+static constexpr uint8_t MSP_BOX = 113;
+static constexpr uint8_t MSP_UID = 160;
 static constexpr uint8_t MSP_EEPROM_WRITE = 200;
 static constexpr uint8_t MSP_RESET_SETTINGS = 201;
 static constexpr uint8_t MSP_SET_PID = 202;

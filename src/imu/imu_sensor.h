@@ -63,6 +63,8 @@ public:
     virtual ImuAxisData getAccelerometerOffset() const = 0;
     virtual void setAccelerometerOffset(const ImuAxisData &offset) = 0;
     virtual ImuQuaternionData getQuaternion() const { return {0, 0, 0, 0}; };
+    virtual uint16_t getI2CErrorCount() const = 0;
+    virtual bool isSensorHealthy() const = 0;
 
 protected:
     ImuData _data = {};

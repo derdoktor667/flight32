@@ -37,6 +37,7 @@ public:
     bool isArmed() const { return _isArmed; }
     FlightMode getFlightMode() const { return _flight_mode; }
     void setFlightMode(FlightMode mode) { _flight_mode = mode; }
+    uint16_t getCycleTime() const { return _cycleTime; }
 
 private:
     ImuTask *_imu_task;
@@ -44,6 +45,7 @@ private:
     MotorTask *_motor_task;
     SettingsManager *_settings_manager;
     bool _isArmed;
+    uint16_t _cycleTime = 0;
 
     PIDController _pid_roll;
     PIDController _pid_pitch;
