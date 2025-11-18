@@ -47,20 +47,21 @@ void com_task(void *pvParameters)
                 switch (msg.type)
                 {
                 case ComMessageType::LOG_INFO:
-                    Serial.print("[INFO] ");
-                    Serial.println(msg.content);
-                    _line_needs_clearing = false;
-                    break;
                 case ComMessageType::LOG_WARN:
-                    Serial.print("[WARN] ");
+                case ComMessageType::LOG_ERROR: {
+                    const char* tag = "";
+                    if (msg.type == ComMessageType::LOG_INFO) {
+                        tag = "[INFO] ";
+                    } else if (msg.type == ComMessageType::LOG_WARN) {
+                        tag = "[WARN] ";
+                    } else if (msg.type == ComMessageType::LOG_ERROR) {
+                        tag = "[ERROR] ";
+                    }
+                    Serial.print(tag);
                     Serial.println(msg.content);
                     _line_needs_clearing = false;
                     break;
-                case ComMessageType::LOG_ERROR:
-                    Serial.print("[ERROR] ");
-                    Serial.println(msg.content);
-                    _line_needs_clearing = false;
-                    break;
+                }
                 case ComMessageType::TERMINAL_OUTPUT:
                     Serial.println(msg.content);
                     _line_needs_clearing = false;

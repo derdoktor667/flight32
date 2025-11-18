@@ -47,7 +47,13 @@ void ImuTask::run()
     _filtered_imu_data.temp = raw_imu_data.temp;
 
     // Apply filters to gyro data
-    _filtered_imu_data.gyroX = _gyro_notch2[0].apply(_gyro_notch1[0].apply(_gyro_lpf[0].apply(raw_imu_data.gyroX)));
-    _filtered_imu_data.gyroY = _gyro_notch2[1].apply(_gyro_notch1[1].apply(_gyro_lpf[1].apply(raw_imu_data.gyroY)));
-    _filtered_imu_data.gyroZ = _gyro_notch2[2].apply(_gyro_notch1[2].apply(_gyro_lpf[2].apply(raw_imu_data.gyroZ)));
+    float raw_gyros[NUM_AXES] = {raw_imu_data.gyroX, raw_imu_data.gyroY, raw_imu_data.gyroZ};
+    float filtered_gyros[NUM_AXES];
+    for (int i = 0; i < NUM_AXES; ++i)
+    {
+        filtered_gyros[i] = _gyro_notch2[i].apply(_gyro_notch1[i].apply(_gyro_lpf[i].apply(raw_gyros[i])));
+    }
+    _filtered_imu_data.gyroX = filtered_gyros[0];
+    _filtered_imu_data.gyroY = filtered_gyros[1];
+    _filtered_imu_data.gyroZ = filtered_gyros[2];
 }
