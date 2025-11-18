@@ -98,16 +98,18 @@ class MSPCommand(Enum):
     MSP_BOARD_INFO = 4
     MSP_BUILD_INFO = 5
     MSP_REBOOT = 6
-    MSP_STATUS = 101
     MSP_MEM_STATS = 8
     MSP_GET_SETTING = 9
     MSP_SET_SETTING = 10
     MSP_PID = 11
-    MSP_UID = 160
+    MSP_STATUS = 101
     MSP_RAW_IMU = 102
-    MSP_ATTITUDE = 108
-    MSP_RC = 105
     MSP_MOTOR = 104
+    MSP_RC = 105
+    MSP_ATTITUDE = 108
+    MSP_BOX = 113
+    MSP_UID = 160
+    MSP_SENSOR_STATUS = 212
     MSP_SET_PID = 202
     MSP_GET_FILTER_CONFIG = 203
     MSP_SET_FILTER_CONFIG = 204
@@ -422,6 +424,21 @@ class MSPTester:
         self.test_results.append(("MSP Status", True, details))
         return True
 
+    def test_msp_sensor_status(self) -> bool:
+        response = self.send_msp_command(MSPCommand.MSP_SENSOR_STATUS.value)
+        if not response.is_valid or len(response.payload) < 12:
+            self.test_results.append(("MSP Sensor Status", False, ""))
+            return False
+
+        acc_x, acc_y, acc_z, gyro_x, gyro_y, gyro_z = struct.unpack(
+            "<hhhhhh", response.payload
+        )
+        details = (
+            f"Acc: ({acc_x}, {acc_y}, {acc_z}), Gyro: ({gyro_x}, {gyro_y}, {gyro_z})"
+        )
+        self.test_results.append(("MSP Sensor Status", True, details))
+        return True
+
     def run_all_tests(self) -> bool:
         """Run all tests"""
         if not self.connect():
@@ -440,6 +457,7 @@ class MSPTester:
                 self.test_motor_output,
                 self.test_msp_uid,
                 self.test_msp_status,
+                self.test_msp_sensor_status,
             ]
 
             for test_func in tests:

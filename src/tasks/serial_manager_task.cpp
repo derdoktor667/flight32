@@ -295,12 +295,51 @@ void SerialManagerTask::_process_msp_message()
     case MSP_UID:
         _handle_msp_uid();
         break;
+    case MSP_SENSOR_STATUS:
+        _handle_msp_sensor_status();
+        break;
     default:
         // Send empty response for unsupported command
         _send_msp_response(_msp_command_id, nullptr, 0);
         break;
     }
 }
+
+void SerialManagerTask::_handle_msp_sensor_status()
+{
+    if (!_imu_task)
+    {
+        _send_msp_response(MSP_SENSOR_STATUS, nullptr, 0);
+        return;
+    }
+
+    ImuData imu_data = _imu_task->getImuSensor().getData();
+
+    // Scale factors from Betaflight for raw IMU data (these are approximate)
+    // Accel: 1G = 512 (approx, depends on sensor and range)
+    // Gyro: 1 deg/s = 4 (approx, depends on sensor and range)
+    int16_t accX = (int16_t)(imu_data.accelX * MSP_ACCEL_SCALING_FACTOR);
+    int16_t accY = (int16_t)(imu_data.accelY * MSP_ACCEL_SCALING_FACTOR);
+    int16_t accZ = (int16_t)(imu_data.accelZ * MSP_ACCEL_SCALING_FACTOR);
+
+    int16_t gyroX = (int16_t)(imu_data.gyroX * MSP_GYRO_SCALING_FACTOR);
+    int16_t gyroY = (int16_t)(imu_data.gyroY * MSP_GYRO_SCALING_FACTOR);
+    int16_t gyroZ = (int16_t)(imu_data.gyroZ * MSP_GYRO_SCALING_FACTOR);
+
+    uint8_t payload[MSP_SENSOR_STATUS_PAYLOAD_SIZE]; // 3x Accel, 3x Gyro (int16_t = 2 bytes each)
+    int i = 0;
+
+    _write_int16_to_payload(payload, i, accX);
+    _write_int16_to_payload(payload, i, accY);
+    _write_int16_to_payload(payload, i, accZ);
+
+    _write_int16_to_payload(payload, i, gyroX);
+    _write_int16_to_payload(payload, i, gyroY);
+    _write_int16_to_payload(payload, i, gyroZ);
+
+    _send_msp_response(MSP_SENSOR_STATUS, payload, MSP_SENSOR_STATUS_PAYLOAD_SIZE);
+}
+
 
 // CORRECTED: Removed '$M>' and changed to proper '$M' format
 void SerialManagerTask::_send_msp_response(uint8_t cmd, uint8_t *payload, uint8_t size)

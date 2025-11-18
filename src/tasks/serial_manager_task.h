@@ -105,4 +105,5 @@ private:
     void _handle_msp_box_get();
     void _handle_msp_box_set();
     void _handle_msp_uid();
+    void _handle_msp_sensor_status();
 };
