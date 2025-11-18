@@ -358,9 +358,11 @@ if __name__ == "__main__":
     test_results = [0, 0]  # [successful_tests, failed_tests]
     try:
         ser = serial.Serial(SERIAL_PORT_TO_USE, BAUD_RATE, timeout=TIMEOUT)
-        ser.reset_input_buffer() # Clear any leftover data in the buffer
+        ser.reset_input_buffer()  # Clear any leftover data in the buffer
         print(f"{GREEN}{ICON_SUCCESS} Serial port opened successfully.{RESET}")
-        time.sleep(1) # Add a delay to allow the FC to boot and send any initial debug messages
+        time.sleep(
+            1
+        )  # Add a delay to allow the FC to boot and send any initial debug messages
         time.sleep(2)  # Give the FC some time to initialize after connection
 
         commands_to_run = {}
@@ -380,12 +382,20 @@ if __name__ == "__main__":
             # Special handling for MSP_GET_SETTING to send a key
             if command_name == "MSP_GET_SETTING":
                 setting_key = "pid.roll.p"
-                key_bytes = setting_key.encode('ascii')
+                key_bytes = setting_key.encode("ascii")
                 # Payload: [key_length (1 byte)] [key_string (variable length)]
                 payload = bytes([len(key_bytes)]) + key_bytes
-                send_and_receive(ser, command_name, command_code, data=payload, test_counts=test_results)
+                send_and_receive(
+                    ser,
+                    command_name,
+                    command_code,
+                    data=payload,
+                    test_counts=test_results,
+                )
             else:
-                send_and_receive(ser, command_name, command_code, test_counts=test_results)
+                send_and_receive(
+                    ser, command_name, command_code, test_counts=test_results
+                )
             time.sleep(0.1)  # Small delay between commands
 
     except serial.SerialException as e:
