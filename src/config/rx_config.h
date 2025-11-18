@@ -66,6 +66,7 @@ constexpr int16_t INVALID_CHANNEL_VALUE = 0;
 
 // --- RC Arming Threshold ---
 constexpr int16_t RC_CHANNEL_ARM_THRESHOLD = 1800;
+constexpr int16_t RC_CHANNEL_FMODE_STABILIZED_THRESHOLD = 1800;
 
 // --- Default RC Channel Mappings (0-based index) ---
 constexpr uint8_t DEFAULT_RC_CHANNEL_ROLL = 1;

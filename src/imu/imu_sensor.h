@@ -18,6 +18,7 @@ struct ImuData
 {
     float accelX, accelY, accelZ;
     float gyroX, gyroY, gyroZ;
+    float angleX, angleY; // New: Roll and Pitch angles
     float temp;
 };
 

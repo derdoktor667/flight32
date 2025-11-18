@@ -287,6 +287,12 @@ void SerialManagerTask::_process_msp_message()
     case MSP_MOTOR:
         _handle_msp_motor();
         break;
+    case MSP_BOX:
+        _handle_msp_box_get();
+        break;
+    case MSP_SET_BOX:
+        _handle_msp_box_set();
+        break;
     default:
         // Send empty response for unsupported command
         _send_msp_response(_msp_command_id, nullptr, 0);
@@ -755,4 +761,46 @@ void SerialManagerTask::_handle_msp_motor()
     }
 
     _send_msp_response(MSP_MOTOR, payload, MSP_MOTOR_PAYLOAD_SIZE);
+}
+
+void SerialManagerTask::_handle_msp_box_get()
+{
+    if (!_pid_task)
+    {
+        _send_msp_response(MSP_BOX, nullptr, 0);
+        return;
+    }
+
+    uint8_t payload[MSP_BOX_PAYLOAD_SIZE];
+    int i = 0;
+
+    FlightMode current_mode = _pid_task->getFlightMode();
+    uint16_t mode_id = (current_mode == FlightMode::STABILIZED) ? MSP_BOX_STABILIZED_ID : MSP_BOX_ACRO_ID;
+
+    _write_int16_to_payload(payload, i, mode_id);
+
+    _send_msp_response(MSP_BOX, payload, MSP_BOX_PAYLOAD_SIZE);
+}
+
+void SerialManagerTask::_handle_msp_box_set()
+{
+    if (!_pid_task || _msp_payload_size != MSP_BOX_PAYLOAD_SIZE)
+    {
+        _send_msp_response(MSP_SET_BOX, nullptr, 0);
+        return;
+    }
+
+    int i = 0;
+    uint16_t mode_id = _read_int16_from_payload(_msp_payload_buffer, i);
+
+    if (mode_id == MSP_BOX_STABILIZED_ID)
+    {
+        _pid_task->setFlightMode(FlightMode::STABILIZED);
+    }
+    else
+    {
+        _pid_task->setFlightMode(FlightMode::ACRO);
+    }
+
+    _send_msp_response(MSP_SET_BOX, nullptr, 0); // Acknowledge
 }

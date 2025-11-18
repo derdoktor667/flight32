@@ -12,6 +12,7 @@
 #include "imu_task.h"
 #include "motor_task.h"
 #include "../config/pid_config.h"
+#include "../utils/flight_modes.h"
 
 class RxTask;          // Forward declaration
 class SettingsManager; // Forward declaration
@@ -34,6 +35,8 @@ public:
 
 public:
     bool isArmed() const { return _isArmed; }
+    FlightMode getFlightMode() const { return _flight_mode; }
+    void setFlightMode(FlightMode mode) { _flight_mode = mode; }
 
 private:
     ImuTask *_imu_task;
@@ -45,6 +48,11 @@ private:
     PIDController _pid_roll;
     PIDController _pid_pitch;
     PIDController _pid_yaw;
+
+    PIDController _pid_angle_roll;
+    PIDController _pid_angle_pitch;
+
+    FlightMode _flight_mode;
 
     void _load_gains();
     void _set_and_save_gains(PidAxis axis, PidGains gains);

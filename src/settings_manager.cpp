@@ -68,6 +68,10 @@ const SettingsManager::SettingMetadata SettingsManager::_settings_metadata[] = {
     {KEY_PID_YAW_P, "pid.yaw.p", "PID Yaw Proportional Gain", SettingsManager::FLOAT, nullptr, 0, 0, DEFAULT_PID_YAW_P, nullptr},
     {KEY_PID_YAW_I, "pid.yaw.i", "PID Yaw Integral Gain", SettingsManager::FLOAT, nullptr, 0, 0, DEFAULT_PID_YAW_I, nullptr},
     {KEY_PID_YAW_D, "pid.yaw.d", "PID Yaw Derivative Gain", SettingsManager::FLOAT, nullptr, 0, 0, DEFAULT_PID_YAW_D, nullptr},
+    {KEY_PID_ANG_R_P, "pid.angR.p", "PID Angle Roll Proportional Gain", SettingsManager::FLOAT, nullptr, 0, 0, DEFAULT_PID_ANGLE_ROLL_P, nullptr},
+    {KEY_PID_ANG_R_I, "pid.angR.i", "PID Angle Roll Integral Gain", SettingsManager::FLOAT, nullptr, 0, 0, DEFAULT_PID_ANGLE_ROLL_I, nullptr},
+    {KEY_PID_ANG_P_P, "pid.angP.p", "PID Angle Pitch Proportional Gain", SettingsManager::FLOAT, nullptr, 0, 0, DEFAULT_PID_ANGLE_PITCH_P, nullptr},
+    {KEY_PID_ANG_P_I, "pid.angP.i", "PID Angle Pitch Integral Gain", SettingsManager::FLOAT, nullptr, 0, 0, DEFAULT_PID_ANGLE_PITCH_I, nullptr},
     // Filter Settings
     {NVS_KEY_GYRO_LPF_HZ, "filter.lpf_hz", "Gyro Low-Pass Filter Cutoff Frequency", SettingsManager::FLOAT, nullptr, 0, 0, DEFAULT_GYRO_LPF_HZ, nullptr},
     {NVS_KEY_NOTCH1_HZ, "filter.notch1_hz", "First Notch Filter Center Frequency", SettingsManager::FLOAT, nullptr, 0, 0, DEFAULT_NOTCH1_HZ, nullptr},
@@ -386,7 +390,11 @@ String SettingsManager::getSettingValueHumanReadable(const char *key)
                 strcmp(key, KEY_PID_PITCH_D) == 0 ||
                 strcmp(key, KEY_PID_YAW_P) == 0 ||
                 strcmp(key, KEY_PID_YAW_I) == 0 ||
-                strcmp(key, KEY_PID_YAW_D) == 0)
+                strcmp(key, KEY_PID_YAW_D) == 0 ||
+                strcmp(key, KEY_PID_ANG_R_P) == 0 ||
+                strcmp(key, KEY_PID_ANG_R_I) == 0 ||
+                strcmp(key, KEY_PID_ANG_P_P) == 0 ||
+                strcmp(key, KEY_PID_ANG_P_I) == 0)
             {
                 if (_settings_metadata[i].type == FLOAT)
                 {

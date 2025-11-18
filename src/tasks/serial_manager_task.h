@@ -102,4 +102,6 @@ private:
     void _handle_msp_attitude();
     void _handle_msp_rc();
     void _handle_msp_motor();
+    void _handle_msp_box_get();
+    void _handle_msp_box_set();
 };

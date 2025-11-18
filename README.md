@@ -23,7 +23,8 @@ Flight32 is a robust, extensible, and user-friendly firmware that turns any ESP3
 *   🧠 **Dual-Core Powerhouse**: Harnesses the full power of the ESP32's dual-core architecture, dedicating one core to flight-critical tasks and the other to communications.
 *   🛡️ **Robust System State Machine**: A built-in state machine ensures safe and predictable behavior, from initialization to in-flight, with robust error handling and failsafe modes.
 *   🧩 **Clean & Modular Architecture**: A clean, object-oriented design makes the firmware easy to understand, modify, and extend.
-*   📊 **Real-time System Insights**: Tune and debug on the fly with a powerful, built-in terminal and MultiWii Serial Protocol (MSP) support. Monitor CPU load, loop times, and memory usage to squeeze every drop of performance out of your hardware.
+*   ✈️ **Configurable Flight Modes**: Seamlessly switch between Acro (rate-based) and Stabilized (angle-based) flight modes using a dedicated RC channel. Stabilized mode utilizes a cascaded PID control loop for precise angle holding.
+*   📊 **Real-time System Insights**: Tune and debug on the fly with a powerful, built-in terminal and MultiWii Serial Protocol (MSP) support. Monitor CPU load, loop times, and memory usage, and configure flight modes to squeeze every drop of performance out of your hardware.
 *   🎛️ **Persistent On-the-Fly Tuning**: A full PID controller and complete channel mapping are easily adjustable via the terminal, with all settings saved persistently to non-volatile storage.
 *   📡 **Extensible Receiver & IMU Support**: Built with a generic task structure to easily support new receiver protocols (currently IBUS, PPM) and IMU sensors (currently MPU6050).
 *   **Configurable MPU6050**: Fine-tune your MPU6050 with configurable gyroscope range, accelerometer range, and low-pass filter settings, along with improved temperature accuracy.
@@ -221,7 +222,7 @@ This section provides a common pinout reference for ESP32 Devkit boards, focusin
 Flight32 is an actively developed project. Here's a glimpse of what's on the horizon:
 
 - [ ] Integration of more advanced sensors (e.g., barometer, magnetometer).
-- [ ] Implementation of different flight modes (e.g., Acro, Angle, Horizon).
+- [x] Implementation of different flight modes (e.g., Acro, Angle, Horizon).
 - [ ] Support for more receiver protocols (e.g., CRSF, SBUS).
 - [ ] Support for more ESC protocols.
 

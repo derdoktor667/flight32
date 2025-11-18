@@ -12,7 +12,9 @@ enum class PidAxis
 {
     ROLL,
     PITCH,
-    YAW
+    YAW,
+    ANGLE_ROLL,
+    ANGLE_PITCH
 };
 
 struct PidGains

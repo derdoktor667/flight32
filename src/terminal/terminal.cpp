@@ -202,7 +202,7 @@ void Terminal::handleInput(char incoming_char)
 void Terminal::showPrompt()
 {
     com_flush_output();
-    com_send_log(ComMessageType::TERMINAL_OUTPUT, "");
+    // com_send_log(ComMessageType::TERMINAL_OUTPUT, "");
 
     // Draw some fancy prompt
     String system_name = _settings_manager->getSettingValue(KEY_SYSTEM_NAME);
@@ -1178,7 +1178,7 @@ void Terminal::_handle_pid_get(String &args)
     com_send_log(ComMessageType::TERMINAL_OUTPUT, "PID Gains (scaled by %d):", (int)PID_SCALE_FACTOR);
 
     int max_label_len = 0;
-    const char *labels[] = {"Roll:", "Pitch:", "Yaw:"};
+    const char *labels[] = {"Roll:", "Pitch:", "Yaw:", "Angle Roll:", "Angle Pitch:"};
     for (int i = 0; i < sizeof(labels) / sizeof(labels[0]); ++i)
     {
         int len = strlen(labels[i]);
@@ -1205,6 +1205,14 @@ void Terminal::_handle_pid_get(String &args)
                  (int)(_pid_task->getGains(PidAxis::YAW).p * PID_SCALE_FACTOR),
                  (int)(_pid_task->getGains(PidAxis::YAW).i * PID_SCALE_FACTOR),
                  (int)(_pid_task->getGains(PidAxis::YAW).d * PID_SCALE_FACTOR));
+    com_send_log(ComMessageType::TERMINAL_OUTPUT, "  %-*s P=%d, I=%d, D=%d", max_label_len, "Angle Roll:",
+                 (int)(_pid_task->getGains(PidAxis::ANGLE_ROLL).p * PID_SCALE_FACTOR),
+                 (int)(_pid_task->getGains(PidAxis::ANGLE_ROLL).i * PID_SCALE_FACTOR),
+                 (int)(_pid_task->getGains(PidAxis::ANGLE_ROLL).d * PID_SCALE_FACTOR));
+    com_send_log(ComMessageType::TERMINAL_OUTPUT, "  %-*s P=%d, I=%d, D=%d", max_label_len, "Angle Pitch:",
+                 (int)(_pid_task->getGains(PidAxis::ANGLE_PITCH).p * PID_SCALE_FACTOR),
+                 (int)(_pid_task->getGains(PidAxis::ANGLE_PITCH).i * PID_SCALE_FACTOR),
+                 (int)(_pid_task->getGains(PidAxis::ANGLE_PITCH).d * PID_SCALE_FACTOR));
     com_send_log(ComMessageType::TERMINAL_OUTPUT, separator_str.c_str());
 }
 
@@ -1246,9 +1254,17 @@ void Terminal::_handle_pid_set(String &args)
     {
         axis = PidAxis::YAW;
     }
+    else if (axis_str.equalsIgnoreCase("angleroll"))
+    {
+        axis = PidAxis::ANGLE_ROLL;
+    }
+    else if (axis_str.equalsIgnoreCase("anglepitch"))
+    {
+        axis = PidAxis::ANGLE_PITCH;
+    }
     else
     {
-        com_send_log(ComMessageType::LOG_ERROR, "Invalid axis: %s. Must be 'roll', 'pitch', or 'yaw'.", axis_str.c_str());
+        com_send_log(ComMessageType::LOG_ERROR, "Invalid axis: %s. Must be 'roll', 'pitch', 'yaw', 'angleroll', or 'anglepitch'.", axis_str.c_str());
         return;
     }
 
@@ -1266,7 +1282,13 @@ void Terminal::_handle_pid_set(String &args)
     }
     else if (gain_str.equalsIgnoreCase("d"))
     {
-        gains.d = value;
+        // Only allow D gain for rate PIDs
+        if (axis == PidAxis::ROLL || axis == PidAxis::PITCH || axis == PidAxis::YAW) {
+            gains.d = value;
+        } else {
+            com_send_log(ComMessageType::LOG_ERROR, "D gain is not applicable for angle PID controllers.");
+            return;
+        }
     }
     else
     {

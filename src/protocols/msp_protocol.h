@@ -32,6 +32,11 @@ static constexpr uint8_t MSP_ATTITUDE_PAYLOAD_SIZE = 6; // 3x angles (int16_t = 
 static constexpr uint8_t MSP_RC_PAYLOAD_SIZE = 16;      // 8x RC channels (int16_t = 2 bytes each)
 static constexpr uint8_t MSP_MOTOR_PAYLOAD_SIZE = 8;    // 4x motor outputs (int16_t = 2 bytes each)
 static constexpr uint8_t MSP_FILTER_CONFIG_PAYLOAD_SIZE = 20; // 5 floats * 4 bytes each
+static constexpr uint8_t MSP_BOX_PAYLOAD_SIZE = 2;      // 1x flight mode (int16_t = 2 bytes)
+
+// --- MSP Flight Mode IDs ---
+static constexpr uint8_t MSP_BOX_ACRO_ID = 0;
+static constexpr uint8_t MSP_BOX_STABILIZED_ID = 1;
 
 // --- MSP Scaling Factors ---
 static constexpr float MSP_ATTITUDE_SCALE_FACTOR = 10.0f; // Roll/Pitch scaled by 10
@@ -51,6 +56,7 @@ static constexpr uint8_t MSP_MEM_STATS = 8;
 static constexpr uint8_t MSP_GET_SETTING = 9;
 static constexpr uint8_t MSP_SET_SETTING = 10;
 static constexpr uint8_t MSP_PID = 11;
+static constexpr uint8_t MSP_BOX = 113;
 static constexpr uint8_t MSP_RAW_IMU = 102;
 static constexpr uint8_t MSP_MOTOR = 104;
 static constexpr uint8_t MSP_RC = 105;
@@ -60,3 +66,4 @@ static constexpr uint8_t MSP_RESET_SETTINGS = 201;
 static constexpr uint8_t MSP_SET_PID = 202;
 static constexpr uint8_t MSP_GET_FILTER_CONFIG = 203;
 static constexpr uint8_t MSP_SET_FILTER_CONFIG = 204;
+static constexpr uint8_t MSP_SET_BOX = 205;

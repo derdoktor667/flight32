@@ -14,6 +14,7 @@ constexpr uint32_t PID_TASK_STACK_SIZE = 4096;
 constexpr uint8_t PID_TASK_PRIORITY = 4;
 constexpr int8_t PID_TASK_CORE = 1;
 constexpr uint8_t PID_TASK_DELAY_MS = 10;
+constexpr float MAX_ANGLE_DEGREES = 30.0f; // Maximum angle in degrees for stabilized mode
 
 // --- PID Gain Settings ---
 constexpr const char *KEY_PID_ROLL_P = "pid.roll.p";
@@ -25,6 +26,11 @@ constexpr const char *KEY_PID_PITCH_D = "pid.pitch.d";
 constexpr const char *KEY_PID_YAW_P = "pid.yaw.p";
 constexpr const char *KEY_PID_YAW_I = "pid.yaw.i";
 constexpr const char *KEY_PID_YAW_D = "pid.yaw.d";
+
+constexpr const char *KEY_PID_ANG_R_P = "pid.angR.p";
+constexpr const char *KEY_PID_ANG_R_I = "pid.angR.i";
+constexpr const char *KEY_PID_ANG_P_P = "pid.angP.p";
+constexpr const char *KEY_PID_ANG_P_I = "pid.angP.i";
 
 // PID scaling: 1/100 for precision
 constexpr float PID_SCALE_FACTOR = 100.0f; // 1 unit = 0.01 gain
@@ -38,3 +44,8 @@ constexpr float DEFAULT_PID_PITCH_D = 0.005f;
 constexpr float DEFAULT_PID_YAW_P = 0.4f;
 constexpr float DEFAULT_PID_YAW_I = 0.04f;
 constexpr float DEFAULT_PID_YAW_D = 0.01f;
+
+constexpr float DEFAULT_PID_ANGLE_ROLL_P = 0.5f;
+constexpr float DEFAULT_PID_ANGLE_ROLL_I = 0.0f;
+constexpr float DEFAULT_PID_ANGLE_PITCH_P = 0.5f;
+constexpr float DEFAULT_PID_ANGLE_PITCH_I = 0.0f;
