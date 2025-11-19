@@ -18,3 +18,8 @@ constexpr uint16_t COM_MESSAGE_MAX_LENGTH = 512;
 constexpr uint32_t COM_TASK_STARTUP_DELAY_MS = 10;
 constexpr uint16_t MSP_RESPONSE_DELAY_US = 100;
 constexpr uint8_t UNIQUE_ID_BUFFER_SIZE = 32;
+
+// MSP FC Variant, Board Info
+static constexpr const char *MSP_FC_VARIANT_NAME = "BTFL";
+static constexpr const char *MSP_BOARD_IDENTIFIER = "SRF3";
+static constexpr const char *MSP_BOARD_NAME = "";

@@ -44,6 +44,7 @@ private:
     ComSerialMode _current_mode = ComSerialMode::TERMINAL; // Current serial communication mode
     unsigned long _last_msp_activity_ms = 0;
     static constexpr unsigned long MSP_TIMEOUT_MS = 2000; // Switch back to terminal after 2 seconds of no MSP activity
+    bool _should_show_prompt = true; // New flag to control prompt display
 
     // MSP Mode Variables
     enum class MspState
@@ -69,7 +70,7 @@ private:
     void _handle_terminal_input(char incoming_char);
 
     // MSP Mode Functions
-    void _parse_msp_char(uint8_t c);
+    bool _parse_msp_char(uint8_t c); // Returns true if char was consumed by MSP, false otherwise
     void _process_msp_message();
     void _send_msp_response(uint8_t cmd, uint8_t *payload, uint8_t size);
 
@@ -96,8 +97,8 @@ private:
     void _handle_msp_set_setting();
     void _handle_msp_pid_get();
     void _handle_msp_pid_set();
-    void _handle_msp_get_filter_config(); // New MSP handler
-    void _handle_msp_set_filter_config(); // New MSP handler
+    void _handle_msp_get_filter_config();
+    void _handle_msp_set_filter_config();
     void _handle_msp_raw_imu();
     void _handle_msp_attitude();
     void _handle_msp_rc();
@@ -106,4 +107,7 @@ private:
     void _handle_msp_box_set();
     void _handle_msp_uid();
     void _handle_msp_sensor_status();
+    void _handle_msp_boxnames();
+    void _handle_msp_mode_ranges();
+    void _handle_msp_motor_config();
 };

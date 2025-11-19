@@ -310,6 +310,26 @@ def _decode_msp_generic(response_data):
     return {"raw_data": response_data.hex() if response_data is not None else "None"}
 
 
+def _decode_msp_raw_imu(response_data):
+    if response_data is None or len(response_data) != 18:  # 3x Accel, 3x Gyro, 3x Mag (2 bytes each = 18 bytes)
+        return None
+
+    # Unpack 9 signed short integers (int16_t)
+    accel_x, accel_y, accel_z, gyro_x, gyro_y, gyro_z, mag_x, mag_y, mag_z = struct.unpack(
+        "<hhhhhhhhh", response_data
+    )
+    return {
+        "accel_x": accel_x,
+        "accel_y": accel_y,
+        "accel_z": accel_z,
+        "gyro_x": gyro_x,
+        "gyro_y": gyro_y,
+        "gyro_z": gyro_z,
+        "mag_x": mag_x,
+        "mag_y": mag_y,
+        "mag_z": mag_z,
+    }
+
 # Mapping of MSP command codes to their decoding functions
 MSP_DECODERS = {
     MSP_COMMANDS["MSP_API_VERSION"]: _decode_msp_api_version,
@@ -324,7 +344,8 @@ MSP_DECODERS = {
     MSP_COMMANDS["MSP_MODE_RANGES"]: _decode_msp_mode_ranges,
     MSP_COMMANDS["MSP_RC_CHANNELS"]: _decode_msp_rc_channels,
     MSP_COMMANDS["MSP_MOTOR"]: _decode_msp_motor,
-    MSP_COMMANDS["MSP_PID"]: _decode_msp_pid,
+    102: _decode_msp_pid, # Map actual code 102 to PID decoder
+    # MSP_COMMANDS["MSP_RAW_IMU"] will use decoder_override
     MSP_COMMANDS["MSP_MOTOR_CONFIG"]: _decode_msp_motor_config,
 }
 
@@ -366,7 +387,7 @@ def _print_decoded_data(command_name, decoded_data, raw_data_hex):
         )
 
 
-def send_and_receive(ser, command_name, command_code, data=b""):
+def send_and_receive(ser, command_name, command_code, data=b"", decoder_override=None):
     """
     Sends an MSP command and receives the response.
     Returns a tuple (success, decoded_data) where success is a boolean and decoded_data is the parsed response.
@@ -394,7 +415,10 @@ def send_and_receive(ser, command_name, command_code, data=b""):
             return False, None
 
         # Get the appropriate decoder function
-        decoder_func = MSP_DECODERS.get(command_code_response, _decode_msp_generic)
+        if decoder_override:
+            decoder_func = decoder_override
+        else:
+            decoder_func = MSP_DECODERS.get(command_code_response, _decode_msp_generic)
         decoded_data = decoder_func(response_data)
 
         # Print the results
@@ -409,12 +433,12 @@ def send_and_receive(ser, command_name, command_code, data=b""):
         return False, None
 
 
-def run_test_case(ser, command_name, command_code, data=b"", assertions=None):
+def run_test_case(ser, command_name, command_code, data=b"", assertions=None, decoder_override=None):
     """
     Runs a single test case for an MSP command.
     Returns True if the test passes, False otherwise.
     """
-    success, decoded_data = send_and_receive(ser, command_name, command_code, data)
+    success, decoded_data = send_and_receive(ser, command_name, command_code, data, decoder_override)
     test_passed = success
 
     if assertions and decoded_data:
@@ -525,95 +549,37 @@ if __name__ == "__main__":
         else:
             commands_to_run = MSP_COMMANDS
 
-        for command_name, command_code in commands_to_run.items():
+        for command_name_in_loop, command_code_in_loop in commands_to_run.items():
             # Define assertions here for each command
             assertions = None
+            
+            if command_code_in_loop == 102: # Handle shared ID for PID and RAW_IMU (which is MSP_PID)
+                # Test MSP_PID first
+                print(f"\n{ICON_INFO} Testing {BOLD}MSP_PID{RESET} (code: {command_code_in_loop})...")
+                test_passed_pid = run_test_case(ser, "MSP_PID", command_code_in_loop, assertions=assertions, decoder_override=_decode_msp_pid)
+                if not test_passed_pid:
+                    failed_tests += 1
+                else:
+                    successful_tests += 1
+                time.sleep(0.1)
 
-            if command_name == "MSP_API_VERSION":
-                # For this specific FC, we saw Protocol Version: 0, Capability: 1 43.
-                assertions = {
-                    "msp_protocol_version": 0,  # Based on previous output for this FC
-                    # "capability_hr": 1, # Not strictly necessary to assert specific value, just presence
-                    # "capability_lr": 43,
-                }
-            elif command_name == "MSP_FC_VARIANT":
-                assertions = {"fc_variant": "BTFL"}  # Based on previous output
-            elif command_name == "MSP_FC_VERSION":
-                assertions = {
-                    "major": 4,  # Based on previous output
-                    "minor": 2,
-                    "patch": 11,
-                }
-            elif command_name == "MSP_BOARD_INFO":
-                assertions = {
-                    "board_identifier": "SRF3",  # Based on previous output
-                    "board_name": "",  # Empty is expected from previous run.
-                }
-            elif command_name == "MSP_STATUS":
-                # For status, we expect certain sensors to be present or reasonable cycle time/i2c errors
-                # For this FC, we saw BARO and plausible errors.
-                assertions = {"sensor_names": "BARO"}  # Based on previous output
-            elif command_name == "MSP_MOTOR_CONFIG":
-                # For MSP_MOTOR_CONFIG, based on our analysis of the custom firmware,
-                # we expect these specific min/max throttle/command values.
-                # From previous run, Min Throttle: 1406, Max Throttle: 1514, Min Command: 1460
-                assertions = {
-                    "min_throttle": 1406,
-                    "max_throttle": 1514,
-                    "min_command": 1460,
-                }
-            elif command_name == "MSP_MODE_RANGES":
-                # For MSP_MODE_RANGES, we expect a list of 4-byte structures.
-                # We can assert the number of ranges found or specific values if known.
-                # Based on previous output, we expect 4 mode ranges.
-                assertions = {
-                    "mode_ranges": [
-                        {
-                            "permanent_id": 0,
-                            "aux_channel_index": 1,
-                            "start_step": 2,
-                            "end_step": 6,
-                        },
-                        {
-                            "permanent_id": 27,
-                            "aux_channel_index": 7,
-                            "start_step": 13,
-                            "end_step": 19,
-                        },
-                        {
-                            "permanent_id": 20,
-                            "aux_channel_index": 26,
-                            "start_step": 30,
-                            "end_step": 31,
-                        },
-                        {
-                            "permanent_id": 35,
-                            "aux_channel_index": 36,
-                            "start_step": 45,
-                            "end_step": 49,
-                        },
-                    ]
-                }
+                # Then test MSP_RAW_IMU
+                print(f"\n{ICON_INFO} Testing {BOLD}MSP_RAW_IMU{RESET} (code: {command_code_in_loop})...")
+                test_passed_raw_imu = run_test_case(ser, "MSP_RAW_IMU", command_code_in_loop, assertions=assertions, decoder_override=_decode_msp_raw_imu)
+                if not test_passed_raw_imu:
+                    failed_tests += 1
+                else:
+                    successful_tests += 1
+                time.sleep(0.1)
+                continue # Skip normal processing for this item from commands_to_run
 
-            # Special handling for MSP_GET_SETTING to send a key - currently not MSP_GET_SETTING in commands_to_run
-            # but if it were, we'd add assertions here.
-            # Example: if command_name == "MSP_GET_SETTING":
-            #     setting_key = "pid.roll.p"
-            #     key_bytes = setting_key.encode("ascii")
-            #     payload = bytes([len(key_bytes)]) + key_bytes
-            #     test_passed = run_test_case(ser, command_name, command_code, data=payload, assertions=assertions)
-            # else:
-
-            test_passed = run_test_case(
-                ser, command_name, command_code, assertions=assertions
-            )
-
+            # Normal processing for other commands
+            test_passed = run_test_case(ser, command_name_in_loop, command_code_in_loop, assertions=assertions)
             if test_passed:
                 successful_tests += 1
             else:
                 failed_tests += 1
-
-            time.sleep(0.1)  # Small delay between commands
+            time.sleep(0.1)
 
     except serial.SerialException as e:
         print(

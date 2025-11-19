@@ -37,7 +37,7 @@ constexpr const char *KEY_RC_PROTOCOL_TYPE = "rc.protocol";
 constexpr RcProtocolType DEFAULT_RC_PROTOCOL_TYPE = RcProtocolType::IBUS;
 
 // --- PPM Protocol Configuration ---
-constexpr uint8_t PPM_MAX_CHANNELS = 8;
+constexpr uint8_t PPM_MAX_CHANNELS = 18;
 constexpr uint32_t PPM_FRAME_LENGTH_MIN = 18000;     // microseconds (18ms)
 constexpr uint8_t PPM_CONNECTION_TIMEOUT_FACTOR = 2; // Multiplier for PPM_FRAME_LENGTH_MIN
 constexpr uint16_t PPM_MIN_PULSE_WIDTH = 1000;       // microseconds

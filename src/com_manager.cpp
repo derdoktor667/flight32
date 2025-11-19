@@ -150,4 +150,7 @@ const char *com_format_bytes(uint32_t bytes)
 void com_set_serial_mode(ComSerialMode mode)
 {
     _current_com_mode = mode;
+    if (_current_com_mode == ComSerialMode::MSP) {
+        _line_needs_clearing = false; // Clear any pending line clearing when entering MSP mode
+    }
 }

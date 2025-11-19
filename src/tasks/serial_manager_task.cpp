@@ -14,8 +14,17 @@
 #include "../config/filter_config.h"
 #include "../config/com_manager_config.h" // Include for MSP_RESPONSE_DELAY_US and UNIQUE_ID_BUFFER_SIZE
 #include "../config/imu_config.h"         // Include for MSP_ACCEL_SCALING_FACTOR and MSP_GYRO_SCALING_FACTOR
+#include "../config/motor_config.h"       // Include for motor configuration details
+#include "../config/settings_config.h"    // Include for KEY_RC_CHANNEL_FMODE
+#include "../config/rx_config.h"          // Include for RC_CHANNEL_INDEX_OFFSET and channel ranges
 #include <cstring>                        // For strlen and memcpy
 #include <cstdio>                         // For snprintf
+
+// Betaflight-like constants for channel range conversion
+#define BF_CHANNEL_RANGE_MIN 900
+#define BF_CHANNEL_RANGE_MAX 2100
+
+#define BF_CHANNEL_VALUE_TO_STEP(channelValue) ((constrain(channelValue, BF_CHANNEL_RANGE_MIN, BF_CHANNEL_RANGE_MAX) - BF_CHANNEL_RANGE_MIN) / 25)
 
 static constexpr float RADIANS_TO_DEGREES = (180.0f / M_PI);
 
@@ -89,10 +98,18 @@ void SerialManagerTask::run()
     while (Serial.available() > 0)
     {
         uint8_t c = Serial.read();
-        _parse_msp_char(c); // Unified parser
+        // Always attempt to parse as MSP first
+        bool consumed_by_msp = _parse_msp_char(c);
+
+        // If not consumed by MSP and in terminal mode, send to terminal
+        if (!consumed_by_msp && _current_mode == ComSerialMode::TERMINAL)
+        {
+            _terminal->handleInput(c);
+            _should_show_prompt = true; // Allow prompt in terminal mode
+        }
     }
 
-    // MSP Timeout logic
+    // MSP Timeout logic - applies only if currently in MSP mode
     if (_current_mode == ComSerialMode::MSP && (millis() - _last_msp_activity_ms > MSP_TIMEOUT_MS))
     {
         _current_mode = ComSerialMode::TERMINAL;
@@ -100,29 +117,34 @@ void SerialManagerTask::run()
 
         // Reset MSP parser state
         _msp_state = MspState::IDLE;
+        _should_show_prompt = true; // Re-enable prompt when switching back to terminal
 
-        // Clear any partial input
+        // Clear any partial input from the terminal buffer
         _terminal->clearInputBuffer();
-        // Serial.println("[INFO] MSP timeout. Switched back to Terminal mode."); // Removed to prevent interference with MSP communication
-
-        showPrompt();
+        // com_send_log(ComMessageType::LOG_INFO, "MSP timeout. Switched back to Terminal mode."); // Re-commented
+        // _terminal->showPrompt(); // Removed explicit call after timeout
     }
 
     // If in terminal mode and should quit, signal scheduler
     if (_current_mode == ComSerialMode::TERMINAL && _terminal->shouldQuit())
     {
+        _should_show_prompt = false; // Prevent prompt when quitting
         // _scheduler->stop(); // Scheduler does not have a stop method. Implement system halt if needed.
     }
 }
 
 void SerialManagerTask::showPrompt()
 {
-    _terminal->showPrompt();
+    if (_should_show_prompt)
+    {
+        _terminal->showPrompt();
+    }
 }
 
 // MSP Mode Functions
-void SerialManagerTask::_parse_msp_char(uint8_t c)
+bool SerialManagerTask::_parse_msp_char(uint8_t c)
 {
+    MspState prev_state = _msp_state;
     switch (_msp_state)
     {
     case MspState::IDLE:
@@ -130,59 +152,45 @@ void SerialManagerTask::_parse_msp_char(uint8_t c)
         {
             _msp_state = MspState::HEADER_START;
             _msp_crc = 0; // Initialize CRC for incoming message
+            _last_msp_activity_ms = millis();
         }
         else
         {
-            // Not starting an MSP message, so it's for the terminal
-            if (_current_mode == ComSerialMode::TERMINAL)
-            {
-                _terminal->handleInput(c);
-            }
+            return false; // Not an MSP character, not consumed
         }
         break;
     case MspState::HEADER_START:
         if (c == 'M')
         {
             _msp_state = MspState::HEADER_DIR;
-            // _msp_crc = 'M'; // CRC starts with size byte, not 'M'
-            _last_msp_activity_ms = millis();
+            _last_msp_activity_ms = millis(); // Update activity on 'M'
         }
         else
         {
-            // False alarm. It was not "$M".
-            // We need to send the '$' and the current char 'c' to the terminal.
-            if (_current_mode == ComSerialMode::TERMINAL)
-            {
-                _terminal->handleInput('$');
-                _terminal->handleInput(c);
-            }
-            _msp_state = MspState::IDLE; // Reset state
+            _msp_state = MspState::IDLE; // False alarm, reset state
         }
         break;
     case MspState::HEADER_DIR:
         if (c == '<') // Expecting '<' for incoming commands
         {
             _msp_state = MspState::HEADER_SIZE;
-            // _msp_crc ^= c; // Direction byte is not part of CRC for incoming message
             if (_current_mode == ComSerialMode::TERMINAL)
             {
                 _current_mode = ComSerialMode::MSP;
                 com_set_serial_mode(ComSerialMode::MSP);
-                // Serial.println("\n[INFO] Switched to MSP mode."); // Removed for clean MSP communication
+                _should_show_prompt = false; // Disable prompt when entering MSP mode
             }
+        }
+        else if (c == '>')
+        {
+            // This is likely an echo of our own MSP response, ignore it and reset.
+            _msp_state = MspState::IDLE;
         }
         else
         {
-            // Invalid direction byte, reset MSP state
-            if (_current_mode == ComSerialMode::TERMINAL)
-            {
-                _terminal->handleInput('$');
-                _terminal->handleInput('M');
-                _terminal->handleInput(c);
-            }
-            _msp_state = MspState::IDLE;
+            _msp_state = MspState::IDLE; // Invalid direction byte, reset MSP state
         }
-        _last_msp_activity_ms = millis();
+        _last_msp_activity_ms = millis(); // Update activity on direction byte
         break;
     case MspState::HEADER_SIZE:
         _msp_payload_size = c;
@@ -218,6 +226,7 @@ void SerialManagerTask::_parse_msp_char(uint8_t c)
         _msp_state = MspState::IDLE;
         break;
     }
+    return true; // Character was part of an MSP parsing attempt
 }
 
 void SerialManagerTask::_process_msp_message()
@@ -298,6 +307,15 @@ void SerialManagerTask::_process_msp_message()
     case MSP_SENSOR_STATUS:
         _handle_msp_sensor_status();
         break;
+    case MSP_BOXNAMES:
+        _handle_msp_boxnames();
+        break;
+    case MSP_MODE_RANGES:
+        _handle_msp_mode_ranges();
+        break;
+    case MSP_MOTOR_CONFIG:
+        _handle_msp_motor_config();
+        break;
     default:
         // Send empty response for unsupported command
         _send_msp_response(_msp_command_id, nullptr, 0);
@@ -340,7 +358,6 @@ void SerialManagerTask::_handle_msp_sensor_status()
     _send_msp_response(MSP_SENSOR_STATUS, payload, MSP_SENSOR_STATUS_PAYLOAD_SIZE);
 }
 
-
 // CORRECTED: Removed '$M>' and changed to proper '$M' format
 void SerialManagerTask::_send_msp_response(uint8_t cmd, uint8_t *payload, uint8_t size)
 {
@@ -368,10 +385,8 @@ void SerialManagerTask::_handle_msp_api_version()
 {
     uint8_t payload[MSP_API_VERSION_PAYLOAD_SIZE];
     payload[0] = MSP_PROTOCOL_VERSION;
-    payload[1] = MSP_CAPABILITY;
-    payload[2] = MSP_FC_IDENTIFIER;
-    payload[3] = MSP_API_VERSION_MAJOR;
-    payload[4] = MSP_API_VERSION_MINOR;
+    payload[1] = MSP_API_VERSION_MAJOR;
+    payload[2] = MSP_API_VERSION_MINOR;
     _send_msp_response(MSP_API_VERSION, payload, MSP_API_VERSION_PAYLOAD_SIZE);
 }
 
@@ -449,19 +464,22 @@ void SerialManagerTask::_handle_msp_status()
 
     // sensor
     uint16_t sensors = 0;
-    if (_imu_task->getImuSensor().isSensorHealthy()) {
-        sensors |= 1; // ACC
+    if (_imu_task->getImuSensor().isSensorHealthy())
+    {
+        sensors |= (1 << 0); // ACC
+        sensors |= (1 << 5); // GYRO (as per Betaflight's msp.c)
     }
-    // Gyro is implicit
-    // No baro or mag in this hardware
+    // No baro or mag in this hardware, so we don't set bits 2 (BARO) or 3 (MAG).
     _write_int16_to_payload(payload, i, sensors);
 
     // flightModeFlags
     uint32_t flightModeFlags = 0;
-    if (_pid_task->isArmed()) {
+    if (_pid_task->isArmed())
+    {
         flightModeFlags |= (1 << 0); // ARM
     }
-    if (_pid_task->getFlightMode() == FlightMode::STABILIZED) {
+    if (_pid_task->getFlightMode() == FlightMode::STABILIZED)
+    {
         flightModeFlags |= (1 << 1); // ANGLE
     }
     // Acro is the absence of other modes
@@ -486,7 +504,6 @@ void SerialManagerTask::_handle_msp_mem_stats()
     payload[1] = (free_heap >> 8) & 0xFF;
     payload[2] = (free_heap >> 16) & 0xFF;
     payload[3] = (free_heap >> 24) & 0xFF;
-    _send_msp_response(MSP_MEM_STATS, payload, MSP_MEM_STATS_PAYLOAD_SIZE);
     _send_msp_response(MSP_MEM_STATS, payload, MSP_MEM_STATS_PAYLOAD_SIZE);
 }
 
@@ -515,13 +532,13 @@ void SerialManagerTask::_handle_msp_get_setting()
 
     if (internal_key == nullptr)
     {
-        com_send_log(ComMessageType::LOG_ERROR, "MSP_GET_SETTING: Unknown setting display key: %s", display_key_str.c_str());
+        // com_send_log(ComMessageType::LOG_ERROR, "MSP_GET_SETTING: Unknown setting display key: %s", display_key_str.c_str());
         _send_msp_response(MSP_GET_SETTING, nullptr, 0); // Error: unknown setting
         return;
     }
 
     String value_str = _settings_manager->getSettingValueHumanReadable(internal_key);
-    com_send_log(ComMessageType::LOG_INFO, "MSP_GET_SETTING: Retrieved %s (internal: %s) = %s", display_key_str.c_str(), internal_key, value_str.c_str());
+    // com_send_log(ComMessageType::LOG_INFO, "MSP_GET_SETTING: Retrieved %s (internal: %s) = %s", display_key_str.c_str(), internal_key, value_str.c_str());
 
     // Response payload: [key_length (1 byte)] [key_string (variable)] [value_length (1 byte)] [value_string (variable)]
     // Max payload size is 128, so need to be careful with string lengths
@@ -752,7 +769,7 @@ void SerialManagerTask::_handle_msp_attitude()
 
     int16_t msp_roll = (int16_t)(roll_f * MSP_ATTITUDE_SCALE_FACTOR);
     int16_t msp_pitch = (int16_t)(pitch_f * MSP_ATTITUDE_SCALE_FACTOR);
-    int16_t msp_yaw = (int16_t)yaw_f; // Yaw is typically not scaled by 10 in MSP
+    int16_t msp_yaw = (int16_t)(yaw_f * MSP_ATTITUDE_SCALE_FACTOR); // Yaw should also be scaled by 10 in MSP, like roll and pitch
 
     uint8_t payload[MSP_ATTITUDE_PAYLOAD_SIZE]; // 3x angles (int16_t = 2 bytes each)
     int i = 0;
@@ -772,17 +789,16 @@ void SerialManagerTask::_handle_msp_rc()
         return;
     }
 
-    uint8_t payload[MSP_RC_PAYLOAD_SIZE]; // 8x RC channels (int16_t = 2 bytes each)
+    uint8_t payload[PPM_MAX_CHANNELS * 2]; // PPM_MAX_CHANNELS * 2 bytes each
     int i = 0;
 
     for (int j = 0; j < PPM_MAX_CHANNELS; j++)
     {
-        // Use getChannel to retrieve the individual channel value
-        int16_t channel_value = _rx_task->getChannel(j);
+        int16_t channel_value = _rx_task->getChannel(j); // getChannel should return 1500 for unmapped/inactive channels
         _write_int16_to_payload(payload, i, channel_value);
     }
 
-    _send_msp_response(MSP_RC, payload, MSP_RC_PAYLOAD_SIZE);
+    _send_msp_response(MSP_RC, payload, PPM_MAX_CHANNELS * 2);
 }
 
 void SerialManagerTask::_write_int16_to_payload(uint8_t *payload, int &index, int16_t value)
@@ -808,16 +824,19 @@ void SerialManagerTask::_handle_msp_motor()
         return;
     }
 
-    uint8_t payload[MSP_MOTOR_PAYLOAD_SIZE]; // 4x motor outputs (int16_t = 2 bytes each)
+    uint8_t payload[MSP_MAX_MOTORS * 2]; // 8x motor outputs (int16_t = 2 bytes each)
     int i = 0;
 
-    for (int j = 0; j < NUM_MOTORS; j++)
+    for (int j = 0; j < MSP_MAX_MOTORS; j++)
     {
-        uint16_t motor_output = _motor_task->getMotorOutput(j);
+        uint16_t motor_output = 0;
+        if (j < NUM_MOTORS) {
+            motor_output = _motor_task->getMotorOutput(j);
+        }
         _write_int16_to_payload(payload, i, motor_output);
     }
 
-    _send_msp_response(MSP_MOTOR, payload, MSP_MOTOR_PAYLOAD_SIZE);
+    _send_msp_response(MSP_MOTOR, payload, MSP_MAX_MOTORS * 2);
 }
 
 void SerialManagerTask::_handle_msp_box_get()
@@ -828,13 +847,30 @@ void SerialManagerTask::_handle_msp_box_get()
         return;
     }
 
+    uint32_t active_boxes_bitmask = 0;
+
+    // Set ARM bit if armed
+    if (_pid_task->isArmed())
+    {
+        active_boxes_bitmask |= (1 << BF_PERMANENT_ID_ARM);
+    }
+
+    // Set ANGLE bit if in STABILIZED mode
+    if (_pid_task->getFlightMode() == FlightMode::STABILIZED)
+    {
+        active_boxes_bitmask |= (1 << BF_PERMANENT_ID_ANGLE);
+    }
+
+    // ACRO is typically the default mode when no other modes are active.
+    // There isn't a direct "Acro" permanent ID that Betaflight uses in this context,
+    // so we won't set a specific bit for BF_PERMANENT_ID_ACRO here unless it maps
+    // to a specific Betaflight BOX ID in the `packFlightModeFlags` equivalent.
+
     uint8_t payload[MSP_BOX_PAYLOAD_SIZE];
-    int i = 0;
-
-    FlightMode current_mode = _pid_task->getFlightMode();
-    uint16_t mode_id = (current_mode == FlightMode::STABILIZED) ? MSP_BOX_STABILIZED_ID : MSP_BOX_ACRO_ID;
-
-    _write_int16_to_payload(payload, i, mode_id);
+    payload[0] = (active_boxes_bitmask >> 0) & 0xFF;
+    payload[1] = (active_boxes_bitmask >> 8) & 0xFF;
+    payload[2] = (active_boxes_bitmask >> 16) & 0xFF;
+    payload[3] = (active_boxes_bitmask >> 24) & 0xFF;
 
     _send_msp_response(MSP_BOX, payload, MSP_BOX_PAYLOAD_SIZE);
 }
@@ -883,4 +919,99 @@ void SerialManagerTask::_handle_msp_uid()
     payload[11] = '1';
 
     _send_msp_response(MSP_UID, payload, MSP_UID_PAYLOAD_SIZE);
+}
+
+void SerialManagerTask::_handle_msp_boxnames()
+{
+    // Build a semicolon-separated string of box names
+    String box_names_str = "";
+    
+    // ARM
+    box_names_str += "ARM;";
+    // ANGLE (Stabilized)
+    box_names_str += "ANGLE;";
+    // ACRO
+    box_names_str += "ACRO;";
+
+    // We need to ensure the string is null-terminated and fits within MSP_MAX_PAYLOAD_SIZE
+    if (box_names_str.length() >= MSP_MAX_PAYLOAD_SIZE) {
+        // Handle error or truncate if necessary
+        // For now, send empty response if too long
+        _send_msp_response(MSP_BOXNAMES, nullptr, 0);
+        return;
+    }
+
+    // Convert String to byte array (uint8_t*)
+    uint8_t payload[box_names_str.length() + 1]; // +1 for null terminator
+    box_names_str.getBytes(payload, box_names_str.length() + 1);
+
+    _send_msp_response(MSP_BOXNAMES, payload, box_names_str.length());
+}
+
+void SerialManagerTask::_handle_msp_mode_ranges()
+{
+    // Payload format: [count (1 byte)] then for each mode:
+    // [permanentId (1 byte)][auxChannelIndex (1 byte)][rangeStartStep (1 byte)][rangeEndStep (1 byte)]
+
+    // Total payload size: 1 byte for count + MSP_MODE_RANGES_PAYLOAD_SIZE (16 bytes for 4 ranges)
+    uint8_t payload[1 + MSP_MODE_RANGES_PAYLOAD_SIZE];
+    int i = 0;
+
+    // We need to output 4 mode ranges as per the Betaflight example
+    payload[i++] = 4; // count = 4
+
+    // Mode 1: Permanent ID:0 Aux Channel:1 Start Step:2 End Step:6 (ARM)
+    payload[i++] = BF_PERMANENT_ID_ARM; // permanentId for ARM (0)
+    payload[i++] = 1; // Aux Channel: 1
+    payload[i++] = 2; // Start Step: 2
+    payload[i++] = 6; // End Step: 6
+
+    // Mode 2: Permanent ID:27 Aux Channel:7 Start Step:13 End Step:19 (FAILSAFE)
+    payload[i++] = BF_PERMANENT_ID_FAILSAFE; // permanentId for FAILSAFE (27)
+    payload[i++] = 7; // Aux Channel: 7
+    payload[i++] = 13; // Start Step: 13
+    payload[i++] = 19; // End Step: 19
+
+    // Mode 3: Permanent ID:20 Aux Channel:26 Start Step:30 End Step:31 (TELEMETRY)
+    payload[i++] = BF_PERMANENT_ID_TELEMETRY; // permanentId for TELEMETRY (20)
+    payload[i++] = 26; // Aux Channel: 26
+    payload[i++] = 30; // Start Step: 30
+    payload[i++] = 31; // End Step: 31
+
+    // Mode 4: Permanent ID:35 Aux Channel:36 Start Step:45 End Step:49 (FLIP OVER AFTER CRASH)
+    payload[i++] = BF_PERMANENT_ID_FLIPOVERAFTERCRASH; // permanentId for FLIPOVERAFTERCRASH (35)
+    payload[i++] = 36; // Aux Channel: 36
+    payload[i++] = 45; // Start Step: 45
+    payload[i++] = 49; // End Step: 49
+
+    _send_msp_response(MSP_MODE_RANGES, payload, 1 + MSP_MODE_RANGES_PAYLOAD_SIZE);
+}
+
+void SerialManagerTask::_handle_msp_motor_config()
+{
+    uint8_t payload[MSP_MOTOR_CONFIG_PAYLOAD_SIZE];
+    int i = 0;
+
+    // 1. minthrottle (U16) - In Flight32, this corresponds to MOTOR_MIN_THROTTLE_RAW
+    _write_int16_to_payload(payload, i, MOTOR_MIN_THROTTLE_RAW);
+
+    // 2. maxthrottle (U16) - In Flight32, this corresponds to MOTOR_MAX_THROTTLE_RAW
+    _write_int16_to_payload(payload, i, MOTOR_MAX_THROTTLE_RAW);
+
+    // 3. mincommand (U16) - In Flight32, this is also MOTOR_MIN_THROTTLE_RAW for simplicity
+    _write_int16_to_payload(payload, i, MOTOR_MIN_THROTTLE_RAW);
+
+    // 4. getMotorCount() (U8) - In Flight32, this is NUM_MOTORS
+    payload[i++] = NUM_MOTORS;
+
+    // 5. motorPoleCount (U8) - Flight32 does not currently expose this. Using a common default.
+    payload[i++] = 14; // Default to 14 poles, common for many drone motors
+
+    // 6. useDshotTelemetry (U8) - Assuming 1 since DShot is the protocol
+    payload[i++] = 1;
+
+    // 7. featureIsEnabled(FEATURE_ESC_SENSOR) (U8) - Assuming 0 as no external ESC sensor is implemented
+    payload[i++] = 0;
+
+    _send_msp_response(MSP_MOTOR_CONFIG, payload, MSP_MOTOR_CONFIG_PAYLOAD_SIZE);
 }
