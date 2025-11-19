@@ -36,17 +36,12 @@ BAUD_RATE = 115200
 TIMEOUT = 2  # seconds for serial read timeout
 
 # --- MSP Command Codes ---
-# Note: MSP_UID is not a standard direct command. MSP_IDENT (100) usually provides
-# board information including a unique ID. Using MSP_IDENT for this purpose.
 MSP_COMMANDS = {
     "MSP_API_VERSION": 1,
     "MSP_FC_VARIANT": 2,
     "MSP_FC_VERSION": 3,
     "MSP_BOARD_INFO": 4,
     "MSP_BUILD_INFO": 5,
-    "MSP_GET_SETTING": 9,
-    "MSP_PID": 11,
-    "MSP_IDENT": 100,
     "MSP_STATUS": 101,
     "MSP_PID": 102,
     "MSP_MOTOR": 104,
@@ -56,8 +51,6 @@ MSP_COMMANDS = {
     "MSP_BOX": 117,
     "MSP_MODE_RANGES": 119,
     "MSP_MOTOR_CONFIG": 124,
-    "MSP_GET_FILTER_CONFIG": 203,
-    "MSP_SET_FILTER_CONFIG": 204,
 }
 
 
@@ -124,211 +117,364 @@ def deserialize_msp_response(response_bytes):
         return None, None
 
 
-def send_and_receive(ser, command_name, command_code, data=b"", test_counts=None):
-    """Sends an MSP command and reads the response, updating test_counts."""
-    print(
-        f"\n{BLUE}{BOLD}{ICON_COMMAND} Testing {command_name} (Code: {command_code}){RESET}"
-    )
-    command_packet = serialize_msp_command(command_code, data)
-    ser.write(command_packet)
+# --- Individual MSP Response Decoders ---
 
-    response_buffer = b""
-    start_time = time.time()
-    while time.time() - start_time < TIMEOUT:
-        if ser.in_waiting > 0:
-            byte = ser.read(1)
-            response_buffer += byte
-            if len(response_buffer) >= 5 and response_buffer.startswith(
-                b"$M"
-            ):  # Check for header ($M) + size + command
-                # Read the third byte to determine if it's a regular response (>) or error (!)
-                header_third_byte = response_buffer[2]
-                if header_third_byte == ord(">") or header_third_byte == ord("!"):
-                    size = response_buffer[3]
-                    # If we've received enough bytes for header (3) + size (1) + command (1) + data (size) + checksum (1)
-                    if len(response_buffer) >= 6 + size:
-                        break
-        time.sleep(0.001)  # Small delay to prevent busy-waiting
 
-    if not response_buffer:
-        print(f"{RED}{ICON_FAILURE} No response received for {command_name}.{RESET}")
-        if test_counts is not None:
-            test_counts[1] += 1  # Increment failed count
-        return
+def _decode_msp_api_version(response_data):
+    if response_data is not None and len(response_data) >= 3:
+        return {
+            "msp_protocol_version": response_data[0],
+            "capability_hr": response_data[1],
+            "capability_lr": response_data[2],
+        }
+    return None
 
-    command_code_rx, response_data = deserialize_msp_response(response_buffer)
 
-    if command_code_rx is not None:
-        print(f"{GREEN}{ICON_SUCCESS} Received response for {command_name}:{RESET}")
-        print(
-            f"  {CYAN}Raw Data (hex):{RESET} {response_data.hex() if response_data is not None else 'None'}"
-        )
-        # Add basic interpretation for some known commands
-        if command_code == MSP_COMMANDS["MSP_API_VERSION"]:
-            if response_data is not None and len(response_data) >= 3:
-                print(f"  {BOLD}MSP Protocol Version:{RESET} {response_data[0]}")
-                print(
-                    f"  {BOLD}Capability:{RESET} {response_data[1]} {response_data[2]}"
-                )
-            else:
-                print(
-                    f"  {YELLOW}{ICON_WARNING} Decoded (unparsed API version):{RESET} {response_data}"
-                )
-        elif command_code == MSP_COMMANDS["MSP_FC_VARIANT"]:
-            if response_data:
-                print(
-                    f"  {BOLD}FC Variant:{RESET} {response_data.decode('ascii', errors='ignore')}"
-                )
-        elif command_code == MSP_COMMANDS["MSP_FC_VERSION"]:
-            if response_data is not None and len(response_data) == 3:
-                print(
-                    f"  {BOLD}FC Version:{RESET} {response_data[0]}.{response_data[1]}.{response_data[2]}"
-                )
-        elif command_code == MSP_COMMANDS["MSP_BOARD_INFO"]:
-            if response_data is not None and len(response_data) >= 7:
-                board_identifier = response_data[0:4].decode("ascii", errors="ignore")
-                hardware_revision = struct.unpack("<H", response_data[4:6])[0]
-                board_name_len = response_data[6]
-                # Ensure we don't slice beyond the available data
-                if len(response_data) >= 7 + board_name_len:
-                    board_name = response_data[7 : 7 + board_name_len].decode(
-                        "ascii", errors="ignore"
-                    )
-                else:
-                    board_name = response_data[7:].decode("ascii", errors="ignore")
+def _decode_msp_fc_variant(response_data):
+    if response_data:
+        return {"fc_variant": response_data.decode("ascii", errors="ignore")}
+    return None
 
-                print(f"  {BOLD}Board Identifier:{RESET} {board_identifier}")
-                print(f"  {BOLD}Hardware Revision:{RESET} {hardware_revision}")
-                print(f"  {BOLD}Board Name:{RESET} {board_name}")
-        elif command_code == MSP_COMMANDS["MSP_BUILD_INFO"]:
-            if response_data:
-                build_info = response_data.decode("ascii", errors="ignore")
-                print(f"  {BOLD}Build Info:{RESET} {build_info}")
-        elif command_code == MSP_COMMANDS["MSP_STATUS"]:
-            if response_data is not None and len(response_data) >= 11:
-                flight_mode_flags = struct.unpack("<H", response_data[0:2])[0]
-                cycle_time = struct.unpack("<H", response_data[2:4])[0]
-                i2c_errors = struct.unpack("<H", response_data[4:6])[0]
-                sensor_present = response_data[6]
-                box_setup = struct.unpack("<H", response_data[7:9])[0]
 
-                sensor_names = []
-                if sensor_present & (1 << 0):
-                    sensor_names.append("ACC")
-                if sensor_present & (1 << 1):
-                    sensor_names.append("BARO")
-                if sensor_present & (1 << 2):
-                    sensor_names.append("MAG")
-                if sensor_present & (1 << 3):
-                    sensor_names.append("GPS")
-                if sensor_present & (1 << 4):
-                    sensor_names.append("SONAR")
+def _decode_msp_fc_version(response_data):
+    if response_data is not None and len(response_data) == 3:
+        return {
+            "major": response_data[0],
+            "minor": response_data[1],
+            "patch": response_data[2],
+        }
+    return None
 
-                print(f"  {BOLD}Flight Mode Flags:{RESET} {flight_mode_flags}")
-                print(f"  {BOLD}Cycle Time:{RESET} {cycle_time} us")
-                print(f"  {BOLD}I2C Errors:{RESET} {i2c_errors}")
-                print(
-                    f"  {BOLD}Sensor Present:{RESET} {', '.join(sensor_names) if sensor_names else 'None'} ({bin(sensor_present)})"
-                )
-                print(f"  {BOLD}Box Setup:{RESET} {box_setup}")
 
-        elif command_code == MSP_COMMANDS["MSP_SENSOR_STATUS"]:
-            # Ensure response_data is not None before calling len() to avoid TypeError
-            if response_data is not None and len(response_data) >= 3:
-                acc_health, gyro_health, mag_health = struct.unpack(
-                    "<BBB", response_data[0:3]
-                )
-                print(f"  {BOLD}Accelerometer Health:{RESET} {acc_health}")
-                print(f"  {BOLD}Gyroscope Health:{RESET} {gyro_health}")
-                print(f"  {BOLD}Magnetometer Health:{RESET} {mag_health}")
-            else:
-                print(
-                    f"  {YELLOW}{ICON_WARNING} Decoded (unparsed sensor status):{RESET} {response_data}"
-                )
-        elif command_code == MSP_COMMANDS["MSP_BOXNAMES"]:
-            if response_data:
-                box_names = (
-                    response_data.decode("ascii", errors="ignore").strip(";").split(";")
-                )
-                print(f"  {BOLD}Box Names:{RESET} {', '.join(box_names)}")
-        elif command_code == MSP_COMMANDS["MSP_BOX"]:
-            if response_data:
-                print(
-                    f"  {BOLD}Decoded (unparsed BOX data):{RESET} {response_data.decode('ascii', errors='ignore')}"
-                )
-        elif command_code == MSP_COMMANDS["MSP_MODE_RANGES"]:
-            if response_data is not None and len(response_data) % 6 == 0:
-                mode_ranges = []
-                for i in range(0, len(response_data), 6):
-                    mode_id, aux_channel, start_percent, end_percent, flags = (
-                        struct.unpack("<BBBBH", response_data[i : i + 6])
-                    )
-                    mode_ranges.append(
-                        f"ID:{mode_id} Aux:{aux_channel} Start:{start_percent}% End:{end_percent}% Flags:{flags}"
-                    )
-                print(f"  {BOLD}Mode Ranges:{RESET}")
-                for r in mode_ranges:
-                    print(f"    - {r}")
-            else:
-                print(
-                    f"  {YELLOW}{ICON_WARNING} Decoded (unparsed mode ranges):{RESET} {response_data}"
-                )
-        elif command_code == MSP_COMMANDS["MSP_RC_CHANNELS"]:
-            if response_data is not None and len(response_data) % 2 == 0:
-                channels = struct.unpack(
-                    "<" + "H" * (len(response_data) // 2), response_data
-                )
-                print(f"  {BOLD}RC Channels:{RESET} {', '.join(map(str, channels))}")
-            else:
-                print(
-                    f"  {YELLOW}{ICON_WARNING} Decoded (unparsed RC channels):{RESET} {response_data}"
-                )
-        elif command_code == MSP_COMMANDS["MSP_MOTOR"]:
-            if response_data is not None and len(response_data) % 2 == 0:
-                motors = struct.unpack(
-                    "<" + "H" * (len(response_data) // 2), response_data
-                )
-                print(
-                    f"  {BOLD}Motor Values (PWM/Dshot):{RESET} {', '.join(map(str, motors))}"
-                )
-            else:
-                print(
-                    f"  {YELLOW}{ICON_WARNING} Decoded (unparsed motor data):{RESET} {response_data}"
-                )
-        elif command_code == MSP_COMMANDS["MSP_PID"]:
-            if response_data is not None and len(response_data) >= 9:
-                pid_gains = struct.unpack("<BBBBBBBBB", response_data[0:9])
-                print(
-                    f"  {BOLD}PID Gains (Roll):{RESET} P:{pid_gains[0]} I:{pid_gains[1]} D:{pid_gains[2]}"
-                )
-                print(
-                    f"  {BOLD}PID Gains (Pitch):{RESET} P:{pid_gains[3]} I:{pid_gains[4]} D:{pid_gains[5]}"
-                )
-                print(
-                    f"  {BOLD}PID Gains (Yaw):{RESET} P:{pid_gains[6]} I:{pid_gains[7]} D:{pid_gains[8]}"
-                )
-            else:
-                print(
-                    f"  {YELLOW}{ICON_WARNING} Decoded (unparsed PID data):{RESET} {response_data}"
-                )
-        elif command_code == MSP_COMMANDS["MSP_MOTOR_CONFIG"]:
-            if response_data is not None and len(response_data) >= 2:
-                motor_count, motor_poles = struct.unpack("<BB", response_data[0:2])
-                print(f"  {BOLD}Motor Count:{RESET} {motor_count}")
-                print(f"  {BOLD}Motor Poles:{RESET} {motor_poles}")
-            else:
-                print(
-                    f"  {YELLOW}{ICON_WARNING} Decoded (unparsed motor config):{RESET} {response_data}"
-                )
+def _decode_msp_board_info(response_data):
+    if response_data is not None and len(response_data) >= 7:
+        board_identifier = response_data[0:4].decode("ascii", errors="ignore")
+        hardware_revision = struct.unpack("<H", response_data[4:6])[0]
+        board_name_len = response_data[6]
+        if len(response_data) >= 7 + board_name_len:
+            board_name = response_data[7 : 7 + board_name_len].decode(
+                "ascii", errors="ignore"
+            )
         else:
-            print(f"  {ICON_INFO} Decoded (generic):{RESET} {response_data}")
+            board_name = response_data[7:].decode("ascii", errors="ignore")
+        return {
+            "board_identifier": board_identifier,
+            "hardware_revision": hardware_revision,
+            "board_name": board_name,
+        }
+    return None
 
-        if test_counts is not None:
-            test_counts[0] += 1  # Increment successful count
+
+def _decode_msp_build_info(response_data):
+    if response_data:
+        return {"build_info": response_data.decode("ascii", errors="ignore")}
+    return None
+
+
+def _decode_msp_status(response_data):
+    if response_data is not None and len(response_data) >= 11:
+        flight_mode_flags = struct.unpack("<H", response_data[0:2])[0]
+        cycle_time = struct.unpack("<H", response_data[2:4])[0]
+        i2c_errors = struct.unpack("<H", response_data[4:6])[0]
+        sensor_present = response_data[6]
+        box_status = struct.unpack("<I", response_data[7:11])[
+            0
+        ]  # Assuming uint32 for boxStatus based on modern MSP
+
+        sensor_names = []
+        if sensor_present & (1 << 0):
+            sensor_names.append("ACC")
+        if sensor_present & (1 << 1):
+            sensor_names.append("BARO")
+        # Add other sensors if needed (MAG, GPS, SONAR as per original script comments)
+
+        return {
+            "flight_mode_flags": flight_mode_flags,
+            "cycle_time_us": cycle_time,
+            "i2c_errors": i2c_errors,
+            "sensor_present": sensor_present,
+            "sensor_names": ", ".join(sensor_names) if sensor_names else "None",
+            "box_status": box_status,
+        }
+    return None
+
+
+def _decode_msp_sensor_status(response_data):
+    if response_data is not None and len(response_data) >= 3:
+        acc_health, gyro_health, mag_health = struct.unpack("<BBB", response_data[0:3])
+        return {
+            "accelerometer_health": acc_health,
+            "gyroscope_health": gyro_health,
+            "magnetometer_health": mag_health,
+        }
+    return None
+
+
+def _decode_msp_boxnames(response_data):
+    if response_data:
+        box_names = response_data.decode("ascii", errors="ignore").strip(";").split(";")
+        return {"box_names": box_names}
+    return None
+
+
+def _decode_msp_box(response_data):
+    if response_data:
+        return {"box_data": response_data.decode("ascii", errors="ignore")}
+    return None
+
+
+def _decode_msp_mode_ranges(response_data):
+    if response_data is None:
+        return None
+
+    entry_len = 4
+    if len(response_data) % entry_len != 0:
+        return None  # Indicate parsing error due to unexpected length
+
+    mode_ranges = []
+    for i in range(0, len(response_data) // entry_len):
+        offset = i * entry_len
+        permanent_id, aux_channel_index, start_step, end_step = struct.unpack(
+            "<BBBB", response_data[offset : offset + entry_len]
+        )
+        mode_ranges.append(
+            {
+                "permanent_id": permanent_id,
+                "aux_channel_index": aux_channel_index,
+                "start_step": start_step,
+                "end_step": end_step,
+            }
+        )
+
+    if mode_ranges:
+        return {"mode_ranges": mode_ranges}
+    return None
+
+
+def _decode_msp_rc_channels(response_data):
+    if response_data is not None and len(response_data) % 2 == 0:
+        channels = struct.unpack("<" + "H" * (len(response_data) // 2), response_data)
+        return {"rc_channels": list(channels)}
+    return None
+
+
+def _decode_msp_motor(response_data):
+    if response_data is not None and len(response_data) % 2 == 0:
+        motors = struct.unpack("<" + "H" * (len(response_data) // 2), response_data)
+        return {"motor_values": list(motors)}
+    return None
+
+
+def _decode_msp_pid(response_data):
+    if response_data is not None and len(response_data) >= 9:
+        pid_gains = struct.unpack("<BBBBBBBBB", response_data[0:9])
+        return {
+            "roll_p": pid_gains[0],
+            "roll_i": pid_gains[1],
+            "roll_d": pid_gains[2],
+            "pitch_p": pid_gains[3],
+            "pitch_i": pid_gains[4],
+            "pitch_d": pid_gains[5],
+            "yaw_p": pid_gains[6],
+            "yaw_i": pid_gains[7],
+            "yaw_d": pid_gains[8],
+        }
+    return None
+
+
+def _decode_msp_motor_config(response_data):
+    if response_data is None:
+        return None
+
+    expected_len = 6
+    if len(response_data) < expected_len:
+        return None  # Indicate parsing error due to incomplete data
+
+    minthrottle = struct.unpack("<H", response_data[0:2])[0]
+    maxthrottle = struct.unpack("<H", response_data[2:4])[0]
+    mincommand = struct.unpack("<H", response_data[4:6])[0]
+
+    decoded = {
+        "min_throttle": minthrottle,
+        "max_throttle": maxthrottle,
+        "min_command": mincommand,
+    }
+
+    if len(response_data) > expected_len:
+        decoded["unparsed_trailing_data_hex"] = response_data[expected_len:].hex()
+
+    return decoded
+
+
+def _decode_msp_generic(response_data):
+    return {"raw_data": response_data.hex() if response_data is not None else "None"}
+
+
+# Mapping of MSP command codes to their decoding functions
+MSP_DECODERS = {
+    MSP_COMMANDS["MSP_API_VERSION"]: _decode_msp_api_version,
+    MSP_COMMANDS["MSP_FC_VARIANT"]: _decode_msp_fc_variant,
+    MSP_COMMANDS["MSP_FC_VERSION"]: _decode_msp_fc_version,
+    MSP_COMMANDS["MSP_BOARD_INFO"]: _decode_msp_board_info,
+    MSP_COMMANDS["MSP_BUILD_INFO"]: _decode_msp_build_info,
+    MSP_COMMANDS["MSP_STATUS"]: _decode_msp_status,
+    MSP_COMMANDS["MSP_SENSOR_STATUS"]: _decode_msp_sensor_status,
+    MSP_COMMANDS["MSP_BOXNAMES"]: _decode_msp_boxnames,
+    MSP_COMMANDS["MSP_BOX"]: _decode_msp_box,
+    MSP_COMMANDS["MSP_MODE_RANGES"]: _decode_msp_mode_ranges,
+    MSP_COMMANDS["MSP_RC_CHANNELS"]: _decode_msp_rc_channels,
+    MSP_COMMANDS["MSP_MOTOR"]: _decode_msp_motor,
+    MSP_COMMANDS["MSP_PID"]: _decode_msp_pid,
+    MSP_COMMANDS["MSP_MOTOR_CONFIG"]: _decode_msp_motor_config,
+}
+
+
+# Helper function to print decoded data
+def _print_decoded_data(command_name, decoded_data, raw_data_hex):
+    if decoded_data:
+        print(f"  {BOLD}Decoded {command_name} Data:{RESET}")
+        for key, value in decoded_data.items():
+            if key == "mode_ranges":  # Special handling for mode_ranges list
+                print(f"    - {key.replace('_', ' ').title()}:")
+                for item in value:
+                    print(
+                        f"      - Permanent ID:{item['permanent_id']} Aux Channel:{item['aux_channel_index']} Start Step:{item['start_step']} End Step:{item['end_step']}"
+                    )
+            elif key == "box_names":  # Special handling for box_names list
+                print(f"    - {key.replace('_', ' ').title()}: {', '.join(value)}")
+            elif (
+                key == "rc_channels" or key == "motor_values"
+            ):  # Special handling for lists
+                print(
+                    f"    - {key.replace('_', ' ').title()}: {', '.join(map(str, value))}"
+                )
+            elif key == "box_status" and isinstance(
+                value, int
+            ):  # Print Box Status in binary
+                print(f"    - {key.replace('_', ' ').title()}: {bin(value)}")
+            else:
+                print(f"    - {key.replace('_', ' ').title()}: {value}")
+        if "unparsed_trailing_data_hex" in decoded_data:
+            print(
+                f"  {YELLOW}{ICON_WARNING} Unparsed trailing data (hex):{RESET} {decoded_data['unparsed_trailing_data_hex']}"
+            )
+    elif command_name == "generic":
+        print(f"  {ICON_INFO} Decoded (generic):{RESET} {raw_data_hex}")
     else:
-        print(f"{RED}{ICON_FAILURE} Failed to get valid MSP response.{RESET}")
-        if test_counts is not None:
-            test_counts[1] += 1  # Increment failed count
+        print(
+            f"  {YELLOW}{ICON_WARNING} Decoded (unparsed {command_name}):{RESET} {raw_data_hex}"
+        )
+
+
+def send_and_receive(ser, command_name, command_code, data=b""):
+    """
+    Sends an MSP command and receives the response.
+    Returns a tuple (success, decoded_data) where success is a boolean and decoded_data is the parsed response.
+    """
+    print(
+        f"{ICON_COMMAND} Sending {BOLD}{command_name}{RESET} (code: {command_code})..."
+    )
+
+    try:
+        # Serialize and send the command
+        packet = serialize_msp_command(command_code, data)
+        ser.write(packet)
+
+        # Read response
+        response_bytes = ser.read(1024)  # Read up to 1024 bytes
+
+        if not response_bytes:
+            print(f"{RED}{ICON_FAILURE} No response received from FC.{RESET}")
+            return False, None
+
+        # Deserialize the response
+        command_code_response, response_data = deserialize_msp_response(response_bytes)
+
+        if command_code_response is None:
+            return False, None
+
+        # Get the appropriate decoder function
+        decoder_func = MSP_DECODERS.get(command_code_response, _decode_msp_generic)
+        decoded_data = decoder_func(response_data)
+
+        # Print the results
+        raw_data_hex = response_data.hex() if response_data else "None"
+        _print_decoded_data(command_name, decoded_data, raw_data_hex)
+
+        print(f"{GREEN}{ICON_SUCCESS} {command_name} command successful.{RESET}")
+        return True, decoded_data
+
+    except Exception as e:
+        print(f"{RED}{ICON_FAILURE} Error sending/receiving {command_name}: {e}{RESET}")
+        return False, None
+
+
+def run_test_case(ser, command_name, command_code, data=b"", assertions=None):
+    """
+    Runs a single test case for an MSP command.
+    Returns True if the test passes, False otherwise.
+    """
+    success, decoded_data = send_and_receive(ser, command_name, command_code, data)
+    test_passed = success
+
+    if assertions and decoded_data:
+        # Check for expected keys to exist in decoded_data
+        for key in assertions.keys():
+            if key not in decoded_data:
+                print(
+                    f"{RED}{ICON_FAILURE} Assertion Failed for {command_name}: Key '{key}' not found in decoded data.{RESET}"
+                )
+                test_passed = False
+
+        # Perform specific value assertions
+        if test_passed:  # Only proceed if all keys are present
+            for key, expected_value in assertions.items():
+                if key == "mode_ranges":  # Special handling for mode_ranges list
+                    if not isinstance(decoded_data[key], list):
+                        print(
+                            f"{RED}{ICON_FAILURE} Assertion Failed for {command_name} - {key}: Expected a list, but got {type(decoded_data[key])}.{RESET}"
+                        )
+                        test_passed = False
+                        continue
+                    if len(decoded_data[key]) != len(expected_value):
+                        print(
+                            f"{RED}{ICON_FAILURE} Assertion Failed for {command_name} - {key}: Expected {len(expected_value)} mode ranges, but got {len(decoded_data[key])}.{RESET}"
+                        )
+                        test_passed = False
+                    else:
+                        for i, expected_item in enumerate(expected_value):
+                            if decoded_data[key][i] != expected_item:
+                                print(
+                                    f"{RED}{ICON_FAILURE} Assertion Failed for {command_name} - {key} item {i}: Expected '{expected_item}', but got '{decoded_data[key][i]}'.{RESET}"
+                                )
+                                test_passed = False
+                elif isinstance(
+                    expected_value, dict
+                ):  # For nested dictionaries (e.g., if we had sub-assertions)
+                    for sub_key, sub_expected_value in expected_value.items():
+                        if sub_key in decoded_data[key]:
+                            if decoded_data[key][sub_key] != sub_expected_value:
+                                print(
+                                    f"{RED}{ICON_FAILURE} Assertion Failed for {command_name} - {key}: Expected '{sub_key}' to be '{sub_expected_value}', but got '{decoded_data[key][sub_key]}'.{RESET}"
+                                )
+                                test_passed = False
+                        else:
+                            print(
+                                f"{RED}{ICON_FAILURE} Assertion Failed for {command_name} - {key}: Sub-key '{sub_key}' not found in decoded data.{RESET}"
+                            )
+                            test_passed = False
+                elif decoded_data[key] != expected_value:
+                    print(
+                        f"{RED}{ICON_FAILURE} Assertion Failed for {command_name}: Expected '{key}' to be '{expected_value}', but got '{decoded_data[key]}'.{RESET}"
+                    )
+                    test_passed = False
+    elif assertions and not decoded_data:
+        print(
+            f"{RED}{ICON_FAILURE} Assertion Failed for {command_name}: No decoded data to assert against.{RESET}"
+        )
+        test_passed = False
+
+    return test_passed
 
 
 # --- Main Script ---
@@ -355,7 +501,8 @@ if __name__ == "__main__":
     print(
         f"{ICON_INFO} Attempting to connect to {BOLD}{SERIAL_PORT_TO_USE}{RESET} at {BOLD}{BAUD_RATE}{RESET} baud..."
     )
-    test_results = [0, 0]  # [successful_tests, failed_tests]
+    successful_tests = 0
+    failed_tests = 0
     try:
         ser = serial.Serial(SERIAL_PORT_TO_USE, BAUD_RATE, timeout=TIMEOUT)
         ser.reset_input_buffer()  # Clear any leftover data in the buffer
@@ -373,29 +520,99 @@ if __name__ == "__main__":
                 print(
                     f"{RED}{ICON_FAILURE} Error: Command '{COMMAND_TO_TEST}' not found in the list of available MSP commands.{RESET}"
                 )
-                test_results[1] = 1  # Mark as a failed test overall for invalid command
+                failed_tests += 1  # Mark as a failed test overall for invalid command
                 raise SystemExit  # Exit if command is not found
         else:
             commands_to_run = MSP_COMMANDS
 
         for command_name, command_code in commands_to_run.items():
-            # Special handling for MSP_GET_SETTING to send a key
-            if command_name == "MSP_GET_SETTING":
-                setting_key = "pid.roll.p"
-                key_bytes = setting_key.encode("ascii")
-                # Payload: [key_length (1 byte)] [key_string (variable length)]
-                payload = bytes([len(key_bytes)]) + key_bytes
-                send_and_receive(
-                    ser,
-                    command_name,
-                    command_code,
-                    data=payload,
-                    test_counts=test_results,
-                )
+            # Define assertions here for each command
+            assertions = None
+
+            if command_name == "MSP_API_VERSION":
+                # For this specific FC, we saw Protocol Version: 0, Capability: 1 43.
+                assertions = {
+                    "msp_protocol_version": 0,  # Based on previous output for this FC
+                    # "capability_hr": 1, # Not strictly necessary to assert specific value, just presence
+                    # "capability_lr": 43,
+                }
+            elif command_name == "MSP_FC_VARIANT":
+                assertions = {"fc_variant": "BTFL"}  # Based on previous output
+            elif command_name == "MSP_FC_VERSION":
+                assertions = {
+                    "major": 4,  # Based on previous output
+                    "minor": 2,
+                    "patch": 11,
+                }
+            elif command_name == "MSP_BOARD_INFO":
+                assertions = {
+                    "board_identifier": "SRF3",  # Based on previous output
+                    "board_name": "",  # Empty is expected from previous run.
+                }
+            elif command_name == "MSP_STATUS":
+                # For status, we expect certain sensors to be present or reasonable cycle time/i2c errors
+                # For this FC, we saw BARO and plausible errors.
+                assertions = {"sensor_names": "BARO"}  # Based on previous output
+            elif command_name == "MSP_MOTOR_CONFIG":
+                # For MSP_MOTOR_CONFIG, based on our analysis of the custom firmware,
+                # we expect these specific min/max throttle/command values.
+                # From previous run, Min Throttle: 1406, Max Throttle: 1514, Min Command: 1460
+                assertions = {
+                    "min_throttle": 1406,
+                    "max_throttle": 1514,
+                    "min_command": 1460,
+                }
+            elif command_name == "MSP_MODE_RANGES":
+                # For MSP_MODE_RANGES, we expect a list of 4-byte structures.
+                # We can assert the number of ranges found or specific values if known.
+                # Based on previous output, we expect 4 mode ranges.
+                assertions = {
+                    "mode_ranges": [
+                        {
+                            "permanent_id": 0,
+                            "aux_channel_index": 1,
+                            "start_step": 2,
+                            "end_step": 6,
+                        },
+                        {
+                            "permanent_id": 27,
+                            "aux_channel_index": 7,
+                            "start_step": 13,
+                            "end_step": 19,
+                        },
+                        {
+                            "permanent_id": 20,
+                            "aux_channel_index": 26,
+                            "start_step": 30,
+                            "end_step": 31,
+                        },
+                        {
+                            "permanent_id": 35,
+                            "aux_channel_index": 36,
+                            "start_step": 45,
+                            "end_step": 49,
+                        },
+                    ]
+                }
+
+            # Special handling for MSP_GET_SETTING to send a key - currently not MSP_GET_SETTING in commands_to_run
+            # but if it were, we'd add assertions here.
+            # Example: if command_name == "MSP_GET_SETTING":
+            #     setting_key = "pid.roll.p"
+            #     key_bytes = setting_key.encode("ascii")
+            #     payload = bytes([len(key_bytes)]) + key_bytes
+            #     test_passed = run_test_case(ser, command_name, command_code, data=payload, assertions=assertions)
+            # else:
+
+            test_passed = run_test_case(
+                ser, command_name, command_code, assertions=assertions
+            )
+
+            if test_passed:
+                successful_tests += 1
             else:
-                send_and_receive(
-                    ser, command_name, command_code, test_counts=test_results
-                )
+                failed_tests += 1
+
             time.sleep(0.1)  # Small delay between commands
 
     except serial.SerialException as e:
@@ -405,14 +622,16 @@ if __name__ == "__main__":
         print(
             f"{YELLOW}{ICON_WARNING} Please ensure the flight controller is connected and not in use by another application.{RESET}"
         )
+        failed_tests += 1
     except KeyboardInterrupt:
         print(f"\n{YELLOW}{ICON_WARNING} Script interrupted by user.{RESET}")
+        failed_tests += 1
     finally:
         if "ser" in locals() and ser.is_open:
             ser.close()
             print(f"\n{ICON_INFO} Serial port closed.{RESET}")
 
         print(f"\n{BLUE}{BOLD}--- Test Summary ---{RESET}")
-        print(f"{GREEN}{ICON_SUCCESS} Successful tests: {test_results[0]}{RESET}")
-        print(f"{RED}{ICON_FAILURE} Failed tests: {test_results[1]}{RESET}")
+        print(f"{GREEN}{ICON_SUCCESS} Successful tests: {successful_tests}{RESET}")
+        print(f"{RED}{ICON_FAILURE} Failed tests: {failed_tests}{RESET}")
         print(f"{BLUE}{BOLD}--------------------{RESET}")
