@@ -13,9 +13,11 @@
 #include "../config/imu_config.h"
 #include "../config/rx_config.h"
 #include "../config/motor_config.h"
+#include "../config/motor_config.h"
 #include "../config/pid_config.h"
 #include "../config/filter_config.h"
 #include "../utils/task_names.h"
+#include "../utils/math_constants.h"
 
 const ChannelMapping Terminal::_channel_map[] = {
     {"roll", KEY_RC_CHANNEL_ROLL},
@@ -1016,9 +1018,9 @@ void Terminal::_handle_motor_test(String &args)
         com_send_log(ComMessageType::LOG_ERROR, "Invalid motor name: %s. Must be FL, FR, RL, or RR.", motor_name_str.c_str());
         return;
     }
-    if (throttle_percentage < 0.0f || throttle_percentage > MAX_THROTTLE_PERCENTAGE)
+    if (throttle_percentage < MIN_NORMALIZED_THROTTLE || throttle_percentage > MAX_THROTTLE_PERCENTAGE)
     {
-        com_send_log(ComMessageType::LOG_ERROR, "Invalid throttle percentage. Must be between 0 and %d.", (int)MAX_THROTTLE_PERCENTAGE);
+        com_send_log(ComMessageType::LOG_ERROR, "Invalid throttle percentage. Must be between %.0f and %.0f.", MIN_NORMALIZED_THROTTLE, MAX_THROTTLE_PERCENTAGE);
         return;
     }
 

@@ -19,6 +19,7 @@
 
 #include <Arduino.h>
 #include <cstdint>
+#include "../utils/math_constants.h"
 
 PidTask::PidTask(const char *name, uint32_t stack_size, UBaseType_t priority, BaseType_t core_id, uint32_t task_delay_ms,
                  ImuTask *imu_task,
@@ -33,8 +34,8 @@ PidTask::PidTask(const char *name, uint32_t stack_size, UBaseType_t priority, Ba
       _pid_roll(DEFAULT_PID_ROLL_P, DEFAULT_PID_ROLL_I, DEFAULT_PID_ROLL_D),
       _pid_pitch(DEFAULT_PID_PITCH_P, DEFAULT_PID_PITCH_I, DEFAULT_PID_PITCH_D),
       _pid_yaw(DEFAULT_PID_YAW_P, DEFAULT_PID_YAW_I, DEFAULT_PID_YAW_D),
-      _pid_angle_roll(DEFAULT_PID_ANGLE_ROLL_P, DEFAULT_PID_ANGLE_ROLL_I, 0.0f),
-      _pid_angle_pitch(DEFAULT_PID_ANGLE_PITCH_P, DEFAULT_PID_ANGLE_PITCH_I, 0.0f),
+      _pid_angle_roll(DEFAULT_PID_ANGLE_ROLL_P, DEFAULT_PID_ANGLE_ROLL_I, (float)PID_ANGLE_D_GAIN_DISABLED),
+      _pid_angle_pitch(DEFAULT_PID_ANGLE_PITCH_P, DEFAULT_PID_ANGLE_PITCH_I, (float)PID_ANGLE_D_GAIN_DISABLED),
       _isArmed(false),
       _flight_mode(FlightMode::ACRO)
 {
@@ -148,15 +149,19 @@ void PidTask::_load_gains()
         _settings_manager->getSettingValue(KEY_PID_YAW_I).toFloat(),
         _settings_manager->getSettingValue(KEY_PID_YAW_D).toFloat());
 
+    float angle_roll_p = _settings_manager->getSettingValue(KEY_PID_ANG_R_P).toFloat();
+    float angle_roll_i = _settings_manager->getSettingValue(KEY_PID_ANG_R_I).toFloat();
     _pid_angle_roll.setGains(
-        _settings_manager->getSettingValue(KEY_PID_ANG_R_P).toFloat(),
-        _settings_manager->getSettingValue(KEY_PID_ANG_R_I).toFloat(),
-        0.0f); // Angle PID does not use D gain
+        angle_roll_p,
+        angle_roll_i,
+        (float)PID_ANGLE_D_GAIN_DISABLED); // Angle PID does not use D gain
 
+    float angle_pitch_p = _settings_manager->getSettingValue(KEY_PID_ANG_P_P).toFloat();
+    float angle_pitch_i = _settings_manager->getSettingValue(KEY_PID_ANG_P_I).toFloat();
     _pid_angle_pitch.setGains(
-        _settings_manager->getSettingValue(KEY_PID_ANG_P_P).toFloat(),
-        _settings_manager->getSettingValue(KEY_PID_ANG_P_I).toFloat(),
-        0.0f); // Angle PID does not use D gain
+        angle_pitch_p,
+        angle_pitch_i,
+        (float)PID_ANGLE_D_GAIN_DISABLED); // Angle PID does not use D gain
 
     com_send_log(ComMessageType::LOG_INFO, "PidTask: Loaded PID gains from settings.");
 }
@@ -166,8 +171,8 @@ void PidTask::resetToDefaults()
     _set_and_save_gains(PidAxis::ROLL, {DEFAULT_PID_ROLL_P, DEFAULT_PID_ROLL_I, DEFAULT_PID_ROLL_D});
     _set_and_save_gains(PidAxis::PITCH, {DEFAULT_PID_PITCH_P, DEFAULT_PID_PITCH_I, DEFAULT_PID_PITCH_D});
     _set_and_save_gains(PidAxis::YAW, {DEFAULT_PID_YAW_P, DEFAULT_PID_YAW_I, DEFAULT_PID_YAW_D});
-    _set_and_save_gains(PidAxis::ANGLE_ROLL, {DEFAULT_PID_ANGLE_ROLL_P, DEFAULT_PID_ANGLE_ROLL_I, 0.0f});
-    _set_and_save_gains(PidAxis::ANGLE_PITCH, {DEFAULT_PID_ANGLE_PITCH_P, DEFAULT_PID_ANGLE_PITCH_I, 0.0f});
+    _set_and_save_gains(PidAxis::ANGLE_ROLL, {DEFAULT_PID_ANGLE_ROLL_P, DEFAULT_PID_ANGLE_ROLL_I, PID_ANGLE_D_GAIN_DISABLED});
+    _set_and_save_gains(PidAxis::ANGLE_PITCH, {DEFAULT_PID_ANGLE_PITCH_P, DEFAULT_PID_ANGLE_PITCH_I, PID_ANGLE_D_GAIN_DISABLED});
 
     _settings_manager->saveSettings();
     com_send_log(ComMessageType::LOG_INFO, "PidTask: Reset PID gains to defaults and saved.");
@@ -198,13 +203,13 @@ void PidTask::_set_and_save_gains(PidAxis axis, PidGains gains)
             d_key = KEY_PID_YAW_D;
             break;
         case PidAxis::ANGLE_ROLL:
-            _pid_angle_roll.setGains(gains.p, gains.i, 0.0f); // Angle PID does not use D gain
+            _pid_angle_roll.setGains(gains.p, gains.i, (float)PID_ANGLE_D_GAIN_DISABLED); // Angle PID does not use D gain
             p_key = KEY_PID_ANG_R_P;
             i_key = KEY_PID_ANG_R_I;
             d_key = nullptr; // No D gain for angle PID
             break;
         case PidAxis::ANGLE_PITCH:
-            _pid_angle_pitch.setGains(gains.p, gains.i, 0.0f); // Angle PID does not use D gain
+            _pid_angle_pitch.setGains(gains.p, gains.i, (float)PID_ANGLE_D_GAIN_DISABLED); // Angle PID does not use D gain
             p_key = KEY_PID_ANG_P_P;
             i_key = KEY_PID_ANG_P_I;
             d_key = nullptr; // No D gain for angle PID

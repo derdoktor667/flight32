@@ -231,9 +231,9 @@ void MotorTask::stopMotorTest()
 
 bool MotorTask::_is_valid_throttle_percentage(float throttle)
 {
-    if (throttle < 0.0f || throttle > 1.0f)
+    if (throttle < MIN_NORMALIZED_THROTTLE || throttle > MAX_NORMALIZED_THROTTLE)
     {
-        com_send_log(ComMessageType::LOG_ERROR, "MotorTest: Invalid throttle percentage %f. Must be between 0 and 1.", throttle);
+        com_send_log(ComMessageType::LOG_ERROR, "MotorTest: Invalid throttle percentage %f. Must be between %.0f and %.0f.", throttle, MIN_NORMALIZED_THROTTLE, MAX_NORMALIZED_THROTTLE);
         return false;
     }
     return true;

@@ -43,6 +43,9 @@ extern QueueHandle_t com_flush_signal_queue;
 
 void com_task(void *pvParameters);
 
+// Initializes the communication manager's FreeRTOS queues.
+void com_manager_init();
+
 void com_send_log(ComMessageType type, const char *format, ...);
 void com_send_prompt(const char *prompt);
 void com_flush_output();

@@ -20,12 +20,16 @@ static ComSerialMode _current_com_mode = ComSerialMode::TERMINAL; // Default mod
 // Static flag to ensure log messages don't print on the same line as a prompt.
 static bool _line_needs_clearing = false;
 
-// Task function for handling communication messages.
-void com_task(void *pvParameters)
+// Initializes the communication manager's FreeRTOS queues.
+void com_manager_init()
 {
     com_queue = xQueueCreate(COM_QUEUE_LENGTH, sizeof(com_message_t));
     com_flush_signal_queue = xQueueCreate(COM_FLUSH_QUEUE_LENGTH, sizeof(uint8_t));
+}
 
+// Task function for handling communication messages.
+void com_task(void *pvParameters)
+{
     com_message_t msg;
     uint8_t dummy = 0;
 

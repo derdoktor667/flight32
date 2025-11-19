@@ -579,7 +579,6 @@ if __name__ == "__main__":
                 successful_tests += 1
             else:
                 failed_tests += 1
-            time.sleep(0.1)
 
     except serial.SerialException as e:
         print(

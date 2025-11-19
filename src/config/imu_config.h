@@ -20,7 +20,7 @@ constexpr uint8_t MPU6050_I2C_SCL = 22;
 constexpr uint32_t MPU6050_I2C_CLOCK_SPEED = 400000;
 constexpr uint8_t MPU6050_I2C_ADDRESS = 0x70;     // usually 0x68
 constexpr uint8_t MPU6050_FIFO_BUFFER_SIZE = 128; // Size of the MPU6050 FIFO buffer
-constexpr bool IMU_DMP_ENABLED_DEFAULT = false;   // Default setting for enabling the Digital Motion Processor (DMP)
+static constexpr bool IMU_DMP_ENABLED_DEFAULT = false;   // Default setting for enabling the Digital Motion Processor (DMP)
 
 // --- IMU Protocol Configuration ---
 enum class ImuType : uint8_t
@@ -63,15 +63,12 @@ enum class ImuLpfBandwidthIndex : uint8_t
 constexpr const char *KEY_IMU_LPF_BANDWIDTH = "imu.lpf_bw";
 constexpr const char *KEY_IMU_DMP_ENABLED = "imu.dmp_enabled";
 constexpr uint8_t DEFAULT_IMU_LPF_BANDWIDTH = static_cast<uint8_t>(ImuLpfBandwidthIndex::LPF_256HZ_N_0MS); // Corresponds to LPF_256HZ_N_0MS
-constexpr const char *IMU_LPF_BANDWIDTH_STRINGS[] = {
-    "LPF_256HZ_N_0MS", "LPF_188HZ_N_2MS", "LPF_98HZ_N_3MS",
-    "LPF_42HZ_N_5MS", "LPF_20HZ_N_10MS", "LPF_10HZ_N_13MS", "LPF_5HZ_N_18MS"};
-constexpr uint8_t NUM_IMU_LPF_BANDWIDTHS = sizeof(IMU_LPF_BANDWIDTH_STRINGS) / sizeof(IMU_LPF_BANDWIDTH_STRINGS[0]);
+extern const char *const IMU_LPF_BANDWIDTH_STRINGS[];
+extern const uint8_t NUM_IMU_LPF_BANDWIDTHS;
 
 // --- Sensor ---
 constexpr uint16_t SENSOR_POWER_UP_DELAY_MS = 100;
-constexpr float MS_PER_SECOND = 1000.0f;
-constexpr float HALF_PI_RADIANS = M_PI / 2.0f;
+
 
 // --- IMU General Constants ---
 constexpr uint8_t NUM_AXES = 3;

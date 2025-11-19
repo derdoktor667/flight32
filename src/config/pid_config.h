@@ -34,6 +34,7 @@ constexpr const char *KEY_PID_ANG_P_I = "pid.angP.i";
 
 // PID scaling: 1/100 for precision
 constexpr float PID_SCALE_FACTOR = 100.0f; // 1 unit = 0.01 gain
+constexpr float PID_ANGLE_D_GAIN_DISABLED = 0.0f;
 
 constexpr float DEFAULT_PID_ROLL_P = 0.2f;
 constexpr float DEFAULT_PID_ROLL_I = 0.02f;

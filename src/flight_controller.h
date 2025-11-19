@@ -17,6 +17,7 @@
 #include "tasks/serial_manager_task.h"
 #include "tasks/motor_task.h"
 #include "tasks/pid_task.h"
+#include "tasks/com_manager_task.h"
 
 #include "settings_manager.h"
 #include "utils/system_state.h"
@@ -43,4 +44,5 @@ private:
     std::unique_ptr<SerialManagerTask> _serial_manager_task;
     std::unique_ptr<MotorTask> _motor_task;
     std::unique_ptr<PidTask> _pid_task;
+    std::unique_ptr<ComManagerTask> _com_manager_task;
 };

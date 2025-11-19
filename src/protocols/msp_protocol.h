@@ -24,10 +24,8 @@ static constexpr uint8_t MSP_PID_PAYLOAD_SIZE = 18;
 
 // --- MSP Payload Sizes ---
 static constexpr uint8_t MSP_API_VERSION_PAYLOAD_SIZE = 3;
-static constexpr uint8_t MSP_FC_VARIANT_PAYLOAD_SIZE = 4;
+static constexpr uint8_t MSP_FC_VARIANT_PAYLOAD_SIZE = 0;
 static constexpr uint8_t MSP_FC_VERSION_PAYLOAD_SIZE = 3;
-static constexpr uint8_t MSP_BOARD_INFO_PAYLOAD_SIZE = 64;
-static constexpr uint8_t MSP_BUILD_INFO_PAYLOAD_SIZE = 21; // "MMM DD YYYY HH:MM:SS" is 20 chars + null terminator
 static constexpr uint8_t MSP_MEM_STATS_PAYLOAD_SIZE = 4;
 static constexpr uint8_t MSP_RAW_IMU_PAYLOAD_SIZE = 18; // 3x Accel, 3x Gyro, 3x Mag (int16_t = 2 bytes each)
 static constexpr uint8_t MSP_ATTITUDE_PAYLOAD_SIZE = 6; // 3x angles (int16_t = 2 bytes each)
@@ -67,22 +65,22 @@ static constexpr uint8_t MSP_FC_VERSION = 3;
 static constexpr uint8_t MSP_BOARD_INFO = 4;
 static constexpr uint8_t MSP_BUILD_INFO = 5;
 static constexpr uint8_t MSP_REBOOT = 6;
-static constexpr uint8_t MSP_MEM_STATS = 8;
+static constexpr uint8_t MSP_MEM_STATS = 208;
 static constexpr uint8_t MSP_GET_SETTING = 9;
 static constexpr uint8_t MSP_SET_SETTING = 10;
-static constexpr uint8_t MSP_PID = 11;
+static constexpr uint8_t MSP_PID = 102;
 static constexpr uint8_t MSP_STATUS = 101;
-static constexpr uint8_t MSP_RAW_IMU = 102;
+static constexpr uint8_t MSP_RAW_IMU = 106;
 static constexpr uint8_t MSP_MOTOR = 104;
 static constexpr uint8_t MSP_RC = 105;
-static constexpr uint8_t MSP_ATTITUDE = 108;
-static constexpr uint8_t MSP_BOX = 113;
+static constexpr uint8_t MSP_ATTITUDE = 100;
+static constexpr uint8_t MSP_BOX = 117;
 static constexpr uint8_t MSP_BOXNAMES = 116;
 static constexpr uint8_t MSP_MODE_RANGES = 119;
 static constexpr uint8_t MSP_MOTOR_CONFIG = 124;
 static constexpr uint8_t MSP_UID = 160;
-static constexpr uint8_t MSP_SENSOR_STATUS = 212;
-static constexpr uint8_t MSP_SENSOR_STATUS_PAYLOAD_SIZE = 12;
+static constexpr uint8_t MSP_SENSOR_STATUS = 108; // Python defines SENSOR_STATUS as 108
+static constexpr uint8_t MSP_SENSOR_STATUS_PAYLOAD_SIZE = 3; // Python's _decode_msp_sensor_status expects 3 bytes
 static constexpr uint8_t MSP_EEPROM_WRITE = 200;
 static constexpr uint8_t MSP_RESET_SETTINGS = 201;
 static constexpr uint8_t MSP_SET_PID = 202;

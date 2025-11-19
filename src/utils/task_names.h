@@ -10,7 +10,7 @@
 #include <cstdint>
 
 // --- Task Names ---
-constexpr const char *COM_TASK_NAME = "com_task";
+constexpr const char *COM_TASK_NAME = "Comms Manager";
 constexpr const char *IMU_TASK_NAME = "IMU / Sensor";
 constexpr const char *RX_TASK_NAME = "RX / Receiver";
 constexpr const char *IBUS_TASK_NAME = "RX / IBUS";

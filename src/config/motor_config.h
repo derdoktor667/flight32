@@ -44,9 +44,13 @@ constexpr uint8_t MOTOR_INDEX_FL = 3; // Front Left
 // --- Motor Protocol Settings ---
 constexpr const char *KEY_MOTOR_PROTOCOL = "motor.protocol";
 constexpr uint8_t DEFAULT_MOTOR_PROTOCOL = static_cast<uint8_t>(DshotProtocolIndex::DSHOT300); // Corresponds to DSHOT300
-constexpr const char *DSHOT_PROTOCOL_STRINGS[] = {"DSHOT150", "DSHOT300", "DSHOT600", "DSHOT1200"};
-constexpr uint8_t NUM_DSHOT_PROTOCOLS = sizeof(DSHOT_PROTOCOL_STRINGS) / sizeof(DSHOT_PROTOCOL_STRINGS[0]);
+extern const char *const DSHOT_PROTOCOL_STRINGS[];
+extern const uint8_t NUM_DSHOT_PROTOCOLS;
 
 // --- Motor Test Constants ---
 constexpr float PERCENTAGE_TO_NORMALIZED_FACTOR = 100.0f;
 constexpr float MAX_THROTTLE_PERCENTAGE = 100.0f;
+
+// Normalized throttle values (0.0 to 1.0)
+constexpr float MIN_NORMALIZED_THROTTLE = 0.0f;
+constexpr float MAX_NORMALIZED_THROTTLE = 1.0f;

@@ -20,17 +20,25 @@
 #include <cstring>
 
 // These string arrays are specific to SettingsManager for displaying options in a human-readable format.
-const char *GYRO_RANGE_STRINGS[] = {"250_DPS", "500_DPS", "1000_DPS", "2000_DPS"};
+const char *const GYRO_RANGE_STRINGS[] = {"250_DPS", "500_DPS", "1000_DPS", "2000_DPS"};
 const uint8_t NUM_GYRO_RANGES = sizeof(GYRO_RANGE_STRINGS) / sizeof(GYRO_RANGE_STRINGS[0]);
 
-const char *RC_PROTOCOL_STRINGS[] = {"IBUS", "PPM"};
+const char *const RC_PROTOCOL_STRINGS[] = {"IBUS", "PPM"};
 const uint8_t NUM_RC_PROTOCOLS = sizeof(RC_PROTOCOL_STRINGS) / sizeof(RC_PROTOCOL_STRINGS[0]);
 
-const char *IMU_TYPE_STRINGS[] = {"MPU6050", "NONE"};
+const char *const IMU_TYPE_STRINGS[] = {"MPU6050", "NONE"};
 const uint8_t NUM_IMU_TYPES = sizeof(IMU_TYPE_STRINGS) / sizeof(IMU_TYPE_STRINGS[0]);
 
-const char *BOOLEAN_STRINGS[] = {"false", "true"};
+const char *const BOOLEAN_STRINGS[] = {"false", "true"};
 const uint8_t NUM_BOOLEAN_STRINGS = sizeof(BOOLEAN_STRINGS) / sizeof(BOOLEAN_STRINGS[0]);
+
+const char *const IMU_LPF_BANDWIDTH_STRINGS[] = {
+    "LPF_256HZ_N_0MS", "LPF_188HZ_N_2MS", "LPF_98HZ_N_3MS",
+    "LPF_42HZ_N_5MS", "LPF_20HZ_N_10MS", "LPF_10HZ_N_13MS", "LPF_5HZ_N_18MS"};
+const uint8_t NUM_IMU_LPF_BANDWIDTHS = sizeof(IMU_LPF_BANDWIDTH_STRINGS) / sizeof(IMU_LPF_BANDWIDTH_STRINGS[0]);
+
+const char *const DSHOT_PROTOCOL_STRINGS[] = {"DSHOT150", "DSHOT300", "DSHOT600", "DSHOT1200"};
+const uint8_t NUM_DSHOT_PROTOCOLS = sizeof(DSHOT_PROTOCOL_STRINGS) / sizeof(DSHOT_PROTOCOL_STRINGS[0]);
 
 // Array containing metadata for all configurable settings.
 const SettingsManager::SettingMetadata SettingsManager::_settings_metadata[] = {

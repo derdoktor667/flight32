@@ -8,6 +8,7 @@
 #include "serial_manager_task.h"
 #include "../utils/version_info.h"
 #include <cmath>
+#include "../utils/math_constants.h"
 #include "imu_task.h"
 #include "../config/terminal_config.h"
 #include "../config/serial_config.h"
@@ -26,7 +27,7 @@
 
 #define BF_CHANNEL_VALUE_TO_STEP(channelValue) ((constrain(channelValue, BF_CHANNEL_RANGE_MIN, BF_CHANNEL_RANGE_MAX) - BF_CHANNEL_RANGE_MIN) / 25)
 
-static constexpr float RADIANS_TO_DEGREES = (180.0f / M_PI);
+
 
 // Helper function to convert quaternion to Euler angles (roll, pitch, yaw)
 // Angles are in degrees
@@ -286,10 +287,10 @@ void SerialManagerTask::_process_msp_message()
     case MSP_RAW_IMU:
         _handle_msp_raw_imu();
         break;
-    case MSP_ATTITUDE:
+    case MSP_ATTITUDE: // New ID for MSP_ATTITUDE
         _handle_msp_attitude();
         break;
-    case MSP_RC:
+    case MSP_RC: // Formerly MSP_RC_CHANNELS in Python script's list
         _handle_msp_rc();
         break;
     case MSP_MOTOR:
@@ -301,10 +302,10 @@ void SerialManagerTask::_process_msp_message()
     case MSP_SET_BOX:
         _handle_msp_box_set();
         break;
-    case MSP_UID:
+    case MSP_UID: // Firmware specific
         _handle_msp_uid();
         break;
-    case MSP_SENSOR_STATUS:
+    case MSP_SENSOR_STATUS: // New ID for MSP_SENSOR_STATUS
         _handle_msp_sensor_status();
         break;
     case MSP_BOXNAMES:
@@ -331,29 +332,13 @@ void SerialManagerTask::_handle_msp_sensor_status()
         return;
     }
 
-    ImuData imu_data = _imu_task->getImuSensor().getData();
-
-    // Scale factors from Betaflight for raw IMU data (these are approximate)
-    // Accel: 1G = 512 (approx, depends on sensor and range)
-    // Gyro: 1 deg/s = 4 (approx, depends on sensor and range)
-    int16_t accX = (int16_t)(imu_data.accelX * MSP_ACCEL_SCALING_FACTOR);
-    int16_t accY = (int16_t)(imu_data.accelY * MSP_ACCEL_SCALING_FACTOR);
-    int16_t accZ = (int16_t)(imu_data.accelZ * MSP_ACCEL_SCALING_FACTOR);
-
-    int16_t gyroX = (int16_t)(imu_data.gyroX * MSP_GYRO_SCALING_FACTOR);
-    int16_t gyroY = (int16_t)(imu_data.gyroY * MSP_GYRO_SCALING_FACTOR);
-    int16_t gyroZ = (int16_t)(imu_data.gyroZ * MSP_GYRO_SCALING_FACTOR);
-
-    uint8_t payload[MSP_SENSOR_STATUS_PAYLOAD_SIZE]; // 3x Accel, 3x Gyro (int16_t = 2 bytes each)
+    uint8_t payload[MSP_SENSOR_STATUS_PAYLOAD_SIZE]; // Expected 3 bytes (ACC, GYRO, MAG health)
     int i = 0;
 
-    _write_int16_to_payload(payload, i, accX);
-    _write_int16_to_payload(payload, i, accY);
-    _write_int16_to_payload(payload, i, accZ);
-
-    _write_int16_to_payload(payload, i, gyroX);
-    _write_int16_to_payload(payload, i, gyroY);
-    _write_int16_to_payload(payload, i, gyroZ);
+    // Report 1 (healthy) or 0 (unhealthy) for each sensor
+    payload[i++] = _imu_task->getImuSensor().isSensorHealthy() ? 1 : 0; // ACC health
+    payload[i++] = _imu_task->getImuSensor().isSensorHealthy() ? 1 : 0; // GYRO health (assuming same health for now)
+    payload[i++] = 0; // MAG health (MPU6050 does not have magnetometer)
 
     _send_msp_response(MSP_SENSOR_STATUS, payload, MSP_SENSOR_STATUS_PAYLOAD_SIZE);
 }
@@ -392,7 +377,8 @@ void SerialManagerTask::_handle_msp_api_version()
 
 void SerialManagerTask::_handle_msp_fc_variant()
 {
-    _send_msp_response(MSP_FC_VARIANT, (uint8_t *)MSP_FC_VARIANT_NAME, MSP_FC_VARIANT_PAYLOAD_SIZE);
+    uint8_t variant_name_len = strlen(MSP_FC_VARIANT_NAME);
+    _send_msp_response(MSP_FC_VARIANT, (uint8_t *)MSP_FC_VARIANT_NAME, variant_name_len);
 }
 
 void SerialManagerTask::_handle_msp_fc_version()
@@ -403,12 +389,13 @@ void SerialManagerTask::_handle_msp_fc_version()
 
 void SerialManagerTask::_handle_msp_board_info()
 {
-    uint8_t payload[MSP_BOARD_INFO_PAYLOAD_SIZE] = {0};
+    // Maximum possible size for the payload based on MSP_MAX_PAYLOAD_SIZE
+    uint8_t payload[MSP_MAX_PAYLOAD_SIZE] = {0};
     int idx = 0;
 
     // Board Identifier (4 chars)
-    memcpy(&payload[idx], MSP_BOARD_IDENTIFIER, 4);
-    idx += 4;
+    memcpy(&payload[idx], MSP_BOARD_IDENTIFIER, strlen(MSP_BOARD_IDENTIFIER));
+    idx += strlen(MSP_BOARD_IDENTIFIER);
 
     // Hardware Revision (uint16_t)
     payload[idx++] = (uint8_t)(MSP_HARDWARE_REVISION_VALUE & 0xFF);
@@ -425,7 +412,7 @@ void SerialManagerTask::_handle_msp_board_info()
 
 void SerialManagerTask::_handle_msp_build_info()
 {
-    char build_info_str[MSP_BUILD_INFO_PAYLOAD_SIZE];
+    char build_info_str[MSP_MAX_PAYLOAD_SIZE];
     snprintf(build_info_str, sizeof(build_info_str), "%s %s", __DATE__, __TIME__);
     _send_msp_response(MSP_BUILD_INFO, (uint8_t *)build_info_str, strlen(build_info_str));
 }
@@ -950,15 +937,10 @@ void SerialManagerTask::_handle_msp_boxnames()
 
 void SerialManagerTask::_handle_msp_mode_ranges()
 {
-    // Payload format: [count (1 byte)] then for each mode:
-    // [permanentId (1 byte)][auxChannelIndex (1 byte)][rangeStartStep (1 byte)][rangeEndStep (1 byte)]
-
-    // Total payload size: 1 byte for count + MSP_MODE_RANGES_PAYLOAD_SIZE (16 bytes for 4 ranges)
-    uint8_t payload[1 + MSP_MODE_RANGES_PAYLOAD_SIZE];
+    // Payload format: [permanentId (1 byte)][auxChannelIndex (1 byte)][rangeStartStep (1 byte)][rangeEndStep (1 byte)]
+    // The Python script expects a variable number of 4-byte entries, not a count-prefixed payload.
+    uint8_t payload[MSP_MODE_RANGES_PAYLOAD_SIZE];
     int i = 0;
-
-    // We need to output 4 mode ranges as per the Betaflight example
-    payload[i++] = 4; // count = 4
 
     // Mode 1: Permanent ID:0 Aux Channel:1 Start Step:2 End Step:6 (ARM)
     payload[i++] = BF_PERMANENT_ID_ARM; // permanentId for ARM (0)
@@ -984,12 +966,12 @@ void SerialManagerTask::_handle_msp_mode_ranges()
     payload[i++] = 45; // Start Step: 45
     payload[i++] = 49; // End Step: 49
 
-    _send_msp_response(MSP_MODE_RANGES, payload, 1 + MSP_MODE_RANGES_PAYLOAD_SIZE);
+    _send_msp_response(MSP_MODE_RANGES, payload, MSP_MODE_RANGES_PAYLOAD_SIZE);
 }
 
 void SerialManagerTask::_handle_msp_motor_config()
 {
-    uint8_t payload[MSP_MOTOR_CONFIG_PAYLOAD_SIZE];
+    uint8_t payload[6]; // Python script only expects 6 bytes
     int i = 0;
 
     // 1. minthrottle (U16) - In Flight32, this corresponds to MOTOR_MIN_THROTTLE_RAW
@@ -1001,17 +983,5 @@ void SerialManagerTask::_handle_msp_motor_config()
     // 3. mincommand (U16) - In Flight32, this is also MOTOR_MIN_THROTTLE_RAW for simplicity
     _write_int16_to_payload(payload, i, MOTOR_MIN_THROTTLE_RAW);
 
-    // 4. getMotorCount() (U8) - In Flight32, this is NUM_MOTORS
-    payload[i++] = NUM_MOTORS;
-
-    // 5. motorPoleCount (U8) - Flight32 does not currently expose this. Using a common default.
-    payload[i++] = 14; // Default to 14 poles, common for many drone motors
-
-    // 6. useDshotTelemetry (U8) - Assuming 1 since DShot is the protocol
-    payload[i++] = 1;
-
-    // 7. featureIsEnabled(FEATURE_ESC_SENSOR) (U8) - Assuming 0 as no external ESC sensor is implemented
-    payload[i++] = 0;
-
-    _send_msp_response(MSP_MOTOR_CONFIG, payload, MSP_MOTOR_CONFIG_PAYLOAD_SIZE);
+    _send_msp_response(MSP_MOTOR_CONFIG, payload, 6);
 }

@@ -5,7 +5,7 @@
     <strong>A high-performance, open-source flight controller firmware designed to unleash the full potential of the ESP32.</strong>
   </p>
   <p>
-    <img src="https://img.shields.io/badge/Version-0.3.1-blue.svg" alt="Version">
+    <img src="https://img.shields.io/badge/Version-0.3.2-blue.svg" alt="Version">
     <img src="https://img.shields.io/badge/License-MIT-green.svg" alt="License">
     <img src="https://img.shields.io/badge/Platform-ESP32-orange.svg" alt="Platform">
     <img src="https://img.shields.io/badge/Framework-Arduino-cyan.svg" alt="Framework">
@@ -24,7 +24,7 @@ Flight32 is a robust, extensible, and user-friendly firmware that turns any ESP3
 *   🛡️ **Robust System State Machine**: A built-in state machine ensures safe and predictable behavior, from initialization to in-flight, with robust error handling and failsafe modes.
 *   🧩 **Clean & Modular Architecture**: A clean, object-oriented design makes the firmware easy to understand, modify, and extend.
 *   ✈️ **Configurable Flight Modes**: Seamlessly switch between Acro (rate-based) and Stabilized (angle-based) flight modes using a dedicated RC channel. Stabilized mode utilizes a cascaded PID control loop for precise angle holding.
-*   📊 **Real-time System Insights**: Tune and debug on the fly with a powerful, built-in terminal and MultiWii Serial Protocol (MSP) support, including commands like `MSP_UID`, `MSP_STATUS`, and `MSP_SENSOR_STATUS`. Monitor CPU load, loop times, and memory usage, and configure flight modes to squeeze every drop of performance out of your hardware.
+*   📊 **Real-time System Insights**: Tune and debug on the fly with a powerful, built-in terminal and a web-based serial monitor. The firmware's MultiWii Serial Protocol (MSP) implementation is fully compatible with the `flight32_msp_tester.py` reference script, ensuring seamless integration with external tools. Monitor CPU load, loop times, memory usage, and more.
 *   🎛️ **Persistent On-the-Fly Tuning**: A full PID controller and complete channel mapping are easily adjustable via the terminal, with all settings saved persistently to non-volatile storage.
 *   📡 **Extensible Receiver & IMU Support**: Built with a generic task structure to easily support new receiver protocols (currently IBUS, PPM) and IMU sensors (currently MPU6050).
 *   **Configurable MPU6050**: Fine-tune your MPU6050 with configurable gyroscope range, accelerometer range, and low-pass filter settings, along with improved temperature accuracy.
@@ -71,6 +71,7 @@ The Flight32 firmware is organized into a clean, modular structure to promote re
     ├── com_manager.cpp/h       # Core communication (logging) manager
     ├── flight_controller.cpp/h # Main flight controller class
     ├── settings_manager.cpp/h  # Manages persistent settings in NVS
+    ├── app/                    # Web-based serial monitor
     ├── config/                 # Header-only configuration files for modules
     ├── imu/                    # IMU sensor interfaces and implementations
     ├── pid/                    # PID controller implementation
@@ -78,7 +79,7 @@ The Flight32 firmware is organized into a clean, modular structure to promote re
     ├── scheduler/              # FreeRTOS task scheduler
     ├── tasks/                  # All major system tasks (IMU, RX, Motor, etc.)
     ├── terminal/               # Interactive serial terminal
-    └── utils/                  # Utility functions and version info
+    └── utils/                  # Utility functions, system constants, and version info
 ```
 
 ## 🏁 Quick Start
