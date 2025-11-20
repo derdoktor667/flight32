@@ -68,14 +68,11 @@ void FlightController::setSystemState(SystemState new_state)
 // Setup function for the FlightController, initializes hardware and FreeRTOS tasks.
 void FlightController::setup()
 {
+    // just to be sure I2C running maximum speed
     Wire.begin();
     Wire.setClock(MPU6050_I2C_CLOCK_SPEED);
 
-    Serial.begin(SERIAL_BAUD_RATE);
-    Serial.println("DEBUG: [STEP 1] Serial initialized.");
-
     com_manager_init(); // Initialize communication queues early
-    Serial.println("DEBUG: [STEP 2] Com Manager initialized.");
 
     setSystemState(SystemState::INITIALIZING);
 
@@ -86,14 +83,11 @@ void FlightController::setup()
     com_send_log(ComMessageType::TERMINAL_OUTPUT, "========================================");
     com_send_log(ComMessageType::LOG_INFO, "Firmware v%s starting...", FIRMWARE_VERSION);
 
-    Serial.println("DEBUG: [STEP 3] Before Settings Manager begin.");
     _settings_manager.begin();
-    Serial.println("DEBUG: [STEP 4] After Settings Manager begin.");
 
     // Delay to allow sensors to power up.
     delay(SENSOR_POWER_UP_DELAY_MS);
 
-    Serial.println("DEBUG: [STEP 5] Before IMU initialization block.");
     // Retrieve IMU type from settings.
     String imu_type_str = _settings_manager.getSettingValue(KEY_IMU_TYPE);
     ImuType imu_type;
@@ -137,40 +131,34 @@ void FlightController::setup()
             vTaskDelay(portMAX_DELAY);
         } // Halt
     }
-    Serial.println("DEBUG: [STEP 6] After successful IMU initialization.");
 
     ImuAxisData gyro_offsets = _settings_manager.getGyroOffsets();
     ImuAxisData accel_offsets = _settings_manager.getAccelOffsets();
 
     setSystemState(SystemState::CALIBRATING);
-    Serial.println("DEBUG: [STEP 7] Before IMU calibration.");
     _imu_sensor->calibrate();
+
     // Save new offsets to settings.
     _settings_manager.setGyroOffsets(_imu_sensor->getGyroscopeOffset());
     _settings_manager.setAccelOffsets(_imu_sensor->getAccelerometerOffset());
     _settings_manager.saveSettings();
-    com_send_log(ComMessageType::LOG_INFO, "IMU calibration complete and offsets saved.");
-    Serial.println("DEBUG: [STEP 8] After IMU calibration.");
 
-    Serial.println("DEBUG: [STEP 9] Before creating FreeRTOS task objects.");
+    com_send_log(ComMessageType::LOG_INFO, "IMU calibration complete and offsets saved.");
+
     // Create FreeRTOS task objects.
     _com_manager_task = std::make_unique<ComManagerTask>(COM_TASK_NAME, COM_TASK_STACK_SIZE, COM_TASK_PRIORITY, COM_TASK_CORE, COM_TASK_DELAY_MS);
     _imu_task = std::make_unique<ImuTask>(IMU_TASK_NAME, IMU_TASK_STACK_SIZE, IMU_TASK_PRIORITY, IMU_TASK_CORE, IMU_TASK_DELAY_MS, *_imu_sensor, &_settings_manager);
     _rx_task = std::make_unique<RxTask>(RX_TASK_NAME, RX_TASK_STACK_SIZE, RX_TASK_PRIORITY, RX_TASK_CORE, RX_TASK_DELAY_MS, &_settings_manager);
     _motor_task = std::make_unique<MotorTask>(MOTOR_TASK_NAME, MOTOR_TASK_STACK_SIZE, MOTOR_TASK_PRIORITY, MOTOR_TASK_CORE, MOTOR_TASK_DELAY_MS, MOTOR_PINS_ARRAY, &_settings_manager);
-    _pid_task = std::make_unique<PidTask>(PID_TASK_NAME, PID_TASK_STACK_SIZE, PID_TASK_PRIORITY, PID_TASK_CORE, PID_TASK_DELAY_MS, _imu_task.get(), _rx_task.get(), _motor_task.get(), &_settings_manager);
-    Serial.println("DEBUG: [STEP 10] After creating FreeRTOS task objects.");
+    _pid_task = std::make_unique<PidTask>(PID_TASK_NAME, PidConfig::TASK_STACK_SIZE, PidConfig::TASK_PRIORITY, PidConfig::TASK_CORE, PidConfig::TASK_DELAY_MS, _imu_task.get(), _rx_task.get(), _motor_task.get(), &_settings_manager);
 
-    Serial.println("DEBUG: [STEP 11] Before adding tasks to the scheduler.");
     // Add tasks to the scheduler.
     _scheduler.addTask(_com_manager_task.get());
     _scheduler.addTask(_rx_task.get());
     _scheduler.addTask(_imu_task.get());
     _scheduler.addTask(_motor_task.get());
     _scheduler.addTask(_pid_task.get());
-    Serial.println("DEBUG: [STEP 12] After adding tasks to the scheduler.");
 
-    Serial.println("DEBUG: [STEP 13] Before calling setup() for each registered task.");
     // Create and add the Serial Manager task.
     _serial_manager_task = std::make_unique<SerialManagerTask>(SERIAL_MANAGER_TASK_NAME, SERIAL_MANAGER_TASK_STACK_SIZE, SERIAL_MANAGER_TASK_PRIORITY, SERIAL_MANAGER_TASK_CORE, SERIAL_MANAGER_TASK_DELAY_MS, &_scheduler, _imu_task.get(), _rx_task.get(), _motor_task.get(), _pid_task.get(), &_settings_manager);
     _scheduler.addTask(_serial_manager_task.get());
@@ -187,6 +175,7 @@ void FlightController::setup()
 
     // Display welcome message and prompt AFTER scheduler has started and tasks are running.
     com_send_log(ComMessageType::LOG_INFO, "Welcome, type 'help' for a list of commands.");
+    com_send_log(ComMessageType::TERMINAL_OUTPUT, "");
     com_flush_output();
     _serial_manager_task->showPrompt();
 }

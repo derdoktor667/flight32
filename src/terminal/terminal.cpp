@@ -568,9 +568,9 @@ void Terminal::_handle_tasks(String &args)
     num_freertos_tasks = uxTaskGetSystemState(freertos_task_status_array, num_freertos_tasks, &total_run_time);
 
     com_send_log(ComMessageType::TERMINAL_OUTPUT, "");
-    com_send_log(ComMessageType::TERMINAL_OUTPUT, "% -16s %-10s %-6s %-8s %-10s %-10s %-10s %s",
-                 "Task Name", "State", "Prio", "CPU %", "Loop (us)", "Avg (us)", "Max (us)", "Stack");
-    com_send_log(ComMessageType::TERMINAL_OUTPUT, "-------------------------------------------------------------------------------------");
+    com_send_log(ComMessageType::TERMINAL_OUTPUT, "% -16s %-10s %-6s %-8s %-10s %-10s %-5s %s",
+                 "Task Name", "State", "Prio", "CPU %", "Loop (us)", "Avg (us)", "Core", "Stack");
+    com_send_log(ComMessageType::TERMINAL_OUTPUT, "-------------------------------------------------------------------------------");
 
     for (uint8_t i = 0; i < _scheduler->getTaskCount(); i++)
     {
@@ -607,14 +607,14 @@ void Terminal::_handle_tasks(String &args)
 
         char output_buffer[TASK_STATUS_OUTPUT_BUFFER_SIZE];
         snprintf(output_buffer, sizeof(output_buffer),
-                 "% -*s %-*s %-*u %-*s %-*u %-*u %-*u %u",
+                 "% -*s %-*s %-*u %-*s %-*u %-*u %-*d %u",
                  TASK_NAME_COLUMN_WIDTH, name,
                  TASK_STATE_COLUMN_WIDTH, Terminal::_get_task_state_string(freertos_status.eCurrentState),
                  TASK_PRIO_COLUMN_WIDTH, freertos_status.uxBasePriority,
                  TASK_CPU_COLUMN_WIDTH, cpu_str,
                  TASK_LOOP_COLUMN_WIDTH, current_task->getLoopTime(),
                  TASK_AVG_LOOP_COLUMN_WIDTH, current_task->getAvgLoopTime(),
-                 TASK_MAX_LOOP_COLUMN_WIDTH, current_task->getMaxLoopTime(),
+                 TASK_CORE_COLUMN_WIDTH, freertos_status.xCoreID,
                  freertos_status.usStackHighWaterMark);
         com_send_log(ComMessageType::TERMINAL_OUTPUT, output_buffer);
     }
@@ -1020,12 +1020,12 @@ void Terminal::_handle_motor_test(String &args)
     }
     if (throttle_percentage < MIN_NORMALIZED_THROTTLE || throttle_percentage > MAX_THROTTLE_PERCENTAGE)
     {
-        com_send_log(ComMessageType::LOG_ERROR, "Invalid throttle percentage. Must be between %.0f and %.0f.", MIN_NORMALIZED_THROTTLE, MAX_THROTTLE_PERCENTAGE);
+        com_send_log(ComMessageType::LOG_ERROR, "Invalid throttle percentage. Must be between %.0f and %.0f.", MIN_NORMALIZED_THROTTLE * CPU_PERCENTAGE_FACTOR, MAX_THROTTLE_PERCENTAGE);
         return;
     }
 
     // Convert percentage to normalized 0-1 float
-    float normalized_throttle = throttle_percentage / PERCENTAGE_TO_NORMALIZED_FACTOR;
+    float normalized_throttle = throttle_percentage / CPU_PERCENTAGE_FACTOR;
 
     if (duration_ms > 0)
     {
@@ -1118,7 +1118,8 @@ void Terminal::_handle_factory_reset(String &args)
     if (args.equalsIgnoreCase("confirm"))
     {
         _settings_manager->factoryReset();
-        com_send_log(ComMessageType::LOG_INFO, "Settings reset to default values. Rebooting...");
+        com_send_log(ComMessageType::LOG_INFO, "Settings reset to default values. Rebooting now...");
+        delay(500);
         ESP.restart();
     }
     else
@@ -1177,7 +1178,7 @@ void Terminal::_handle_pid_get(String &args)
         return;
     }
 
-    com_send_log(ComMessageType::TERMINAL_OUTPUT, "PID Gains (scaled by %d):", (int)PID_SCALE_FACTOR);
+    com_send_log(ComMessageType::TERMINAL_OUTPUT, "PID Gains (scaled by %d):", (int)PidConfig::SCALE_FACTOR);
 
     int max_label_len = 0;
     const char *labels[] = {"Roll:", "Pitch:", "Yaw:", "Angle Roll:", "Angle Pitch:"};
@@ -1196,25 +1197,25 @@ void Terminal::_handle_pid_get(String &args)
     com_send_log(ComMessageType::TERMINAL_OUTPUT, separator_str.c_str());
 
     com_send_log(ComMessageType::TERMINAL_OUTPUT, "  %-*s P=%d, I=%d, D=%d", max_label_len, "Roll:",
-                 (int)(_pid_task->getGains(PidAxis::ROLL).p * PID_SCALE_FACTOR),
-                 (int)(_pid_task->getGains(PidAxis::ROLL).i * PID_SCALE_FACTOR),
-                 (int)(_pid_task->getGains(PidAxis::ROLL).d * PID_SCALE_FACTOR));
+                 (int)(_pid_task->getGains(PidAxis::ROLL).p * PidConfig::SCALE_FACTOR),
+                 (int)(_pid_task->getGains(PidAxis::ROLL).i * PidConfig::SCALE_FACTOR),
+                 (int)(_pid_task->getGains(PidAxis::ROLL).d * PidConfig::SCALE_FACTOR));
     com_send_log(ComMessageType::TERMINAL_OUTPUT, "  %-*s P=%d, I=%d, D=%d", max_label_len, "Pitch:",
-                 (int)(_pid_task->getGains(PidAxis::PITCH).p * PID_SCALE_FACTOR),
-                 (int)(_pid_task->getGains(PidAxis::PITCH).i * PID_SCALE_FACTOR),
-                 (int)(_pid_task->getGains(PidAxis::PITCH).d * PID_SCALE_FACTOR));
+                 (int)(_pid_task->getGains(PidAxis::PITCH).p * PidConfig::SCALE_FACTOR),
+                 (int)(_pid_task->getGains(PidAxis::PITCH).i * PidConfig::SCALE_FACTOR),
+                 (int)(_pid_task->getGains(PidAxis::PITCH).d * PidConfig::SCALE_FACTOR));
     com_send_log(ComMessageType::TERMINAL_OUTPUT, "  %-*s P=%d, I=%d, D=%d", max_label_len, "Yaw:",
-                 (int)(_pid_task->getGains(PidAxis::YAW).p * PID_SCALE_FACTOR),
-                 (int)(_pid_task->getGains(PidAxis::YAW).i * PID_SCALE_FACTOR),
-                 (int)(_pid_task->getGains(PidAxis::YAW).d * PID_SCALE_FACTOR));
+                 (int)(_pid_task->getGains(PidAxis::YAW).p * PidConfig::SCALE_FACTOR),
+                 (int)(_pid_task->getGains(PidAxis::YAW).i * PidConfig::SCALE_FACTOR),
+                 (int)(_pid_task->getGains(PidAxis::YAW).d * PidConfig::SCALE_FACTOR));
     com_send_log(ComMessageType::TERMINAL_OUTPUT, "  %-*s P=%d, I=%d, D=%d", max_label_len, "Angle Roll:",
-                 (int)(_pid_task->getGains(PidAxis::ANGLE_ROLL).p * PID_SCALE_FACTOR),
-                 (int)(_pid_task->getGains(PidAxis::ANGLE_ROLL).i * PID_SCALE_FACTOR),
-                 (int)(_pid_task->getGains(PidAxis::ANGLE_ROLL).d * PID_SCALE_FACTOR));
+                 (int)(_pid_task->getGains(PidAxis::ANGLE_ROLL).p * PidConfig::SCALE_FACTOR),
+                 (int)(_pid_task->getGains(PidAxis::ANGLE_ROLL).i * PidConfig::SCALE_FACTOR),
+                 (int)(_pid_task->getGains(PidAxis::ANGLE_ROLL).d * PidConfig::SCALE_FACTOR));
     com_send_log(ComMessageType::TERMINAL_OUTPUT, "  %-*s P=%d, I=%d, D=%d", max_label_len, "Angle Pitch:",
-                 (int)(_pid_task->getGains(PidAxis::ANGLE_PITCH).p * PID_SCALE_FACTOR),
-                 (int)(_pid_task->getGains(PidAxis::ANGLE_PITCH).i * PID_SCALE_FACTOR),
-                 (int)(_pid_task->getGains(PidAxis::ANGLE_PITCH).d * PID_SCALE_FACTOR));
+                 (int)(_pid_task->getGains(PidAxis::ANGLE_PITCH).p * PidConfig::SCALE_FACTOR),
+                 (int)(_pid_task->getGains(PidAxis::ANGLE_PITCH).i * PidConfig::SCALE_FACTOR),
+                 (int)(_pid_task->getGains(PidAxis::ANGLE_PITCH).d * PidConfig::SCALE_FACTOR));
     com_send_log(ComMessageType::TERMINAL_OUTPUT, separator_str.c_str());
 }
 
@@ -1229,13 +1230,13 @@ void Terminal::_handle_pid_set(String &args)
     int first_space = args.indexOf(' ');
     if (first_space == -1)
     {
-        com_send_log(ComMessageType::LOG_ERROR, "Usage: set pid <axis> <p|i|d> <value> (value is scaled by %d)", (int)PID_SCALE_FACTOR);
+        com_send_log(ComMessageType::LOG_ERROR, "Usage: set pid <axis> <p|i|d> <value> (value is scaled by %d)", (int)PidConfig::SCALE_FACTOR);
         return;
     }
     int second_space = args.indexOf(' ', first_space + 1);
     if (second_space == -1)
     {
-        com_send_log(ComMessageType::LOG_ERROR, "Usage: set pid <axis> <p|i|d> <value> (value is scaled by %d)", (int)PID_SCALE_FACTOR);
+        com_send_log(ComMessageType::LOG_ERROR, "Usage: set pid <axis> <p|i|d> <value> (value is scaled by %d)", (int)PidConfig::SCALE_FACTOR);
         return;
     }
 
@@ -1272,7 +1273,7 @@ void Terminal::_handle_pid_set(String &args)
 
     PidGains gains = _pid_task->getGains(axis);
     int int_value = value_str.toInt();
-    float value = (float)int_value / PID_SCALE_FACTOR;
+    float value = (float)int_value / PidConfig::SCALE_FACTOR;
 
     if (gain_str.equalsIgnoreCase("p"))
     {
@@ -1285,9 +1286,12 @@ void Terminal::_handle_pid_set(String &args)
     else if (gain_str.equalsIgnoreCase("d"))
     {
         // Only allow D gain for rate PIDs
-        if (axis == PidAxis::ROLL || axis == PidAxis::PITCH || axis == PidAxis::YAW) {
+        if (axis == PidAxis::ROLL || axis == PidAxis::PITCH || axis == PidAxis::YAW)
+        {
             gains.d = value;
-        } else {
+        }
+        else
+        {
             com_send_log(ComMessageType::LOG_ERROR, "D gain is not applicable for angle PID controllers.");
             return;
         }

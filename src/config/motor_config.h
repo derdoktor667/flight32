@@ -9,11 +9,12 @@
 
 #include <cstdint>
 #include <DShotRMT.h>
+#include "../utils/math_constants.h"
 
 // --- Motor Task Configuration ---
 constexpr uint32_t MOTOR_TASK_STACK_SIZE = 4096;
 constexpr uint8_t MOTOR_TASK_PRIORITY = 3;
-constexpr int8_t MOTOR_TASK_CORE = 1;
+constexpr int8_t MOTOR_TASK_CORE = 0;
 constexpr uint8_t MOTOR_TASK_DELAY_MS = 10;
 constexpr uint8_t NUM_MOTORS = 4;
 constexpr uint8_t MOTOR_PIN_FR = 25;
@@ -47,10 +48,9 @@ constexpr uint8_t DEFAULT_MOTOR_PROTOCOL = static_cast<uint8_t>(DshotProtocolInd
 extern const char *const DSHOT_PROTOCOL_STRINGS[];
 extern const uint8_t NUM_DSHOT_PROTOCOLS;
 
-// --- Motor Test Constants ---
-constexpr float PERCENTAGE_TO_NORMALIZED_FACTOR = 100.0f;
-constexpr float MAX_THROTTLE_PERCENTAGE = 100.0f;
-
 // Normalized throttle values (0.0 to 1.0)
 constexpr float MIN_NORMALIZED_THROTTLE = 0.0f;
 constexpr float MAX_NORMALIZED_THROTTLE = 1.0f;
+
+// Throttle percentage constants (0.0 to 100.0)
+constexpr float MAX_THROTTLE_PERCENTAGE = CPU_PERCENTAGE_FACTOR;

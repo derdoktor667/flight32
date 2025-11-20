@@ -11,12 +11,12 @@
 #include <cstdint>
 
 // --- IBUS Task Configuration ---
+inline HardwareSerial &IBUS_SERIAL_PORT = Serial2;
 constexpr uint32_t RX_TASK_STACK_SIZE = 4096;
 constexpr uint8_t RX_TASK_PRIORITY = 4;
 constexpr int8_t RX_TASK_CORE = 1;
 constexpr uint8_t RX_TASK_DELAY_MS = 20;
 constexpr uint8_t IBUS_UART_NUM = 2;
-inline HardwareSerial &IBUS_SERIAL_PORT = Serial2;
 constexpr uint8_t IBUS_RX_PIN = 16;
 constexpr uint8_t IBUS_TX_PIN = 17;
 constexpr uint32_t IBUS_BAUD_RATE = 115200;

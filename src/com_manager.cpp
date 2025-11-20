@@ -6,6 +6,7 @@
  */
 
 #include <Arduino.h>
+#include "config/serial_config.h"
 #include "com_manager.h"
 #include "config/com_manager_config.h"
 #include "config/terminal_config.h"
@@ -23,6 +24,10 @@ static bool _line_needs_clearing = false;
 // Initializes the communication manager's FreeRTOS queues.
 void com_manager_init()
 {
+    // Still needed to start serial first
+    Serial.begin(SERIAL_BAUD_RATE);
+
+    //
     com_queue = xQueueCreate(COM_QUEUE_LENGTH, sizeof(com_message_t));
     com_flush_signal_queue = xQueueCreate(COM_FLUSH_QUEUE_LENGTH, sizeof(uint8_t));
 }
@@ -52,13 +57,19 @@ void com_task(void *pvParameters)
                 {
                 case ComMessageType::LOG_INFO:
                 case ComMessageType::LOG_WARN:
-                case ComMessageType::LOG_ERROR: {
-                    const char* tag = "";
-                    if (msg.type == ComMessageType::LOG_INFO) {
+                case ComMessageType::LOG_ERROR:
+                {
+                    const char *tag = "";
+                    if (msg.type == ComMessageType::LOG_INFO)
+                    {
                         tag = "[INFO] ";
-                    } else if (msg.type == ComMessageType::LOG_WARN) {
+                    }
+                    else if (msg.type == ComMessageType::LOG_WARN)
+                    {
                         tag = "[WARN] ";
-                    } else if (msg.type == ComMessageType::LOG_ERROR) {
+                    }
+                    else if (msg.type == ComMessageType::LOG_ERROR)
+                    {
                         tag = "[ERROR] ";
                     }
                     Serial.print(tag);
@@ -154,7 +165,8 @@ const char *com_format_bytes(uint32_t bytes)
 void com_set_serial_mode(ComSerialMode mode)
 {
     _current_com_mode = mode;
-    if (_current_com_mode == ComSerialMode::MSP) {
+    if (_current_com_mode == ComSerialMode::MSP)
+    {
         _line_needs_clearing = false; // Clear any pending line clearing when entering MSP mode
     }
 }

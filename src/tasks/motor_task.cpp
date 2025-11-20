@@ -5,18 +5,7 @@
  * @license MIT
  */
 
-// Motor Mixing for Quad-X Configuration
-
-// Motor Layout:
-//    FL (Front Left)      FR (Front Right)
-//          \                /
-//           \              /
-//            \    [CP]    /
-//             \          /
-//              \        /
-//         RL (Rear Left) - RR (Rear Right)
-
-// Mixing matrix:
+// Motot Mixing matrix:
 // RR =  T - P + R - Y  (rear right)
 // FR =  T - P - R + Y  (front right)
 // RL =  T + P + R + Y  (rear left)
@@ -27,6 +16,7 @@
 #include "../com_manager.h"
 #include "../settings_manager.h"
 #include "../config/motor_config.h"
+#include <DShotRMT.h>
 
 dshot_mode_t get_dshot_mode_from_index(uint8_t index)
 {
@@ -186,7 +176,7 @@ void MotorTask::startMotorTest(uint8_t motorNum, float throttle, uint32_t durati
     _testDuration = duration_ms;
     _testStartTime = millis();
     _motorTestState = SPINNING_TIMED;
-    com_send_log(ComMessageType::LOG_INFO, "MotorTest: Motor %d spinning at %.1f%% throttle for %lu ms.", motorNum + 1, throttle * PERCENTAGE_TO_NORMALIZED_FACTOR, duration_ms);
+    com_send_log(ComMessageType::LOG_INFO, "MotorTest: Motor %d spinning at %.1f%% throttle for %lu ms.", motorNum + 1, throttle * CPU_PERCENTAGE_FACTOR, duration_ms);
 }
 
 void MotorTask::startContinuousMotorTest(uint8_t motorNum, float throttle)
@@ -206,7 +196,7 @@ void MotorTask::startContinuousMotorTest(uint8_t motorNum, float throttle)
     _testMotorNum = motorNum;
     _testThrottle = throttle;
     _motorTestState = SPINNING_CONTINUOUS;
-    com_send_log(ComMessageType::LOG_INFO, "MotorTest: Motor %d spinning continuously at %.1f%% throttle. Send 'motor stop' to stop.", motorNum + 1, throttle * PERCENTAGE_TO_NORMALIZED_FACTOR);
+    com_send_log(ComMessageType::LOG_INFO, "MotorTest: Motor %d spinning continuously at %.1f%% throttle. Send 'motor stop' to stop.", motorNum + 1, throttle * CPU_PERCENTAGE_FACTOR);
 }
 
 void MotorTask::stopMotorTest()

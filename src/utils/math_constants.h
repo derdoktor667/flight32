@@ -7,7 +7,8 @@
 
 #pragma once
 
-#include <cmath> // For M_PI
+#include <cmath>
+#include <math.h>
 
 // Conversion constants
 constexpr float RADIANS_TO_DEGREES = 180.0f / M_PI;

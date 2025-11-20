@@ -10,7 +10,7 @@
 #include <cstdint>
 
 // --- Com Task Configuration ---
-constexpr uint32_t COM_TASK_STACK_SIZE = 8192;
+constexpr uint32_t COM_TASK_STACK_SIZE = 4096;
 constexpr uint8_t COM_TASK_PRIORITY = 2;
 constexpr int8_t COM_TASK_CORE = 0; // Assign to Core 0 (PRO_CPU)
 constexpr uint8_t COM_TASK_DELAY_MS = 10;

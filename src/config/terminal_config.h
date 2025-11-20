@@ -16,7 +16,6 @@ constexpr int8_t SERIAL_MANAGER_TASK_CORE = 0;
 constexpr uint8_t SERIAL_MANAGER_TASK_DELAY_MS = 10;
 constexpr uint16_t TERMINAL_INPUT_BUFFER_SIZE = 128;
 
-
 // --- Terminal/Utility ---
 constexpr uint16_t MAX_THROTTLE_VALUE = 2047;
 constexpr uint8_t ASCII_BACKSPACE = 127;
@@ -27,7 +26,7 @@ constexpr uint8_t TASK_PRIO_COLUMN_WIDTH = 6;
 constexpr uint8_t TASK_CPU_COLUMN_WIDTH = 8;
 constexpr uint8_t TASK_LOOP_COLUMN_WIDTH = 10;
 constexpr uint8_t TASK_AVG_LOOP_COLUMN_WIDTH = 10;
-constexpr uint8_t TASK_MAX_LOOP_COLUMN_WIDTH = 10;
+constexpr uint8_t TASK_CORE_COLUMN_WIDTH = 5;
 constexpr uint8_t TASK_STACK_HWM_COLUMN_WIDTH = 17;
 constexpr uint8_t TERMINAL_DISPLAY_KEY_BUFFER = 2;
 

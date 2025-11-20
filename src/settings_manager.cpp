@@ -67,19 +67,19 @@ const SettingsManager::SettingMetadata SettingsManager::_settings_metadata[] = {
     {KEY_RC_CHANNEL_AUX3, "rc.ch.aux3", "RC Auxiliary Channel 3 Index", SettingsManager::UINT8, nullptr, 0, DEFAULT_RC_CHANNEL_AUX3, 0.0f, nullptr},
     {KEY_RC_CHANNEL_AUX4, "rc.ch.aux4", "RC Auxiliary Channel 4 Index", SettingsManager::UINT8, nullptr, 0, DEFAULT_RC_CHANNEL_AUX4, 0.0f, nullptr},
     {KEY_MOTOR_PROTOCOL, "motor.protocol", "DShot Motor Protocol", SettingsManager::UINT8, DSHOT_PROTOCOL_STRINGS, NUM_DSHOT_PROTOCOLS, DEFAULT_MOTOR_PROTOCOL, 0.0f, nullptr},
-    {KEY_PID_ROLL_P, "pid.roll.p", "PID Roll Proportional Gain", SettingsManager::FLOAT, nullptr, 0, 0, DEFAULT_PID_ROLL_P, nullptr},
-    {KEY_PID_ROLL_I, "pid.roll.i", "PID Roll Integral Gain", SettingsManager::FLOAT, nullptr, 0, 0, DEFAULT_PID_ROLL_I, nullptr},
-    {KEY_PID_ROLL_D, "pid.roll.d", "PID Roll Derivative Gain", SettingsManager::FLOAT, nullptr, 0, 0, DEFAULT_PID_ROLL_D, nullptr},
-    {KEY_PID_PITCH_P, "pid.pitch.p", "PID Pitch Proportional Gain", SettingsManager::FLOAT, nullptr, 0, 0, DEFAULT_PID_PITCH_P, nullptr},
-    {KEY_PID_PITCH_I, "pid.pitch.i", "PID Pitch Integral Gain", SettingsManager::FLOAT, nullptr, 0, 0, DEFAULT_PID_PITCH_I, nullptr},
-    {KEY_PID_PITCH_D, "pid.pitch.d", "PID Pitch Derivative Gain", SettingsManager::FLOAT, nullptr, 0, 0, DEFAULT_PID_PITCH_D, nullptr},
-    {KEY_PID_YAW_P, "pid.yaw.p", "PID Yaw Proportional Gain", SettingsManager::FLOAT, nullptr, 0, 0, DEFAULT_PID_YAW_P, nullptr},
-    {KEY_PID_YAW_I, "pid.yaw.i", "PID Yaw Integral Gain", SettingsManager::FLOAT, nullptr, 0, 0, DEFAULT_PID_YAW_I, nullptr},
-    {KEY_PID_YAW_D, "pid.yaw.d", "PID Yaw Derivative Gain", SettingsManager::FLOAT, nullptr, 0, 0, DEFAULT_PID_YAW_D, nullptr},
-    {KEY_PID_ANG_R_P, "pid.angR.p", "PID Angle Roll Proportional Gain", SettingsManager::FLOAT, nullptr, 0, 0, DEFAULT_PID_ANGLE_ROLL_P, nullptr},
-    {KEY_PID_ANG_R_I, "pid.angR.i", "PID Angle Roll Integral Gain", SettingsManager::FLOAT, nullptr, 0, 0, DEFAULT_PID_ANGLE_ROLL_I, nullptr},
-    {KEY_PID_ANG_P_P, "pid.angP.p", "PID Angle Pitch Proportional Gain", SettingsManager::FLOAT, nullptr, 0, 0, DEFAULT_PID_ANGLE_PITCH_P, nullptr},
-    {KEY_PID_ANG_P_I, "pid.angP.i", "PID Angle Pitch Integral Gain", SettingsManager::FLOAT, nullptr, 0, 0, DEFAULT_PID_ANGLE_PITCH_I, nullptr},
+    {KEY_PID_ROLL_P, "pid.roll.p", "PID Roll Proportional Gain", SettingsManager::FLOAT, nullptr, 0, 0, PidConfig::DEFAULT_RATE_P, nullptr},
+    {KEY_PID_ROLL_I, "pid.roll.i", "PID Roll Integral Gain", SettingsManager::FLOAT, nullptr, 0, 0, PidConfig::DEFAULT_RATE_I, nullptr},
+    {KEY_PID_ROLL_D, "pid.roll.d", "PID Roll Derivative Gain", SettingsManager::FLOAT, nullptr, 0, 0, PidConfig::DEFAULT_RATE_D, nullptr},
+    {KEY_PID_PITCH_P, "pid.pitch.p", "PID Pitch Proportional Gain", SettingsManager::FLOAT, nullptr, 0, 0, PidConfig::DEFAULT_RATE_P, nullptr},
+    {KEY_PID_PITCH_I, "pid.pitch.i", "PID Pitch Integral Gain", SettingsManager::FLOAT, nullptr, 0, 0, PidConfig::DEFAULT_RATE_I, nullptr},
+    {KEY_PID_PITCH_D, "pid.pitch.d", "PID Pitch Derivative Gain", SettingsManager::FLOAT, nullptr, 0, 0, PidConfig::DEFAULT_RATE_D, nullptr},
+    {KEY_PID_YAW_P, "pid.yaw.p", "PID Yaw Proportional Gain", SettingsManager::FLOAT, nullptr, 0, 0, PidConfig::DEFAULT_YAW_P, nullptr},
+    {KEY_PID_YAW_I, "pid.yaw.i", "PID Yaw Integral Gain", SettingsManager::FLOAT, nullptr, 0, 0, PidConfig::DEFAULT_YAW_I, nullptr},
+    {KEY_PID_YAW_D, "pid.yaw.d", "PID Yaw Derivative Gain", SettingsManager::FLOAT, nullptr, 0, 0, PidConfig::DEFAULT_YAW_D, nullptr},
+    {KEY_PID_ANG_R_P, "pid.angR.p", "PID Angle Roll Proportional Gain", SettingsManager::FLOAT, nullptr, 0, 0, PidConfig::DEFAULT_ANGLE_P, nullptr},
+    {KEY_PID_ANG_R_I, "pid.angR.i", "PID Angle Roll Integral Gain", SettingsManager::FLOAT, nullptr, 0, 0, PidConfig::DEFAULT_ANGLE_I, nullptr},
+    {KEY_PID_ANG_P_P, "pid.angP.p", "PID Angle Pitch Proportional Gain", SettingsManager::FLOAT, nullptr, 0, 0, PidConfig::DEFAULT_ANGLE_P, nullptr},
+    {KEY_PID_ANG_P_I, "pid.angP.i", "PID Angle Pitch Integral Gain", SettingsManager::FLOAT, nullptr, 0, 0, PidConfig::DEFAULT_ANGLE_I, nullptr},
     // Filter Settings
     {NVS_KEY_GYRO_LPF_HZ, "filter.lpf_hz", "Gyro Low-Pass Filter Cutoff Frequency", SettingsManager::FLOAT, nullptr, 0, 0, DEFAULT_GYRO_LPF_HZ, nullptr},
     {NVS_KEY_NOTCH1_HZ, "filter.notch1_hz", "First Notch Filter Center Frequency", SettingsManager::FLOAT, nullptr, 0, 0, DEFAULT_NOTCH1_HZ, nullptr},
@@ -145,25 +145,20 @@ void SettingsManager::_write_defaults()
         {
         case UINT8:
             _preferences.putUChar(key, (uint8_t)_settings_metadata[i].default_value);
-            com_send_log(ComMessageType::LOG_INFO, "  Default UINT8: %s = %u", key, (uint8_t)_settings_metadata[i].default_value);
             break;
         case INT32:
             _preferences.putInt(key, _settings_metadata[i].default_value);
-            com_send_log(ComMessageType::LOG_INFO, "  Default INT32: %s = %d", key, _settings_metadata[i].default_value);
             break;
         case FLOAT:
             _preferences.putFloat(key, _settings_metadata[i].default_float_value);
-            com_send_log(ComMessageType::LOG_INFO, "  Default FLOAT: %s = %.3f", key, _settings_metadata[i].default_float_value);
             break;
         case STRING:
             if (_settings_metadata[i].string_default != nullptr)
             {
-                com_send_log(ComMessageType::LOG_INFO, "  Default STRING: %s = %s", key, _settings_metadata[i].string_default);
                 _preferences.putString(key, _settings_metadata[i].string_default);
             }
             else
             {
-                com_send_log(ComMessageType::LOG_INFO, "  Default STRING: %s = (empty)", key);
                 _preferences.putString(key, "");
             }
             break;
@@ -406,7 +401,7 @@ String SettingsManager::getSettingValueHumanReadable(const char *key)
             {
                 if (_settings_metadata[i].type == FLOAT)
                 {
-                    return String((int)(getSettingValue(key).toFloat() * PID_SCALE_FACTOR));
+                    return String((int)(getSettingValue(key).toFloat() * PidConfig::SCALE_FACTOR));
                 }
             }
             return getSettingValue(key);

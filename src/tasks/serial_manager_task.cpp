@@ -13,21 +13,13 @@
 #include "../config/terminal_config.h"
 #include "../config/serial_config.h"
 #include "../config/filter_config.h"
-#include "../config/com_manager_config.h" // Include for MSP_RESPONSE_DELAY_US and UNIQUE_ID_BUFFER_SIZE
-#include "../config/imu_config.h"         // Include for MSP_ACCEL_SCALING_FACTOR and MSP_GYRO_SCALING_FACTOR
-#include "../config/motor_config.h"       // Include for motor configuration details
-#include "../config/settings_config.h"    // Include for KEY_RC_CHANNEL_FMODE
-#include "../config/rx_config.h"          // Include for RC_CHANNEL_INDEX_OFFSET and channel ranges
-#include <cstring>                        // For strlen and memcpy
-#include <cstdio>                         // For snprintf
-
-// Betaflight-like constants for channel range conversion
-#define BF_CHANNEL_RANGE_MIN 900
-#define BF_CHANNEL_RANGE_MAX 2100
-
-#define BF_CHANNEL_VALUE_TO_STEP(channelValue) ((constrain(channelValue, BF_CHANNEL_RANGE_MIN, BF_CHANNEL_RANGE_MAX) - BF_CHANNEL_RANGE_MIN) / 25)
-
-
+#include "../config/com_manager_config.h"
+#include "../config/imu_config.h"
+#include "../config/motor_config.h"
+#include "../config/settings_config.h"
+#include "../config/rx_config.h"
+#include <cstring>
+#include <cstdio>
 
 // Helper function to convert quaternion to Euler angles (roll, pitch, yaw)
 // Angles are in degrees
@@ -53,28 +45,6 @@ void quaternionToEuler(float w, float x, float y, float z, float *roll, float *p
     float siny_cosp = 2 * (w * z + x * y);
     float cosy_cosp = 1 - 2 * (y * y + z * z);
     *yaw = atan2(siny_cosp, cosy_cosp) * RADIANS_TO_DEGREES;
-}
-
-// Helper function to write float to payload
-void SerialManagerTask::_write_float_to_payload(uint8_t *payload, int &index, float value)
-{
-    uint8_t *float_bytes = (uint8_t *)&value;
-    payload[index++] = float_bytes[0];
-    payload[index++] = float_bytes[1];
-    payload[index++] = float_bytes[2];
-    payload[index++] = float_bytes[3];
-}
-
-// Helper function to read float from payload
-float SerialManagerTask::_read_float_from_payload(const uint8_t *payload, int &index)
-{
-    float value;
-    uint8_t *float_bytes = (uint8_t *)&value;
-    float_bytes[0] = payload[index++];
-    float_bytes[1] = payload[index++];
-    float_bytes[2] = payload[index++];
-    float_bytes[3] = payload[index++];
-    return value;
 }
 
 SerialManagerTask::SerialManagerTask(const char *name, uint32_t stackSize, UBaseType_t priority, BaseType_t coreID, uint32_t task_delay_ms, Scheduler *scheduler, ImuTask *imu_task, RxTask *rx_task, MotorTask *motor_task, PidTask *pid_task, SettingsManager *settings_manager)
@@ -338,7 +308,7 @@ void SerialManagerTask::_handle_msp_sensor_status()
     // Report 1 (healthy) or 0 (unhealthy) for each sensor
     payload[i++] = _imu_task->getImuSensor().isSensorHealthy() ? 1 : 0; // ACC health
     payload[i++] = _imu_task->getImuSensor().isSensorHealthy() ? 1 : 0; // GYRO health (assuming same health for now)
-    payload[i++] = 0; // MAG health (MPU6050 does not have magnetometer)
+    payload[i++] = 0;                                                   // MAG health (MPU6050 does not have magnetometer)
 
     _send_msp_response(MSP_SENSOR_STATUS, payload, MSP_SENSOR_STATUS_PAYLOAD_SIZE);
 }
@@ -444,10 +414,10 @@ void SerialManagerTask::_handle_msp_status()
     int i = 0;
 
     // cycleTime
-    _write_int16_to_payload(payload, i, _pid_task->getCycleTime());
+    _write_to_payload<int16_t>(payload, i, _pid_task->getCycleTime());
 
     // i2c_errors_count
-    _write_int16_to_payload(payload, i, _imu_task->getImuSensor().getI2CErrorCount());
+    _write_to_payload<int16_t>(payload, i, _imu_task->getImuSensor().getI2CErrorCount());
 
     // sensor
     uint16_t sensors = 0;
@@ -457,7 +427,7 @@ void SerialManagerTask::_handle_msp_status()
         sensors |= (1 << 5); // GYRO (as per Betaflight's msp.c)
     }
     // No baro or mag in this hardware, so we don't set bits 2 (BARO) or 3 (MAG).
-    _write_int16_to_payload(payload, i, sensors);
+    _write_to_payload<int16_t>(payload, i, sensors);
 
     // flightModeFlags
     uint32_t flightModeFlags = 0;
@@ -609,11 +579,11 @@ void SerialManagerTask::_handle_msp_get_filter_config()
     uint8_t payload[MSP_FILTER_CONFIG_PAYLOAD_SIZE]; // 5 floats * 4 bytes each
     int i = 0;
 
-    _write_float_to_payload(payload, i, _settings_manager->getFloat(NVS_KEY_GYRO_LPF_HZ));
-    _write_float_to_payload(payload, i, _settings_manager->getFloat(NVS_KEY_NOTCH1_HZ));
-    _write_float_to_payload(payload, i, _settings_manager->getFloat(NVS_KEY_NOTCH1_Q));
-    _write_float_to_payload(payload, i, _settings_manager->getFloat(NVS_KEY_NOTCH2_HZ));
-    _write_float_to_payload(payload, i, _settings_manager->getFloat(NVS_KEY_NOTCH2_Q));
+    _write_to_payload<float>(payload, i, _settings_manager->getFloat(NVS_KEY_GYRO_LPF_HZ));
+    _write_to_payload<float>(payload, i, _settings_manager->getFloat(NVS_KEY_NOTCH1_HZ));
+    _write_to_payload<float>(payload, i, _settings_manager->getFloat(NVS_KEY_NOTCH1_Q));
+    _write_to_payload<float>(payload, i, _settings_manager->getFloat(NVS_KEY_NOTCH2_HZ));
+    _write_to_payload<float>(payload, i, _settings_manager->getFloat(NVS_KEY_NOTCH2_Q));
 
     _send_msp_response(MSP_GET_FILTER_CONFIG, payload, MSP_FILTER_CONFIG_PAYLOAD_SIZE);
 }
@@ -628,11 +598,11 @@ void SerialManagerTask::_handle_msp_set_filter_config()
     }
 
     int i = 0;
-    _settings_manager->setFloat(NVS_KEY_GYRO_LPF_HZ, _read_float_from_payload(_msp_payload_buffer, i));
-    _settings_manager->setFloat(NVS_KEY_NOTCH1_HZ, _read_float_from_payload(_msp_payload_buffer, i));
-    _settings_manager->setFloat(NVS_KEY_NOTCH1_Q, _read_float_from_payload(_msp_payload_buffer, i));
-    _settings_manager->setFloat(NVS_KEY_NOTCH2_HZ, _read_float_from_payload(_msp_payload_buffer, i));
-    _settings_manager->setFloat(NVS_KEY_NOTCH2_Q, _read_float_from_payload(_msp_payload_buffer, i));
+    _settings_manager->setFloat(NVS_KEY_GYRO_LPF_HZ, _read_from_payload<float>(_msp_payload_buffer, i));
+    _settings_manager->setFloat(NVS_KEY_NOTCH1_HZ, _read_from_payload<float>(_msp_payload_buffer, i));
+    _settings_manager->setFloat(NVS_KEY_NOTCH1_Q, _read_from_payload<float>(_msp_payload_buffer, i));
+    _settings_manager->setFloat(NVS_KEY_NOTCH2_HZ, _read_from_payload<float>(_msp_payload_buffer, i));
+    _settings_manager->setFloat(NVS_KEY_NOTCH2_Q, _read_from_payload<float>(_msp_payload_buffer, i));
 
     _send_msp_response(MSP_SET_FILTER_CONFIG, nullptr, 0); // Acknowledge receipt
 }
@@ -653,19 +623,19 @@ void SerialManagerTask::_handle_msp_pid_get()
     int i = 0;
 
     PidGains roll_gains = _pid_task->getGains(PidAxis::ROLL);
-    _write_int16_to_payload(payload, i, (int16_t)(roll_gains.p * PID_SCALE_FACTOR));
-    _write_int16_to_payload(payload, i, (int16_t)(roll_gains.i * PID_SCALE_FACTOR));
-    _write_int16_to_payload(payload, i, (int16_t)(roll_gains.d * PID_SCALE_FACTOR));
+    _write_to_payload<int16_t>(payload, i, (int16_t)(roll_gains.p * PidConfig::SCALE_FACTOR));
+    _write_to_payload<int16_t>(payload, i, (int16_t)(roll_gains.i * PidConfig::SCALE_FACTOR));
+    _write_to_payload<int16_t>(payload, i, (int16_t)(roll_gains.d * PidConfig::SCALE_FACTOR));
 
     PidGains pitch_gains = _pid_task->getGains(PidAxis::PITCH);
-    _write_int16_to_payload(payload, i, (int16_t)(pitch_gains.p * PID_SCALE_FACTOR));
-    _write_int16_to_payload(payload, i, (int16_t)(pitch_gains.i * PID_SCALE_FACTOR));
-    _write_int16_to_payload(payload, i, (int16_t)(pitch_gains.d * PID_SCALE_FACTOR));
+    _write_to_payload<int16_t>(payload, i, (int16_t)(pitch_gains.p * PidConfig::SCALE_FACTOR));
+    _write_to_payload<int16_t>(payload, i, (int16_t)(pitch_gains.i * PidConfig::SCALE_FACTOR));
+    _write_to_payload<int16_t>(payload, i, (int16_t)(pitch_gains.d * PidConfig::SCALE_FACTOR));
 
     PidGains yaw_gains = _pid_task->getGains(PidAxis::YAW);
-    _write_int16_to_payload(payload, i, (int16_t)(yaw_gains.p * PID_SCALE_FACTOR));
-    _write_int16_to_payload(payload, i, (int16_t)(yaw_gains.i * PID_SCALE_FACTOR));
-    _write_int16_to_payload(payload, i, (int16_t)(yaw_gains.d * PID_SCALE_FACTOR));
+    _write_to_payload<int16_t>(payload, i, (int16_t)(yaw_gains.p * PidConfig::SCALE_FACTOR));
+    _write_to_payload<int16_t>(payload, i, (int16_t)(yaw_gains.i * PidConfig::SCALE_FACTOR));
+    _write_to_payload<int16_t>(payload, i, (int16_t)(yaw_gains.d * PidConfig::SCALE_FACTOR));
 
     _send_msp_response(MSP_PID, payload, MSP_PID_PAYLOAD_SIZE); // CORRECTION: Changed from 9 to 18
 }
@@ -681,21 +651,21 @@ void SerialManagerTask::_handle_msp_pid_set()
 
     int i = 0;
     PidGains roll_gains = _pid_task->getGains(PidAxis::ROLL);
-    roll_gains.p = (float)_read_int16_from_payload(_msp_payload_buffer, i) / PID_SCALE_FACTOR;
-    roll_gains.i = (float)_read_int16_from_payload(_msp_payload_buffer, i) / PID_SCALE_FACTOR;
-    roll_gains.d = (float)_read_int16_from_payload(_msp_payload_buffer, i) / PID_SCALE_FACTOR;
+    roll_gains.p = (float)_read_from_payload<int16_t>(_msp_payload_buffer, i) / PidConfig::SCALE_FACTOR;
+    roll_gains.i = (float)_read_from_payload<int16_t>(_msp_payload_buffer, i) / PidConfig::SCALE_FACTOR;
+    roll_gains.d = (float)_read_from_payload<int16_t>(_msp_payload_buffer, i) / PidConfig::SCALE_FACTOR;
     _pid_task->setGains(PidAxis::ROLL, roll_gains);
 
     PidGains pitch_gains = _pid_task->getGains(PidAxis::PITCH);
-    pitch_gains.p = (float)_read_int16_from_payload(_msp_payload_buffer, i) / PID_SCALE_FACTOR;
-    pitch_gains.i = (float)_read_int16_from_payload(_msp_payload_buffer, i) / PID_SCALE_FACTOR;
-    pitch_gains.d = (float)_read_int16_from_payload(_msp_payload_buffer, i) / PID_SCALE_FACTOR;
+    pitch_gains.p = (float)_read_from_payload<int16_t>(_msp_payload_buffer, i) / PidConfig::SCALE_FACTOR;
+    pitch_gains.i = (float)_read_from_payload<int16_t>(_msp_payload_buffer, i) / PidConfig::SCALE_FACTOR;
+    pitch_gains.d = (float)_read_from_payload<int16_t>(_msp_payload_buffer, i) / PidConfig::SCALE_FACTOR;
     _pid_task->setGains(PidAxis::PITCH, pitch_gains);
 
     PidGains yaw_gains = _pid_task->getGains(PidAxis::YAW);
-    yaw_gains.p = (float)_read_int16_from_payload(_msp_payload_buffer, i) / PID_SCALE_FACTOR;
-    yaw_gains.i = (float)_read_int16_from_payload(_msp_payload_buffer, i) / PID_SCALE_FACTOR;
-    yaw_gains.d = (float)_read_int16_from_payload(_msp_payload_buffer, i) / PID_SCALE_FACTOR;
+    yaw_gains.p = (float)_read_from_payload<int16_t>(_msp_payload_buffer, i) / PidConfig::SCALE_FACTOR;
+    yaw_gains.i = (float)_read_from_payload<int16_t>(_msp_payload_buffer, i) / PidConfig::SCALE_FACTOR;
+    yaw_gains.d = (float)_read_from_payload<int16_t>(_msp_payload_buffer, i) / PidConfig::SCALE_FACTOR;
     _pid_task->setGains(PidAxis::YAW, yaw_gains);
 
     _send_msp_response(MSP_SET_PID, nullptr, 0); // Acknowledge receipt
@@ -727,17 +697,17 @@ void SerialManagerTask::_handle_msp_raw_imu()
     uint8_t payload[MSP_RAW_IMU_PAYLOAD_SIZE]; // 3x Accel, 3x Gyro, 3x Mag (int16_t = 2 bytes each)
     int i = 0;
 
-    _write_int16_to_payload(payload, i, accX);
-    _write_int16_to_payload(payload, i, accY);
-    _write_int16_to_payload(payload, i, accZ);
+    _write_to_payload<int16_t>(payload, i, accX);
+    _write_to_payload<int16_t>(payload, i, accY);
+    _write_to_payload<int16_t>(payload, i, accZ);
 
-    _write_int16_to_payload(payload, i, gyroX);
-    _write_int16_to_payload(payload, i, gyroY);
-    _write_int16_to_payload(payload, i, gyroZ);
+    _write_to_payload<int16_t>(payload, i, gyroX);
+    _write_to_payload<int16_t>(payload, i, gyroY);
+    _write_to_payload<int16_t>(payload, i, gyroZ);
 
-    _write_int16_to_payload(payload, i, magX);
-    _write_int16_to_payload(payload, i, magY);
-    _write_int16_to_payload(payload, i, magZ);
+    _write_to_payload<int16_t>(payload, i, magX);
+    _write_to_payload<int16_t>(payload, i, magY);
+    _write_to_payload<int16_t>(payload, i, magZ);
 
     _send_msp_response(MSP_RAW_IMU, payload, MSP_RAW_IMU_PAYLOAD_SIZE);
 }
@@ -761,9 +731,9 @@ void SerialManagerTask::_handle_msp_attitude()
     uint8_t payload[MSP_ATTITUDE_PAYLOAD_SIZE]; // 3x angles (int16_t = 2 bytes each)
     int i = 0;
 
-    _write_int16_to_payload(payload, i, msp_roll);
-    _write_int16_to_payload(payload, i, msp_pitch);
-    _write_int16_to_payload(payload, i, msp_yaw);
+    _write_to_payload<int16_t>(payload, i, msp_roll);
+    _write_to_payload<int16_t>(payload, i, msp_pitch);
+    _write_to_payload<int16_t>(payload, i, msp_yaw);
 
     _send_msp_response(MSP_ATTITUDE, payload, MSP_ATTITUDE_PAYLOAD_SIZE);
 }
@@ -782,25 +752,10 @@ void SerialManagerTask::_handle_msp_rc()
     for (int j = 0; j < PPM_MAX_CHANNELS; j++)
     {
         int16_t channel_value = _rx_task->getChannel(j); // getChannel should return 1500 for unmapped/inactive channels
-        _write_int16_to_payload(payload, i, channel_value);
+        _write_to_payload<int16_t>(payload, i, channel_value);
     }
 
     _send_msp_response(MSP_RC, payload, PPM_MAX_CHANNELS * 2);
-}
-
-void SerialManagerTask::_write_int16_to_payload(uint8_t *payload, int &index, int16_t value)
-{
-    payload[index++] = (value >> 0) & 0xFF;
-    payload[index++] = (value >> 8) & 0xFF;
-}
-
-// Helper function to read int16_t from payload (for MSP_SET_PID)
-int16_t SerialManagerTask::_read_int16_from_payload(const uint8_t *payload, int &index)
-{
-    int16_t value = 0;
-    value |= ((int16_t)payload[index++] << 0);
-    value |= ((int16_t)payload[index++] << 8);
-    return value;
 }
 
 void SerialManagerTask::_handle_msp_motor()
@@ -817,10 +772,11 @@ void SerialManagerTask::_handle_msp_motor()
     for (int j = 0; j < MSP_MAX_MOTORS; j++)
     {
         uint16_t motor_output = 0;
-        if (j < NUM_MOTORS) {
+        if (j < NUM_MOTORS)
+        {
             motor_output = _motor_task->getMotorOutput(j);
         }
-        _write_int16_to_payload(payload, i, motor_output);
+        _write_to_payload<int16_t>(payload, i, motor_output);
     }
 
     _send_msp_response(MSP_MOTOR, payload, MSP_MAX_MOTORS * 2);
@@ -871,7 +827,7 @@ void SerialManagerTask::_handle_msp_box_set()
     }
 
     int i = 0;
-    uint16_t mode_id = _read_int16_from_payload(_msp_payload_buffer, i);
+    uint16_t mode_id = _read_from_payload<uint16_t>(_msp_payload_buffer, i);
 
     if (mode_id == MSP_BOX_STABILIZED_ID)
     {
@@ -912,7 +868,7 @@ void SerialManagerTask::_handle_msp_boxnames()
 {
     // Build a semicolon-separated string of box names
     String box_names_str = "";
-    
+
     // ARM
     box_names_str += "ARM;";
     // ANGLE (Stabilized)
@@ -921,7 +877,8 @@ void SerialManagerTask::_handle_msp_boxnames()
     box_names_str += "ACRO;";
 
     // We need to ensure the string is null-terminated and fits within MSP_MAX_PAYLOAD_SIZE
-    if (box_names_str.length() >= MSP_MAX_PAYLOAD_SIZE) {
+    if (box_names_str.length() >= MSP_MAX_PAYLOAD_SIZE)
+    {
         // Handle error or truncate if necessary
         // For now, send empty response if too long
         _send_msp_response(MSP_BOXNAMES, nullptr, 0);
@@ -942,46 +899,46 @@ void SerialManagerTask::_handle_msp_mode_ranges()
     uint8_t payload[MSP_MODE_RANGES_PAYLOAD_SIZE];
     int i = 0;
 
-    // Mode 1: Permanent ID:0 Aux Channel:1 Start Step:2 End Step:6 (ARM)
-    payload[i++] = BF_PERMANENT_ID_ARM; // permanentId for ARM (0)
-    payload[i++] = 1; // Aux Channel: 1
-    payload[i++] = 2; // Start Step: 2
-    payload[i++] = 6; // End Step: 6
+    // Mode 1: ARM
+    payload[i++] = BF_PERMANENT_ID_ARM;
+    payload[i++] = MSP_MODE_RANGE_ARM_AUX_CHANNEL;
+    payload[i++] = MSP_MODE_RANGE_ARM_START_STEP;
+    payload[i++] = MSP_MODE_RANGE_ARM_END_STEP;
 
-    // Mode 2: Permanent ID:27 Aux Channel:7 Start Step:13 End Step:19 (FAILSAFE)
-    payload[i++] = BF_PERMANENT_ID_FAILSAFE; // permanentId for FAILSAFE (27)
-    payload[i++] = 7; // Aux Channel: 7
-    payload[i++] = 13; // Start Step: 13
-    payload[i++] = 19; // End Step: 19
+    // Mode 2: FAILSAFE
+    payload[i++] = BF_PERMANENT_ID_FAILSAFE;
+    payload[i++] = MSP_MODE_RANGE_FAILSAFE_AUX_CHANNEL;
+    payload[i++] = MSP_MODE_RANGE_FAILSAFE_START_STEP;
+    payload[i++] = MSP_MODE_RANGE_FAILSAFE_END_STEP;
 
-    // Mode 3: Permanent ID:20 Aux Channel:26 Start Step:30 End Step:31 (TELEMETRY)
-    payload[i++] = BF_PERMANENT_ID_TELEMETRY; // permanentId for TELEMETRY (20)
-    payload[i++] = 26; // Aux Channel: 26
-    payload[i++] = 30; // Start Step: 30
-    payload[i++] = 31; // End Step: 31
+    // Mode 3: TELEMETRY
+    payload[i++] = BF_PERMANENT_ID_TELEMETRY;
+    payload[i++] = MSP_MODE_RANGE_TELEMETRY_AUX_CHANNEL;
+    payload[i++] = MSP_MODE_RANGE_TELEMETRY_START_STEP;
+    payload[i++] = MSP_MODE_RANGE_TELEMETRY_END_STEP;
 
-    // Mode 4: Permanent ID:35 Aux Channel:36 Start Step:45 End Step:49 (FLIP OVER AFTER CRASH)
-    payload[i++] = BF_PERMANENT_ID_FLIPOVERAFTERCRASH; // permanentId for FLIPOVERAFTERCRASH (35)
-    payload[i++] = 36; // Aux Channel: 36
-    payload[i++] = 45; // Start Step: 45
-    payload[i++] = 49; // End Step: 49
+    // Mode 4: FLIP OVER AFTER CRASH
+    payload[i++] = BF_PERMANENT_ID_FLIPOVERAFTERCRASH;
+    payload[i++] = MSP_MODE_RANGE_FLIPOVERAFTERCRASH_AUX_CHANNEL;
+    payload[i++] = MSP_MODE_RANGE_FLIPOVERAFTERCRASH_START_STEP;
+    payload[i++] = MSP_MODE_RANGE_FLIPOVERAFTERCRASH_END_STEP;
 
     _send_msp_response(MSP_MODE_RANGES, payload, MSP_MODE_RANGES_PAYLOAD_SIZE);
 }
 
 void SerialManagerTask::_handle_msp_motor_config()
 {
-    uint8_t payload[6]; // Python script only expects 6 bytes
+    uint8_t payload[MSP_MOTOR_CONFIG_PAYLOAD_SIZE];
     int i = 0;
 
     // 1. minthrottle (U16) - In Flight32, this corresponds to MOTOR_MIN_THROTTLE_RAW
-    _write_int16_to_payload(payload, i, MOTOR_MIN_THROTTLE_RAW);
+    _write_to_payload<uint16_t>(payload, i, MOTOR_MIN_THROTTLE_RAW);
 
     // 2. maxthrottle (U16) - In Flight32, this corresponds to MOTOR_MAX_THROTTLE_RAW
-    _write_int16_to_payload(payload, i, MOTOR_MAX_THROTTLE_RAW);
+    _write_to_payload<uint16_t>(payload, i, MOTOR_MAX_THROTTLE_RAW);
 
     // 3. mincommand (U16) - In Flight32, this is also MOTOR_MIN_THROTTLE_RAW for simplicity
-    _write_int16_to_payload(payload, i, MOTOR_MIN_THROTTLE_RAW);
+    _write_to_payload<uint16_t>(payload, i, MOTOR_MIN_THROTTLE_RAW);
 
-    _send_msp_response(MSP_MOTOR_CONFIG, payload, 6);
+    _send_msp_response(MSP_MOTOR_CONFIG, payload, MSP_MOTOR_CONFIG_PAYLOAD_SIZE);
 }

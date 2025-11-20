@@ -11,7 +11,7 @@
 
 // --- Settings Manager ---
 constexpr const char *SETTINGS_NAMESPACE = "flight32";
-constexpr uint16_t CURRENT_SCHEMA_VERSION = 2;
+constexpr uint16_t CURRENT_SCHEMA_VERSION = 3;
 constexpr const char *KEY_SCHEMA_VERSION = "schema_ver";
 constexpr uint16_t DEFAULT_SCHEMA_VERSION = 0;
 constexpr uint8_t DEFAULT_GYRO_RANGE = 2; // Corresponds to 1000_DPS in GYRO_RANGE_STRINGS
