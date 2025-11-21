@@ -881,8 +881,10 @@ void Terminal::_handle_rx_value_all(String &args)
     {
         int channel_index_0_based = _settings_manager->getSettingValue(mapping.key).toInt();
         int channel_index_1_based = channel_index_0_based + RC_CHANNEL_INDEX_OFFSET;
+        
         int16_t value = _rx_task->getChannel(channel_index_0_based);
-        String desc_str = String(mapping.name) + " (CH" + String(channel_index_1_based) + ")";
+        String desc_str = String(mapping.name) + " (CH" + String(channel_index_0_based) + ")";
+        
         com_send_log(ComMessageType::TERMINAL_OUTPUT, "  %-*s %d", max_desc_len, desc_str.c_str(), value);
         vTaskDelay(1); // Added delay for verbosity
     }
@@ -891,7 +893,7 @@ void Terminal::_handle_rx_value_all(String &args)
 
 void Terminal::_handle_rx_channel_mapping(String &args)
 {
-    int space_index = args.indexOf(' ');
+    int space_index = args.indexOf('=');
     if (space_index == -1)
     {
         com_send_log(ComMessageType::LOG_ERROR, "Usage: set rx.channel.<name> <1-based_index>");
@@ -900,7 +902,7 @@ void Terminal::_handle_rx_channel_mapping(String &args)
 
     String channel_name_arg = args.substring(0, space_index);
     String index_str = args.substring(space_index + 1);
-    int channel_index_1_based = index_str.toInt();
+    int channel_index_1_based = index_str.toInt() + RC_CHANNEL_INDEX_OFFSET;
 
     if (channel_index_1_based < TERMINAL_MIN_CHANNEL_INDEX || channel_index_1_based > TERMINAL_MAX_CHANNEL_INDEX)
     {
@@ -926,9 +928,9 @@ void Terminal::_handle_rx_channel_mapping(String &args)
         return;
     }
 
-    if (_settings_manager->setSettingValue(key, String(channel_index_0_based)))
+    if (_settings_manager->setSettingValue(key, String(channel_index_1_based)))
     {
-        com_send_log(ComMessageType::LOG_INFO, "RX channel '%s' mapped to physical channel %d. Reboot to apply changes.", channel_name_arg.c_str(), channel_index_1_based);
+        com_send_log(ComMessageType::LOG_INFO, "RX channel '%s' mapped to physical channel %d. Reboot to apply changes.", channel_name_arg.c_str(), channel_index_0_based);
     }
     else
     {

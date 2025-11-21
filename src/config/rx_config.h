@@ -70,12 +70,12 @@ constexpr int16_t RC_CHANNEL_FMODE_STABILIZED_THRESHOLD = 1800;
 
 // --- Default RC Channel Mappings (0-based index) ---
 constexpr uint8_t DEFAULT_RC_CHANNEL_ROLL = 1;
-constexpr uint8_t DEFAULT_RC_CHANNEL_PITCH = 0;
-constexpr uint8_t DEFAULT_RC_CHANNEL_THRO = 2;
-constexpr uint8_t DEFAULT_RC_CHANNEL_YAW = 3;
-constexpr uint8_t DEFAULT_RC_CHANNEL_ARM = 4;
-constexpr uint8_t DEFAULT_RC_CHANNEL_FMODE = 5;
-constexpr uint8_t DEFAULT_RC_CHANNEL_AUX1 = 6;
-constexpr uint8_t DEFAULT_RC_CHANNEL_AUX2 = 7;
-constexpr uint8_t DEFAULT_RC_CHANNEL_AUX3 = 8;
-constexpr uint8_t DEFAULT_RC_CHANNEL_AUX4 = 9;
+constexpr uint8_t DEFAULT_RC_CHANNEL_PITCH = 2;
+constexpr uint8_t DEFAULT_RC_CHANNEL_THRO = 3;
+constexpr uint8_t DEFAULT_RC_CHANNEL_YAW = 4;
+constexpr uint8_t DEFAULT_RC_CHANNEL_ARM = 5;
+constexpr uint8_t DEFAULT_RC_CHANNEL_FMODE = 6;
+constexpr uint8_t DEFAULT_RC_CHANNEL_AUX1 = 7;
+constexpr uint8_t DEFAULT_RC_CHANNEL_AUX2 = 8;
+constexpr uint8_t DEFAULT_RC_CHANNEL_AUX3 = 9;
+constexpr uint8_t DEFAULT_RC_CHANNEL_AUX4 = 10;

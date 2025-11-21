@@ -70,15 +70,12 @@ void SerialManagerTask::run()
 
         // Clear any partial input from the terminal buffer
         _terminal->clearInputBuffer();
-        // com_send_log(ComMessageType::LOG_INFO, "MSP timeout. Switched back to Terminal mode."); // Re-commented
-        // _terminal->showPrompt(); // Removed explicit call after timeout
     }
 
     // If in terminal mode and should quit, signal scheduler
     if (_current_mode == ComSerialMode::TERMINAL && _terminal->shouldQuit())
     {
         _should_show_prompt = false; // Prevent prompt when quitting
-        // _scheduler->stop(); // Scheduler does not have a stop method. Implement system halt if needed.
     }
 }
 

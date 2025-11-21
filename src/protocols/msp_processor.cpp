@@ -162,12 +162,12 @@ void MspProcessor::process_api_version_command(uint8_t protocol_version)
 void MspProcessor::process_fc_variant_command(uint8_t protocol_version)
 {
     // Example: "FLTX" for Flight32, X is a specific variant if needed
-    // For now, send "FLT3"
-    uint8_t payload[5]; // "FLT3" + null terminator if needed, or just 4 chars
+    // For now, send "BTFL" to match Betaflight's expected response
+    uint8_t payload[5]; // "BTFL" + null terminator if needed, or just 4 chars
     payload[0] = 'F';
     payload[1] = 'L';
-    payload[2] = 'T';
-    payload[3] = '3';
+    payload[2] = '3';
+    payload[3] = '2';
     send_msp_response(MSP_FC_VARIANT, payload, 4, protocol_version);
 }
 
@@ -182,20 +182,42 @@ void MspProcessor::process_fc_version_command(uint8_t protocol_version)
 
 void MspProcessor::process_board_info_command(uint8_t protocol_version)
 {
-    // Example: NATIVE / ESP32
-    // For now, send a placeholder or actual board info if available
-    uint8_t payload[8]; // "ESP32   "
-    memcpy(payload, "ESP32   ", 8);
-    send_msp_response(MSP_BOARD_INFO, payload, 8, protocol_version);
+    uint8_t payload[12]; // FLT3 (4 bytes) + HW_REV (2 bytes) + BOARD_TYPE (1 byte) + TARGET_CAP (4 bytes) + Board Name (null terminator)
+    // Board Identifier (4 characters)
+    payload[0] = 'F';
+    payload[1] = 'L';
+    payload[2] = '3';
+    payload[3] = '2';
+
+    // Hardware Revision (2 bytes, placeholder 0)
+    payload[4] = 0;
+    payload[5] = 0;
+
+    // Board Type (1 byte, placeholder 0)
+    payload[6] = 0;
+
+    // Target Capabilities (4 bytes, placeholder 0)
+    payload[7] = 0;
+    payload[8] = 0;
+    payload[9] = 0;
+    payload[10] = 0;
+
+    // Board Name (null-terminated empty string - 1 byte for null terminator)
+    payload[11] = '\0';
+
+    send_msp_response(MSP_BOARD_INFO, payload, sizeof(payload), protocol_version);
 }
 
 void MspProcessor::process_build_info_command(uint8_t protocol_version)
 {
-    // Example: BUILD_DATE BUILD_TIME
-    // For now, send a placeholder
-    uint8_t payload[16]; // "DATE TIME       "
-    memcpy(payload, "NOV 21 2025 12:00", 16);
-    send_msp_response(MSP_BUILD_INFO, payload, 16, protocol_version);
+    // Format: "MMM DD YYYY HH:MM:SSFLT3"
+    // Example: "Nov 21 2025 12:00:00FLT3"
+    char build_info[25]; // 24 characters + null terminator
+    snprintf(build_info, sizeof(build_info), "%s %sFLT3", __DATE__, __TIME__);
+    uint8_t payload_size = strlen(build_info);
+    uint8_t payload[payload_size];
+    memcpy(payload, build_info, payload_size);
+    send_msp_response(MSP_BUILD_INFO, payload, payload_size, protocol_version);
 }
 
 void MspProcessor::process_reboot_command(uint8_t protocol_version)
@@ -302,38 +324,39 @@ void MspProcessor::process_set_setting_command(const uint8_t *payload, uint8_t p
 void MspProcessor::process_pid_command(uint8_t protocol_version)
 {
     uint8_t payload[MSP_PID_PAYLOAD_SIZE];
+    uint16_t p_gain, i_gain, d_gain;
+    uint8_t current_byte_idx = 0;
 
     // Roll PID
-    payload[0] = static_cast<uint8_t>(_settingsManager->getFloat(KEY_PID_ROLL_P) * PidConfig::SCALE_FACTOR);
-    payload[1] = static_cast<uint8_t>(_settingsManager->getFloat(KEY_PID_ROLL_I) * PidConfig::SCALE_FACTOR);
-    payload[2] = static_cast<uint8_t>(_settingsManager->getFloat(KEY_PID_ROLL_D) * PidConfig::SCALE_FACTOR);
+    payload[current_byte_idx++] = p_gain & 0xFF;
+    payload[current_byte_idx++] = (p_gain >> 8) & 0xFF;
+    payload[current_byte_idx++] = i_gain & 0xFF;
+    payload[current_byte_idx++] = (i_gain >> 8) & 0xFF;
+    payload[current_byte_idx++] = d_gain & 0xFF;
+    payload[current_byte_idx++] = (d_gain >> 8) & 0xFF;
 
     // Pitch PID
-    payload[3] = static_cast<uint8_t>(_settingsManager->getFloat(KEY_PID_PITCH_P) * PidConfig::SCALE_FACTOR);
-    payload[4] = static_cast<uint8_t>(_settingsManager->getFloat(KEY_PID_PITCH_I) * PidConfig::SCALE_FACTOR);
-    payload[5] = static_cast<uint8_t>(_settingsManager->getFloat(KEY_PID_PITCH_D) * PidConfig::SCALE_FACTOR);
+    p_gain = static_cast<uint16_t>(_settingsManager->getFloat(KEY_PID_PITCH_P) * PidConfig::SCALE_FACTOR);
+    i_gain = static_cast<uint16_t>(_settingsManager->getFloat(KEY_PID_PITCH_I) * PidConfig::SCALE_FACTOR);
+    d_gain = static_cast<uint16_t>(_settingsManager->getFloat(KEY_PID_PITCH_D) * PidConfig::SCALE_FACTOR);
+    payload[current_byte_idx++] = p_gain & 0xFF;
+    payload[current_byte_idx++] = (p_gain >> 8) & 0xFF;
+    payload[current_byte_idx++] = i_gain & 0xFF;
+    payload[current_byte_idx++] = (i_gain >> 8) & 0xFF;
+    payload[current_byte_idx++] = d_gain & 0xFF;
+    payload[current_byte_idx++] = (d_gain >> 8) & 0xFF;
 
     // Yaw PID
-    payload[6] = static_cast<uint8_t>(_settingsManager->getFloat(KEY_PID_YAW_P) * PidConfig::SCALE_FACTOR);
-    payload[7] = static_cast<uint8_t>(_settingsManager->getFloat(KEY_PID_YAW_I) * PidConfig::SCALE_FACTOR);
-    payload[8] = static_cast<uint8_t>(_settingsManager->getFloat(KEY_PID_YAW_D) * PidConfig::SCALE_FACTOR);
+    p_gain = static_cast<uint16_t>(_settingsManager->getFloat(KEY_PID_YAW_P) * PidConfig::SCALE_FACTOR);
+    i_gain = static_cast<uint16_t>(_settingsManager->getFloat(KEY_PID_YAW_I) * PidConfig::SCALE_FACTOR);
+    d_gain = static_cast<uint16_t>(_settingsManager->getFloat(KEY_PID_YAW_D) * PidConfig::SCALE_FACTOR);
+    payload[current_byte_idx++] = p_gain & 0xFF;
+    payload[current_byte_idx++] = (p_gain >> 8) & 0xFF;
+    payload[current_byte_idx++] = i_gain & 0xFF;
+    payload[current_byte_idx++] = (i_gain >> 8) & 0xFF;
+    payload[current_byte_idx++] = d_gain & 0xFF;
+    payload[current_byte_idx++] = (d_gain >> 8) & 0xFF;
 
-    // Rates (Roll, Pitch, Yaw) - These are float values representing rates, but MSP expects a single byte.
-    // Assuming a simple mapping or placeholder for now, as direct settings for these aren't explicit in settings_manager.h.
-    // For now, setting to 0 or a sensible default.
-    payload[9] = 0;  // Roll Rate
-    payload[10] = 0; // Pitch Rate
-    payload[11] = 0; // Yaw Rate
-
-    // RC Expo & Throt Mid/Expo (placeholders for now)
-    payload[12] = 0; // RC_EXPO
-    payload[13] = 0; // RC_RATE
-    payload[14] = 0; // THROTTLE_MID
-    payload[15] = 0; // THROTTLE_EXPO
-
-    // TPA (Throttle PID Attenuation) & D_MIN
-    payload[16] = 0; // TPA_RATE
-    payload[17] = 0; // TPA_BREAKPOINT
     send_msp_response(MSP_PID, payload, sizeof(payload), protocol_version);
 }
 
@@ -348,17 +371,16 @@ void MspProcessor::process_status_command(uint8_t protocol_version)
     payload[2] = i2cErrors & 0xFF;
     payload[3] = (i2cErrors >> 8) & 0xFF;
 
-    // Sensors present (bitmask)
-    // Assuming IMU is always present for now
-    payload[4] = 1; // 1 = ACC, 2 = BARO, 4 = MAG, 8 = SONAR, 16 = GPS, 32 = OPTIC_FLOW
-                    // Add other sensors to the bitmask if present
+    // Sensors present (bitmask): 1 = ACC, 2 = BARO, 4 = MAG, 8 = SONAR, 16 = GPS, 32 = OPTIC_FLOW
+    // Assuming only ACC (MPU6050/6500 provides acc and gyro) is present for now.
+    payload[4] = 1; // ACCELEROMETER
 
-    uint32_t flight_mode_flags = 0; // Placeholder for actual flight mode flags
-    if (_flightController->getSystemState() == SystemState::ARMED)
+    uint32_t flight_mode_flags = 0;
+    if (_pidTask->getFlightMode() == FlightMode::ANGLE || _pidTask->getFlightMode() == FlightMode::STABILIZED)
     {
-        flight_mode_flags |= (1 << BF_PERMANENT_ID_ANGLE); // ANGLE mode
+        flight_mode_flags |= (1 << BF_PERMANENT_ID_ANGLE); // ANGLE mode (ID 1)
     }
-    // Add other flight modes as needed
+    // Add other flight modes (like ACRO, if it has a permanent ID) as needed.
 
     payload[5] = flight_mode_flags & 0xFF;
     payload[6] = (flight_mode_flags >> 8) & 0xFF;
@@ -472,21 +494,22 @@ void MspProcessor::process_box_command(uint8_t protocol_version)
     uint8_t payload[MSP_BOX_PAYLOAD_SIZE];
     uint32_t box_flags = 0;
 
-    // Populate box_flags based on active flight modes / system states
     if (_flightController->getSystemState() == SystemState::ARMED)
     {
         box_flags |= (1 << BF_PERMANENT_ID_ARM);
     }
-    if (_pidTask->getFlightMode() == FlightMode::ANGLE)
+
+    FlightMode currentFlightMode = _pidTask->getFlightMode();
+    if (currentFlightMode == FlightMode::ANGLE || currentFlightMode == FlightMode::STABILIZED)
     {
         box_flags |= (1 << BF_PERMANENT_ID_ANGLE);
     }
-    else if (_pidTask->getFlightMode() == FlightMode::STABILIZED)
+    else if (currentFlightMode == FlightMode::ACRO)
     {
-        // Assuming STABILIZED is mapped to ANGLE for now as per Betaflight's interpretation
-        box_flags |= (1 << BF_PERMANENT_ID_ANGLE);
+        box_flags |= (1 << BF_PERMANENT_ID_ACRO);
     }
-    // Add other modes if implemented (e.g., FAILSAFE, TELEMETRY, FLIPOVERAFTERCRASH)
+    // All other BF_PERMANENT_ID_ constants (HORIZON, HEADFREE, BEEPER, etc.) will have their flags as 0
+    // unless explicitly implemented and active in the Flight32 firmware.
 
     payload[0] = box_flags & 0xFF;
     payload[1] = (box_flags >> 8) & 0xFF;
@@ -505,10 +528,20 @@ void MspProcessor::process_boxnames_command(uint8_t protocol_version)
     String boxnames_str = "";
     boxnames_str += String(BF_PERMANENT_ID_ARM) + ";ARM;";
     boxnames_str += String(BF_PERMANENT_ID_ANGLE) + ";ANGLE;";
+    boxnames_str += String(BF_PERMANENT_ID_HORIZON) + ";HORIZON;";
+    boxnames_str += String(BF_PERMANENT_ID_HEADFREE) + ";HEADFREE;";
+    boxnames_str += String(BF_PERMANENT_ID_HEADADJ) + ";HEADADJ;";
     boxnames_str += String(BF_PERMANENT_ID_FAILSAFE) + ";FAILSAFE;";
+    boxnames_str += String(BF_PERMANENT_ID_BEEPER) + ";BEEPER;";
+    boxnames_str += String(BF_PERMANENT_ID_OSDDISABLESW) + ";OSD DISABLE SW;";
     boxnames_str += String(BF_PERMANENT_ID_TELEMETRY) + ";TELEMETRY;";
-    boxnames_str += String(BF_PERMANENT_ID_FLIPOVERAFTERCRASH) + ";FLIPOVERAFTERCRASH;";
-    // Add any other custom boxes you might have
+    boxnames_str += String(BF_PERMANENT_ID_BLACKBOX) + ";BLACKBOX;";
+    boxnames_str += String(BF_PERMANENT_ID_FPVANGLEMIX) + ";FPV ANGLE MIX;";
+    boxnames_str += String(BF_PERMANENT_ID_BLACKBOXERASE) + ";BLACKBOX ERASE (>30s);";
+    boxnames_str += String(BF_PERMANENT_ID_FLIPOVERAFTERCRASH) + ";FLIP OVER AFTER CRASH;";
+    boxnames_str += String(BF_PERMANENT_ID_PREARM) + ";PREARM;";
+    boxnames_str += String(BF_PERMANENT_ID_PARALYZE) + ";PARALYZE;";
+    boxnames_str += String(BF_PERMANENT_ID_LAUNCHCONTROL) + ";LAUNCH CONTROL;";
 
     // The payload needs to be a byte array
     uint16_t payload_size = boxnames_str.length();
@@ -533,9 +566,9 @@ void MspProcessor::process_mode_ranges_command(uint8_t protocol_version)
 
     // ANGLE
     payload[current_byte++] = BF_PERMANENT_ID_ANGLE;
-    payload[current_byte++] = MSP_MODE_RANGE_ARM_AUX_CHANNEL; // Often same channel as ARM for mode switching
-    payload[current_byte++] = MSP_MODE_RANGE_ARM_START_STEP;  // Placeholder, adjust as needed
-    payload[current_byte++] = MSP_MODE_RANGE_ARM_END_STEP;    // Placeholder, adjust as needed
+    payload[current_byte++] = MSP_MODE_RANGE_ANGLE_AUX_CHANNEL;
+    payload[current_byte++] = MSP_MODE_RANGE_ANGLE_START_STEP;
+    payload[current_byte++] = MSP_MODE_RANGE_ANGLE_END_STEP;
 
     // FAILSAFE
     payload[current_byte++] = BF_PERMANENT_ID_FAILSAFE;
@@ -579,7 +612,6 @@ void MspProcessor::process_motor_config_command(uint8_t protocol_version)
 void MspProcessor::process_uid_command(uint8_t protocol_version)
 {
     uint8_t payload[MSP_UID_PAYLOAD_SIZE];
-
 
     uint64_t chip_id = ESP.getEfuseMac(); // 64-bit MAC address
 
@@ -630,30 +662,33 @@ void MspProcessor::process_set_pid_command(const uint8_t *payload, uint8_t paylo
         return;
     }
 
+    uint16_t p_gain, i_gain, d_gain;
+    uint8_t current_byte_idx = 0;
+
     // Roll PID
-    _settingsManager->setFloat(KEY_PID_ROLL_P, static_cast<float>(payload[0]) / PidConfig::SCALE_FACTOR);
-    _settingsManager->setFloat(KEY_PID_ROLL_I, static_cast<float>(payload[1]) / PidConfig::SCALE_FACTOR);
-    _settingsManager->setFloat(KEY_PID_ROLL_D, static_cast<float>(payload[2]) / PidConfig::SCALE_FACTOR);
+    p_gain = payload[current_byte_idx++] | (payload[current_byte_idx++] << 8);
+    i_gain = payload[current_byte_idx++] | (payload[current_byte_idx++] << 8);
+    d_gain = payload[current_byte_idx++] | (payload[current_byte_idx++] << 8);
+    _settingsManager->setFloat(KEY_PID_ROLL_P, static_cast<float>(p_gain) / PidConfig::SCALE_FACTOR);
+    _settingsManager->setFloat(KEY_PID_ROLL_I, static_cast<float>(i_gain) / PidConfig::SCALE_FACTOR);
+    _settingsManager->setFloat(KEY_PID_ROLL_D, static_cast<float>(d_gain) / PidConfig::SCALE_FACTOR);
 
     // Pitch PID
-    _settingsManager->setFloat(KEY_PID_PITCH_P, static_cast<float>(payload[3]) / PidConfig::SCALE_FACTOR);
-    _settingsManager->setFloat(KEY_PID_PITCH_I, static_cast<float>(payload[4]) / PidConfig::SCALE_FACTOR);
-    _settingsManager->setFloat(KEY_PID_PITCH_D, static_cast<float>(payload[5]) / PidConfig::SCALE_FACTOR);
+    p_gain = payload[current_byte_idx++] | (payload[current_byte_idx++] << 8);
+    i_gain = payload[current_byte_idx++] | (payload[current_byte_idx++] << 8);
+    d_gain = payload[current_byte_idx++] | (payload[current_byte_idx++] << 8);
+    _settingsManager->setFloat(KEY_PID_PITCH_P, static_cast<float>(p_gain) / PidConfig::SCALE_FACTOR);
+    _settingsManager->setFloat(KEY_PID_PITCH_I, static_cast<float>(i_gain) / PidConfig::SCALE_FACTOR);
+    _settingsManager->setFloat(KEY_PID_PITCH_D, static_cast<float>(d_gain) / PidConfig::SCALE_FACTOR);
 
     // Yaw PID
-    _settingsManager->setFloat(KEY_PID_YAW_P, static_cast<float>(payload[6]) / PidConfig::SCALE_FACTOR);
-    _settingsManager->setFloat(KEY_PID_YAW_I, static_cast<float>(payload[7]) / PidConfig::SCALE_FACTOR);
-    _settingsManager->setFloat(KEY_PID_YAW_D, static_cast<float>(payload[8]) / PidConfig::SCALE_FACTOR);
+    p_gain = payload[current_byte_idx++] | (payload[current_byte_idx++] << 8);
+    i_gain = payload[current_byte_idx++] | (payload[current_byte_idx++] << 8);
+    d_gain = payload[current_byte_idx++] | (payload[current_byte_idx++] << 8);
+    _settingsManager->setFloat(KEY_PID_YAW_P, static_cast<float>(p_gain) / PidConfig::SCALE_FACTOR);
+    _settingsManager->setFloat(KEY_PID_YAW_I, static_cast<float>(i_gain) / PidConfig::SCALE_FACTOR);
+    _settingsManager->setFloat(KEY_PID_YAW_D, static_cast<float>(d_gain) / PidConfig::SCALE_FACTOR);
 
-    // Rates (Roll, Pitch, Yaw) - Assuming payload[9-11] are rates, and need to be stored as floats.
-    // For now, these are placeholders and need to be mapped to actual settings if they exist.
-    // If they were meant to be PID 'Rate' settings, then corresponding keys would be needed in settings_config.h.
-    // For now, we'll map them to dummy float settings or ignore if not directly configurable.
-    // settingsManager.setFloat("rc.roll_rate", static_cast<float>(payload[9]));
-    // settingsManager.setFloat("rc.pitch_rate", static_cast<float>(payload[10]));
-    // settingsManager.setFloat("rc.yaw_rate", static_cast<float>(payload[11]));
-
-    // Update settings if needed, save will happen on EEPROM_WRITE
     send_msp_response(MSP_SET_PID, nullptr, 0, protocol_version); // Acknowledge
 }
 
@@ -693,11 +728,11 @@ void MspProcessor::process_set_filter_config_command(const uint8_t *payload, uin
     memcpy(&notch2_hz, payload + 12, 4);
     memcpy(&notch2_q, payload + 16, 4);
 
-_settingsManager->setFloat(NVS_KEY_GYRO_LPF_HZ, gyro_lpf_hz);
-_settingsManager->setFloat(NVS_KEY_NOTCH1_HZ, notch1_hz);
-_settingsManager->setFloat(NVS_KEY_NOTCH1_Q, notch1_q);
-_settingsManager->setFloat(NVS_KEY_NOTCH2_HZ, notch2_hz);
-_settingsManager->setFloat(NVS_KEY_NOTCH2_Q, notch2_q);
+    _settingsManager->setFloat(NVS_KEY_GYRO_LPF_HZ, gyro_lpf_hz);
+    _settingsManager->setFloat(NVS_KEY_NOTCH1_HZ, notch1_hz);
+    _settingsManager->setFloat(NVS_KEY_NOTCH1_Q, notch1_q);
+    _settingsManager->setFloat(NVS_KEY_NOTCH2_HZ, notch2_hz);
+    _settingsManager->setFloat(NVS_KEY_NOTCH2_Q, notch2_q);
 
     // Apply immediately. Note: Filter::set_low_pass_filter_factor expects a single factor,
     // not individual cutoff frequencies. This needs careful consideration.

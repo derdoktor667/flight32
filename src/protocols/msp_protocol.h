@@ -20,7 +20,7 @@ static constexpr uint8_t MSP_MIN_PAYLOAD_SIZE = 3;        // Minimum payload siz
 
 // --- MSP Constants ---
 static constexpr uint8_t MSP_MAX_PAYLOAD_SIZE = 128;
-static constexpr uint8_t MSP_PID_PAYLOAD_SIZE = 18;
+static constexpr uint8_t MSP_PID_PAYLOAD_SIZE = 18;   // 9x PID gains (uint16_t = 2 bytes each)
 
 // --- MSP Payload Sizes ---
 static constexpr uint8_t MSP_API_VERSION_PAYLOAD_SIZE = 3;
@@ -30,10 +30,10 @@ static constexpr uint8_t MSP_MEM_STATS_PAYLOAD_SIZE = 4;
 static constexpr uint8_t MSP_RAW_IMU_PAYLOAD_SIZE = 18; // 3x Accel, 3x Gyro, 3x Mag (int16_t = 2 bytes each)
 static constexpr uint8_t MSP_ATTITUDE_PAYLOAD_SIZE = 6; // 3x angles (int16_t = 2 bytes each)
 static constexpr uint8_t MSP_RC_PAYLOAD_SIZE = 36;      // 18x RC channels (int16_t = 2 bytes each)
-static constexpr uint8_t MSP_MOTOR_PAYLOAD_SIZE = 8;    // 4x motor outputs (int16_t = 2 bytes each)
+static constexpr uint8_t MSP_MOTOR_PAYLOAD_SIZE = 16;   // 8x motor outputs (int16_t = 2 bytes each)
 static constexpr uint8_t MSP_MAX_MOTORS = 8;            // Max number of motors expected by MSP_MOTOR command
 static constexpr uint8_t MSP_BOXNAMES_PAYLOAD_SIZE = 0;
-static constexpr uint8_t MSP_MODE_RANGES_PAYLOAD_SIZE = 16;   // 4 mode ranges * 4 bytes each
+static constexpr uint8_t MSP_MODE_RANGES_PAYLOAD_SIZE = 20;   // 5 mode ranges * 4 bytes each
 static constexpr uint8_t MSP_MOTOR_CONFIG_PAYLOAD_SIZE = 6;   // minthrottle (U16) + maxthrottle (U16) + mincommand (U16) - Python script only expects 6 bytes
 static constexpr uint8_t MSP_FILTER_CONFIG_PAYLOAD_SIZE = 20; // 5 floats * 4 bytes each
 static constexpr uint8_t MSP_BOX_PAYLOAD_SIZE = 4;            // 4-byte bitmask for active modes
@@ -43,27 +43,42 @@ static constexpr uint8_t MSP_STATUS_PAYLOAD_SIZE = 11;        // cycletime, i2c_
 // --- Betaflight Permanent IDs for Modes ---
 static constexpr uint8_t BF_PERMANENT_ID_ANGLE = 1;
 static constexpr uint8_t BF_PERMANENT_ID_ARM = 0;                 // From Betaflight msp_box.c
-static constexpr uint8_t BF_PERMANENT_ID_FAILSAFE = 27;           // From Betaflight msp_box.c
+static constexpr uint8_t BF_PERMANENT_ID_HORIZON = 2;
+static constexpr uint8_t BF_PERMANENT_ID_HEADFREE = 3;
+static constexpr uint8_t BF_PERMANENT_ID_HEADADJ = 4;
+static constexpr uint8_t BF_PERMANENT_ID_BEEPER = 8;
+static constexpr uint8_t BF_PERMANENT_ID_OSDDISABLESW = 15;
+static constexpr uint8_t BF_PERMANENT_ID_BLACKBOX = 18;
 static constexpr uint8_t BF_PERMANENT_ID_TELEMETRY = 20;          // From Betaflight msp_box.c
+static constexpr uint8_t BF_PERMANENT_ID_FPVANGLEMIX = 24;
+static constexpr uint8_t BF_PERMANENT_ID_BLACKBOXERASE = 25;
+static constexpr uint8_t BF_PERMANENT_ID_FAILSAFE = 27;           // From Betaflight msp_box.c
 static constexpr uint8_t BF_PERMANENT_ID_FLIPOVERAFTERCRASH = 35; // From Betaflight msp_box.c
+static constexpr uint8_t BF_PERMANENT_ID_LAUNCHCONTROL = 37;
+static constexpr uint8_t BF_PERMANENT_ID_PREARM = 13;
+static constexpr uint8_t BF_PERMANENT_ID_PARALYZE = 14;
 static constexpr uint8_t BF_PERMANENT_ID_ACRO = 53;               // Placeholder for Acro, as Betaflight doesn't have explicit Acro box
 
 // --- MSP Mode Range Constants ---
 static constexpr uint8_t MSP_MODE_RANGE_ARM_AUX_CHANNEL = 1;
-static constexpr uint8_t MSP_MODE_RANGE_ARM_START_STEP = 2;
-static constexpr uint8_t MSP_MODE_RANGE_ARM_END_STEP = 6;
+static constexpr uint8_t MSP_MODE_RANGE_ARM_START_STEP = 5;  // Corresponds to ~1020 PWM
+static constexpr uint8_t MSP_MODE_RANGE_ARM_END_STEP = 15;   // Corresponds to ~1060 PWM
+
+static constexpr uint8_t MSP_MODE_RANGE_ANGLE_AUX_CHANNEL = 1; // Often same channel as ARM for mode switching
+static constexpr uint8_t MSP_MODE_RANGE_ANGLE_START_STEP = 5; // Corresponds to ~1020 PWM
+static constexpr uint8_t MSP_MODE_RANGE_ANGLE_END_STEP = 15;  // Corresponds to ~1060 PWM
 
 static constexpr uint8_t MSP_MODE_RANGE_FAILSAFE_AUX_CHANNEL = 7;
-static constexpr uint8_t MSP_MODE_RANGE_FAILSAFE_START_STEP = 13;
-static constexpr uint8_t MSP_MODE_RANGE_FAILSAFE_END_STEP = 19;
+static constexpr uint8_t MSP_MODE_RANGE_FAILSAFE_START_STEP = 33; // Corresponds to ~1130 PWM
+static constexpr uint8_t MSP_MODE_RANGE_FAILSAFE_END_STEP = 48;   // Corresponds to ~1190 PWM
 
 static constexpr uint8_t MSP_MODE_RANGE_TELEMETRY_AUX_CHANNEL = 26;
-static constexpr uint8_t MSP_MODE_RANGE_TELEMETRY_START_STEP = 30;
-static constexpr uint8_t MSP_MODE_RANGE_TELEMETRY_END_STEP = 31;
+static constexpr uint8_t MSP_MODE_RANGE_TELEMETRY_START_STEP = 77; // Corresponds to ~1300 PWM
+static constexpr uint8_t MSP_MODE_RANGE_TELEMETRY_END_STEP = 79;   // Corresponds to ~1310 PWM
 
 static constexpr uint8_t MSP_MODE_RANGE_FLIPOVERAFTERCRASH_AUX_CHANNEL = 36;
-static constexpr uint8_t MSP_MODE_RANGE_FLIPOVERAFTERCRASH_START_STEP = 45;
-static constexpr uint8_t MSP_MODE_RANGE_FLIPOVERAFTERCRASH_END_STEP = 49;
+static constexpr uint8_t MSP_MODE_RANGE_FLIPOVERAFTERCRASH_START_STEP = 115; // Corresponds to ~1450 PWM
+static constexpr uint8_t MSP_MODE_RANGE_FLIPOVERAFTERCRASH_END_STEP = 125;   // Corresponds to ~1490 PWM
 
 // --- MSP Flight Mode IDs ---
 static constexpr uint8_t MSP_BOX_ACRO_ID = 0;
