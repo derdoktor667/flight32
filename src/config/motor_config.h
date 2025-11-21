@@ -43,7 +43,7 @@ constexpr uint8_t MOTOR_INDEX_RL = 2; // Rear Left
 constexpr uint8_t MOTOR_INDEX_FL = 3; // Front Left
 
 // --- Motor Protocol Settings ---
-constexpr const char *KEY_MOTOR_PROTOCOL = "motor.protocol";
+constexpr const char *NVS_KEY_MOTOR_PROTOCOL = "motor.proto";
 constexpr uint8_t DEFAULT_MOTOR_PROTOCOL = static_cast<uint8_t>(DshotProtocolIndex::DSHOT300); // Corresponds to DSHOT300
 extern const char *const DSHOT_PROTOCOL_STRINGS[];
 extern const uint8_t NUM_DSHOT_PROTOCOLS;

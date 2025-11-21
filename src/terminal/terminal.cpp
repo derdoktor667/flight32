@@ -20,16 +20,16 @@
 #include "../utils/math_constants.h"
 
 const ChannelMapping Terminal::_channel_map[] = {
-    {"roll", KEY_RC_CHANNEL_ROLL},
-    {"pitch", KEY_RC_CHANNEL_PITCH},
-    {"throttle", KEY_RC_CHANNEL_THRO},
-    {"yaw", KEY_RC_CHANNEL_YAW},
-    {"arm", KEY_RC_CHANNEL_ARM},
-    {"fmode", KEY_RC_CHANNEL_FMODE},
-    {"aux1", KEY_RC_CHANNEL_AUX1},
-    {"aux2", KEY_RC_CHANNEL_AUX2},
-    {"aux3", KEY_RC_CHANNEL_AUX3},
-    {"aux4", KEY_RC_CHANNEL_AUX4}};
+    {"roll", NVS_KEY_RC_ROLL},
+    {"pitch", NVS_KEY_RC_PITCH},
+    {"throttle", NVS_KEY_RC_THRO},
+    {"yaw", NVS_KEY_RC_YAW},
+    {"arm", NVS_KEY_RC_ARM},
+    {"fmode", NVS_KEY_RC_FMODE},
+    {"aux1", NVS_KEY_RC_AUX1},
+    {"aux2", NVS_KEY_RC_AUX2},
+    {"aux3", NVS_KEY_RC_AUX3},
+    {"aux4", NVS_KEY_RC_AUX4}};
 constexpr int Terminal::_num_channel_mappings = sizeof(Terminal::_channel_map) / sizeof(ChannelMapping);
 
 // Command Handlers for Filter Settings
@@ -475,7 +475,7 @@ void Terminal::_handle_help(String &args)
         for (int i = 0; i < _num_categories; ++i)
         {
             com_send_log(ComMessageType::TERMINAL_OUTPUT, "  %-*s %s", max_category_prefix_len, _category_info[i].prefix, _category_info[i].description);
-            vTaskDelay(1); // Added delay for verbosity
+            vTaskDelay(pdMS_TO_TICKS(TASK_YIELD_DELAY_MS)); // Added delay for verbosity
         }
 
         com_send_log(ComMessageType::TERMINAL_OUTPUT, core_separator_str.c_str());
@@ -534,7 +534,7 @@ void Terminal::_handle_help(String &args)
             if (_commands[i].category == requested_category)
             {
                 com_send_log(ComMessageType::TERMINAL_OUTPUT, "  %-*s %s", max_command_name_len, _commands[i].name, _commands[i].help);
-                vTaskDelay(1); // Added delay for verbosity
+                vTaskDelay(pdMS_TO_TICKS(TASK_YIELD_DELAY_MS)); // Added delay for verbosity
             }
         }
         com_send_log(ComMessageType::TERMINAL_OUTPUT, separator_str.c_str());
@@ -650,7 +650,7 @@ void Terminal::_handle_reboot(String &args)
     com_send_log(ComMessageType::TERMINAL_OUTPUT, "");
     com_send_log(ComMessageType::TERMINAL_OUTPUT, "Rebooting...");
 
-    delayMicroseconds(TWO_SECOND_MICROSECONDS);
+    delayMicroseconds(REBOOT_DELAY_MICROSECONDS);
 
     com_send_log(ComMessageType::TERMINAL_OUTPUT, "");
     com_send_log(ComMessageType::TERMINAL_OUTPUT, "");
@@ -713,11 +713,11 @@ void Terminal::_handle_imu_lpf_bandwidth(String &args)
     if (args.length() == 0)
     {
         // Get current LPF bandwidth
-        String current_lpf_bandwidth_index_str = _settings_manager->getSettingValue(KEY_IMU_LPF_BANDWIDTH);
-        String current_lpf_bandwidth_str = _settings_manager->getSettingValueHumanReadable(KEY_IMU_LPF_BANDWIDTH);
+        String current_lpf_bandwidth_index_str = _settings_manager->getSettingValue(NVS_KEY_IMU_LPF_BANDWIDTH);
+        String current_lpf_bandwidth_str = _settings_manager->getSettingValueHumanReadable(NVS_KEY_IMU_LPF_BANDWIDTH);
         com_send_log(ComMessageType::TERMINAL_OUTPUT, "Current IMU LPF Bandwidth: %s (Index: %s)", current_lpf_bandwidth_str.c_str(), current_lpf_bandwidth_index_str.c_str());
         com_send_log(ComMessageType::TERMINAL_OUTPUT, "Available options:");
-        String options_str = _settings_manager->getSettingOptionsHumanReadable(KEY_IMU_LPF_BANDWIDTH);
+        String options_str = _settings_manager->getSettingOptionsHumanReadable(NVS_KEY_IMU_LPF_BANDWIDTH);
         int start_index = 0;
         int end_index = options_str.indexOf(',');
         while (end_index != -1)
@@ -735,9 +735,9 @@ void Terminal::_handle_imu_lpf_bandwidth(String &args)
     else
     {
         // Set LPF bandwidth
-        if (_settings_manager->setSettingValue(KEY_IMU_LPF_BANDWIDTH, args))
+        if (_settings_manager->setSettingValue(NVS_KEY_IMU_LPF_BANDWIDTH, args))
         {
-            com_send_log(ComMessageType::LOG_INFO, "IMU LPF Bandwidth set to %s. Reboot to apply changes.", _settings_manager->getSettingValueHumanReadable(KEY_IMU_LPF_BANDWIDTH).c_str());
+            com_send_log(ComMessageType::LOG_INFO, "IMU LPF Bandwidth set to %s. Reboot to apply changes.", _settings_manager->getSettingValueHumanReadable(NVS_KEY_IMU_LPF_BANDWIDTH).c_str());
         }
         else
         {
@@ -759,7 +759,7 @@ void Terminal::_handle_rx_data(String &args)
     int max_ch_len = 0;
     for (int i = 0; i < TERMINAL_RX_DATA_DISPLAY_CHANNELS; ++i)
     {
-        String ch_str = "CH" + String(i + RC_CHANNEL_INDEX_OFFSET);
+        String ch_str = "CH" + String(i + RC_CHANNEL_DISPLAY_OFFSET);
         if (ch_str.length() > max_ch_len)
         {
             max_ch_len = ch_str.length();
@@ -773,11 +773,11 @@ void Terminal::_handle_rx_data(String &args)
 
     for (int i = 0; i < TERMINAL_RX_DATA_DISPLAY_CHANNELS; ++i)
     {
-        String ch_str = "CH" + String(i + RC_CHANNEL_INDEX_OFFSET);
+        String ch_str = "CH" + String(i + RC_CHANNEL_DISPLAY_OFFSET);
         com_send_log(ComMessageType::TERMINAL_OUTPUT, "  %-*s %d", max_ch_len, ch_str.c_str(), _rx_task->getChannel(i));
 
         // Added delay for verbosity
-        vTaskDelay(1);
+        vTaskDelay(pdMS_TO_TICKS(TASK_YIELD_DELAY_MS));
     }
     com_send_log(ComMessageType::TERMINAL_OUTPUT, separator_str.c_str());
 }
@@ -790,7 +790,7 @@ void Terminal::_handle_rx_status(String &args)
         return;
     }
 
-    String current_protocol = _settings_manager->getSettingValueHumanReadable(KEY_RC_PROTOCOL_TYPE);
+    String current_protocol = _settings_manager->getSettingValueHumanReadable(NVS_KEY_RC_PROTOCOL_TYPE);
     com_send_log(ComMessageType::TERMINAL_OUTPUT, "RX Status: Enabled %s", current_protocol.c_str());
 }
 
@@ -798,15 +798,15 @@ void Terminal::_handle_rx_protocol(String &args)
 {
     if (args.length() == 0)
     {
-        String current_protocol = _settings_manager->getSettingValueHumanReadable(KEY_RC_PROTOCOL_TYPE);
+        String current_protocol = _settings_manager->getSettingValueHumanReadable(NVS_KEY_RC_PROTOCOL_TYPE);
         com_send_log(ComMessageType::TERMINAL_OUTPUT, "Current RC Protocol: %s", current_protocol.c_str());
         com_send_log(ComMessageType::TERMINAL_OUTPUT, "Available protocols: IBUS, PPM");
     }
     else
     {
-        if (_settings_manager->setSettingValue(KEY_RC_PROTOCOL_TYPE, args))
+        if (_settings_manager->setSettingValue(NVS_KEY_RC_PROTOCOL_TYPE, args))
         {
-            com_send_log(ComMessageType::LOG_INFO, "RC Protocol set to %s. Reboot to apply changes.", _settings_manager->getSettingValueHumanReadable(KEY_RC_PROTOCOL_TYPE).c_str());
+            com_send_log(ComMessageType::LOG_INFO, "RC Protocol set to %s. Reboot to apply changes.", _settings_manager->getSettingValueHumanReadable(NVS_KEY_RC_PROTOCOL_TYPE).c_str());
         }
         else
         {
@@ -824,7 +824,7 @@ void Terminal::_handle_rx_value_single(String &args)
     }
 
     int last_dot_index = args.lastIndexOf('.');
-    String channel_name = args.substring(last_dot_index + RC_CHANNEL_INDEX_OFFSET);
+    String channel_name = args.substring(last_dot_index + RC_CHANNEL_DISPLAY_OFFSET);
 
     const char *key = nullptr;
     for (const auto &mapping : _channel_map)
@@ -847,7 +847,7 @@ void Terminal::_handle_rx_value_single(String &args)
 
     const int fixed_desc_width = TERMINAL_RX_SINGLE_DESC_WIDTH;
 
-    String desc_str = "RX " + channel_name + " (CH" + String(channel_index + RC_CHANNEL_INDEX_OFFSET) + ")";
+    String desc_str = "RX " + channel_name + " (CH" + String(channel_index + RC_CHANNEL_DISPLAY_OFFSET) + ")";
     com_send_log(ComMessageType::TERMINAL_OUTPUT, "  %-*s %d", fixed_desc_width, desc_str.c_str(), value);
 }
 
@@ -864,7 +864,7 @@ void Terminal::_handle_rx_value_all(String &args)
     int max_desc_len = 0;
     for (const auto &mapping : _channel_map)
     {
-        int channel_index_1_based = _settings_manager->getSettingValue(mapping.key).toInt() + RC_CHANNEL_INDEX_OFFSET;
+        int channel_index_1_based = _settings_manager->getSettingValue(mapping.key).toInt() + RC_CHANNEL_DISPLAY_OFFSET;
         String desc_str = String(mapping.name) + " (CH" + String(channel_index_1_based) + ")";
         if (desc_str.length() > max_desc_len)
         {
@@ -880,13 +880,13 @@ void Terminal::_handle_rx_value_all(String &args)
     for (const auto &mapping : _channel_map)
     {
         int channel_index_0_based = _settings_manager->getSettingValue(mapping.key).toInt();
-        int channel_index_1_based = channel_index_0_based + RC_CHANNEL_INDEX_OFFSET;
+        int channel_index_1_based = channel_index_0_based + RC_CHANNEL_DISPLAY_OFFSET;
         
         int16_t value = _rx_task->getChannel(channel_index_0_based);
         String desc_str = String(mapping.name) + " (CH" + String(channel_index_0_based) + ")";
         
         com_send_log(ComMessageType::TERMINAL_OUTPUT, "  %-*s %d", max_desc_len, desc_str.c_str(), value);
-        vTaskDelay(1); // Added delay for verbosity
+        vTaskDelay(pdMS_TO_TICKS(TASK_YIELD_DELAY_MS)); // Added delay for verbosity
     }
     com_send_log(ComMessageType::TERMINAL_OUTPUT, separator_str.c_str());
 }
@@ -902,7 +902,7 @@ void Terminal::_handle_rx_channel_mapping(String &args)
 
     String channel_name_arg = args.substring(0, space_index);
     String index_str = args.substring(space_index + 1);
-    int channel_index_1_based = index_str.toInt() + RC_CHANNEL_INDEX_OFFSET;
+    int channel_index_1_based = index_str.toInt() + RC_CHANNEL_DISPLAY_OFFSET;
 
     if (channel_index_1_based < TERMINAL_MIN_CHANNEL_INDEX || channel_index_1_based > TERMINAL_MAX_CHANNEL_INDEX)
     {
@@ -910,7 +910,7 @@ void Terminal::_handle_rx_channel_mapping(String &args)
         return;
     }
 
-    int channel_index_0_based = channel_index_1_based - RC_CHANNEL_INDEX_OFFSET;
+    int channel_index_0_based = channel_index_1_based - RC_CHANNEL_DISPLAY_OFFSET;
 
     const char *key = nullptr;
     for (const auto &mapping : _channel_map)

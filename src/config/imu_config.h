@@ -30,7 +30,7 @@ enum class ImuType : uint8_t
     NONE = 255
 };
 
-constexpr const char *KEY_IMU_TYPE = "imu.type";
+constexpr const char *NVS_KEY_IMU_TYPE = "imu.type";
 constexpr ImuType DEFAULT_IMU_TYPE = ImuType::MPU6050;
 
 enum class ImuGyroRangeIndex : uint8_t
@@ -61,8 +61,8 @@ enum class ImuLpfBandwidthIndex : uint8_t
 };
 
 // --- IMU LPF Bandwidth Configuration ---
-constexpr const char *KEY_IMU_LPF_BANDWIDTH = "imu.lpf_bw";
-constexpr const char *KEY_IMU_DMP_ENABLED = "imu.dmp_enabled";
+constexpr const char *NVS_KEY_IMU_LPF_BANDWIDTH = "imu.lpf_bw";
+constexpr const char *NVS_KEY_IMU_DMP_EN = "imu.dmp_en";
 constexpr uint8_t DEFAULT_IMU_LPF_BANDWIDTH = static_cast<uint8_t>(ImuLpfBandwidthIndex::LPF_256HZ_N_0MS); // Corresponds to LPF_256HZ_N_0MS
 extern const char *const IMU_LPF_BANDWIDTH_STRINGS[];
 extern const uint8_t NUM_IMU_LPF_BANDWIDTHS;

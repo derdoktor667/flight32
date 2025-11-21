@@ -39,3 +39,4 @@ constexpr uint8_t TERMINAL_RX_DATA_DISPLAY_CHANNELS = 10;
 constexpr uint8_t TERMINAL_RX_SINGLE_DESC_WIDTH = 25; // "RX Flight Mode (CH14)" is 22 chars, plus buffer
 constexpr uint8_t SETTING_NAME_DISPLAY_WIDTH = 20;
 constexpr uint16_t TASK_STATUS_OUTPUT_BUFFER_SIZE = 256;
+constexpr uint32_t REBOOT_DELAY_MICROSECONDS = 2000000;

@@ -16,7 +16,7 @@ constexpr float RADIANS_TO_DEGREES = 180.0f / M_PI;
 // Time-related constants
 constexpr float MS_PER_SECOND = 1000.0f;
 constexpr uint64_t ONE_SECOND_MICROSECONDS = 1000000ULL;
-constexpr uint64_t TWO_SECOND_MICROSECONDS = 2000000ULL;
+
 constexpr float MS_TO_SECONDS_FACTOR = 0.001f;
 
 // Angle-related constants

@@ -91,9 +91,9 @@ void MspProcessor::send_msp_response(uint8_t command, const uint8_t *payload, ui
 {
     if (protocol_version == 1)
     { // MSP V1 Response
-        Serial.write('$');
-        Serial.write('M');
-        Serial.write('>'); // Direction byte for response (from FC to GUI)
+        Serial.write(MSP_SYNC_BYTE);
+        Serial.write(MSP_V1_IDENTIFIER);
+        Serial.write(MSP_DIRECTION_FC);
 
         uint8_t crc = 0;
         Serial.write((uint8_t)payload_size); // V1 size is 1 byte
@@ -121,9 +121,9 @@ void MspProcessor::send_msp_response(uint8_t command, const uint8_t *payload, ui
         crc = _crc8_dvb_s2(crc, (uint8_t)(payload_size & 0xFF));
         crc = _crc8_dvb_s2(crc, (uint8_t)((payload_size >> 8) & 0xFF));
 
-        Serial.write('$');
-        Serial.write('X'); // MSP V2 Protocol identifier
-        Serial.write('>'); // Direction byte for response (from FC to GUI)
+        Serial.write(MSP_SYNC_BYTE);
+        Serial.write(MSP_V2_IDENTIFIER); // MSP V2 Protocol identifier
+        Serial.write(MSP_DIRECTION_FC);   // Direction byte for response (from FC to GUI)
         Serial.write(flag);
         Serial.write((uint8_t)(command & 0xFF));             // Command ID Low Byte
         Serial.write((uint8_t)((command >> 8) & 0xFF));      // Command ID High Byte
@@ -163,11 +163,8 @@ void MspProcessor::process_fc_variant_command(uint8_t protocol_version)
 {
     // Example: "FLTX" for Flight32, X is a specific variant if needed
     // For now, send "BTFL" to match Betaflight's expected response
-    uint8_t payload[5]; // "BTFL" + null terminator if needed, or just 4 chars
-    payload[0] = 'F';
-    payload[1] = 'L';
-    payload[2] = '3';
-    payload[3] = '2';
+    uint8_t payload[4]; // "FLT32" is 5 chars, but MSP_FC_VARIANT expects 4.
+    memcpy(payload, MSP_FC_VARIANT_NAME, 4);
     send_msp_response(MSP_FC_VARIANT, payload, 4, protocol_version);
 }
 
@@ -184,10 +181,7 @@ void MspProcessor::process_board_info_command(uint8_t protocol_version)
 {
     uint8_t payload[12]; // FLT3 (4 bytes) + HW_REV (2 bytes) + BOARD_TYPE (1 byte) + TARGET_CAP (4 bytes) + Board Name (null terminator)
     // Board Identifier (4 characters)
-    payload[0] = 'F';
-    payload[1] = 'L';
-    payload[2] = '3';
-    payload[3] = '2';
+    memcpy(payload, MSP_FC_VARIANT_NAME, 4);
 
     // Hardware Revision (2 bytes, placeholder 0)
     payload[4] = 0;
@@ -212,8 +206,8 @@ void MspProcessor::process_build_info_command(uint8_t protocol_version)
 {
     // Format: "MMM DD YYYY HH:MM:SSFLT3"
     // Example: "Nov 21 2025 12:00:00FLT3"
-    char build_info[25]; // 24 characters + null terminator
-    snprintf(build_info, sizeof(build_info), "%s %sFLT3", __DATE__, __TIME__);
+    char build_info[27]; // 26 characters + null terminator
+    snprintf(build_info, sizeof(build_info), "%s %s%s", __DATE__, __TIME__, MSP_FC_VARIANT_NAME);
     uint8_t payload_size = strlen(build_info);
     uint8_t payload[payload_size];
     memcpy(payload, build_info, payload_size);
@@ -328,6 +322,9 @@ void MspProcessor::process_pid_command(uint8_t protocol_version)
     uint8_t current_byte_idx = 0;
 
     // Roll PID
+    p_gain = static_cast<uint16_t>(_settingsManager->getFloat(NVS_KEY_PID_R_P) * PidConfig::SCALE_FACTOR);
+    i_gain = static_cast<uint16_t>(_settingsManager->getFloat(NVS_KEY_PID_R_I) * PidConfig::SCALE_FACTOR);
+    d_gain = static_cast<uint16_t>(_settingsManager->getFloat(NVS_KEY_PID_R_D) * PidConfig::SCALE_FACTOR);
     payload[current_byte_idx++] = p_gain & 0xFF;
     payload[current_byte_idx++] = (p_gain >> 8) & 0xFF;
     payload[current_byte_idx++] = i_gain & 0xFF;
@@ -336,9 +333,9 @@ void MspProcessor::process_pid_command(uint8_t protocol_version)
     payload[current_byte_idx++] = (d_gain >> 8) & 0xFF;
 
     // Pitch PID
-    p_gain = static_cast<uint16_t>(_settingsManager->getFloat(KEY_PID_PITCH_P) * PidConfig::SCALE_FACTOR);
-    i_gain = static_cast<uint16_t>(_settingsManager->getFloat(KEY_PID_PITCH_I) * PidConfig::SCALE_FACTOR);
-    d_gain = static_cast<uint16_t>(_settingsManager->getFloat(KEY_PID_PITCH_D) * PidConfig::SCALE_FACTOR);
+    p_gain = static_cast<uint16_t>(_settingsManager->getFloat(NVS_KEY_PID_P_P) * PidConfig::SCALE_FACTOR);
+    i_gain = static_cast<uint16_t>(_settingsManager->getFloat(NVS_KEY_PID_P_I) * PidConfig::SCALE_FACTOR);
+    d_gain = static_cast<uint16_t>(_settingsManager->getFloat(NVS_KEY_PID_P_D) * PidConfig::SCALE_FACTOR);
     payload[current_byte_idx++] = p_gain & 0xFF;
     payload[current_byte_idx++] = (p_gain >> 8) & 0xFF;
     payload[current_byte_idx++] = i_gain & 0xFF;
@@ -347,9 +344,9 @@ void MspProcessor::process_pid_command(uint8_t protocol_version)
     payload[current_byte_idx++] = (d_gain >> 8) & 0xFF;
 
     // Yaw PID
-    p_gain = static_cast<uint16_t>(_settingsManager->getFloat(KEY_PID_YAW_P) * PidConfig::SCALE_FACTOR);
-    i_gain = static_cast<uint16_t>(_settingsManager->getFloat(KEY_PID_YAW_I) * PidConfig::SCALE_FACTOR);
-    d_gain = static_cast<uint16_t>(_settingsManager->getFloat(KEY_PID_YAW_D) * PidConfig::SCALE_FACTOR);
+    p_gain = static_cast<uint16_t>(_settingsManager->getFloat(NVS_KEY_PID_Y_P) * PidConfig::SCALE_FACTOR);
+    i_gain = static_cast<uint16_t>(_settingsManager->getFloat(NVS_KEY_PID_Y_I) * PidConfig::SCALE_FACTOR);
+    d_gain = static_cast<uint16_t>(_settingsManager->getFloat(NVS_KEY_PID_Y_D) * PidConfig::SCALE_FACTOR);
     payload[current_byte_idx++] = p_gain & 0xFF;
     payload[current_byte_idx++] = (p_gain >> 8) & 0xFF;
     payload[current_byte_idx++] = i_gain & 0xFF;
@@ -462,8 +459,8 @@ void MspProcessor::process_rc_command(uint8_t protocol_version)
     // Fill remaining channels with 1500 (neutral) if NUM_RC_CHANNELS < 18
     for (uint8_t i = PPM_MAX_CHANNELS; i < 18; i++)
     {
-        payload[i * 2] = 0xDC;     // 1500 & 0xFF
-        payload[i * 2 + 1] = 0x05; // 1500 >> 8 & 0xFF
+        payload[i * 2] = MSP_RC_NEUTRAL_CHANNEL_VALUE & 0xFF;     // 1500 & 0xFF
+        payload[i * 2 + 1] = (MSP_RC_NEUTRAL_CHANNEL_VALUE >> 8) & 0xFF; // 1500 >> 8 & 0xFF
     }
     send_msp_response(MSP_RC, payload, sizeof(payload), protocol_version);
 }
@@ -595,9 +592,9 @@ void MspProcessor::process_motor_config_command(uint8_t protocol_version)
 {
     uint8_t payload[MSP_MOTOR_CONFIG_PAYLOAD_SIZE];
 
-    uint16_t min_throttle = static_cast<uint16_t>(_settingsManager->getFloat(KEY_MOTOR_MIN_THROTTLE));
-    uint16_t max_throttle = static_cast<uint16_t>(_settingsManager->getFloat(KEY_MOTOR_MAX_THROTTLE));
-    uint16_t min_command = static_cast<uint16_t>(_settingsManager->getFloat(KEY_MOTOR_MIN_COMMAND));
+    uint16_t min_throttle = static_cast<uint16_t>(_settingsManager->getFloat(NVS_KEY_MOTOR_MIN_THROTTLE));
+    uint16_t max_throttle = static_cast<uint16_t>(_settingsManager->getFloat(NVS_KEY_MOTOR_MAX_THROTTLE));
+    uint16_t min_command = static_cast<uint16_t>(_settingsManager->getFloat(NVS_KEY_MOTOR_MIN_COMMAND));
 
     payload[0] = min_throttle & 0xFF;
     payload[1] = (min_throttle >> 8) & 0xFF;
@@ -669,25 +666,25 @@ void MspProcessor::process_set_pid_command(const uint8_t *payload, uint8_t paylo
     p_gain = payload[current_byte_idx++] | (payload[current_byte_idx++] << 8);
     i_gain = payload[current_byte_idx++] | (payload[current_byte_idx++] << 8);
     d_gain = payload[current_byte_idx++] | (payload[current_byte_idx++] << 8);
-    _settingsManager->setFloat(KEY_PID_ROLL_P, static_cast<float>(p_gain) / PidConfig::SCALE_FACTOR);
-    _settingsManager->setFloat(KEY_PID_ROLL_I, static_cast<float>(i_gain) / PidConfig::SCALE_FACTOR);
-    _settingsManager->setFloat(KEY_PID_ROLL_D, static_cast<float>(d_gain) / PidConfig::SCALE_FACTOR);
+    _settingsManager->setFloat(NVS_KEY_PID_R_P, static_cast<float>(p_gain) / PidConfig::SCALE_FACTOR);
+    _settingsManager->setFloat(NVS_KEY_PID_R_I, static_cast<float>(i_gain) / PidConfig::SCALE_FACTOR);
+    _settingsManager->setFloat(NVS_KEY_PID_R_D, static_cast<float>(d_gain) / PidConfig::SCALE_FACTOR);
 
     // Pitch PID
     p_gain = payload[current_byte_idx++] | (payload[current_byte_idx++] << 8);
     i_gain = payload[current_byte_idx++] | (payload[current_byte_idx++] << 8);
     d_gain = payload[current_byte_idx++] | (payload[current_byte_idx++] << 8);
-    _settingsManager->setFloat(KEY_PID_PITCH_P, static_cast<float>(p_gain) / PidConfig::SCALE_FACTOR);
-    _settingsManager->setFloat(KEY_PID_PITCH_I, static_cast<float>(i_gain) / PidConfig::SCALE_FACTOR);
-    _settingsManager->setFloat(KEY_PID_PITCH_D, static_cast<float>(d_gain) / PidConfig::SCALE_FACTOR);
+    _settingsManager->setFloat(NVS_KEY_PID_P_P, static_cast<float>(p_gain) / PidConfig::SCALE_FACTOR);
+    _settingsManager->setFloat(NVS_KEY_PID_P_I, static_cast<float>(i_gain) / PidConfig::SCALE_FACTOR);
+    _settingsManager->setFloat(NVS_KEY_PID_P_D, static_cast<float>(d_gain) / PidConfig::SCALE_FACTOR);
 
     // Yaw PID
     p_gain = payload[current_byte_idx++] | (payload[current_byte_idx++] << 8);
     i_gain = payload[current_byte_idx++] | (payload[current_byte_idx++] << 8);
     d_gain = payload[current_byte_idx++] | (payload[current_byte_idx++] << 8);
-    _settingsManager->setFloat(KEY_PID_YAW_P, static_cast<float>(p_gain) / PidConfig::SCALE_FACTOR);
-    _settingsManager->setFloat(KEY_PID_YAW_I, static_cast<float>(i_gain) / PidConfig::SCALE_FACTOR);
-    _settingsManager->setFloat(KEY_PID_YAW_D, static_cast<float>(d_gain) / PidConfig::SCALE_FACTOR);
+    _settingsManager->setFloat(NVS_KEY_PID_Y_P, static_cast<float>(p_gain) / PidConfig::SCALE_FACTOR);
+    _settingsManager->setFloat(NVS_KEY_PID_Y_I, static_cast<float>(i_gain) / PidConfig::SCALE_FACTOR);
+    _settingsManager->setFloat(NVS_KEY_PID_Y_D, static_cast<float>(d_gain) / PidConfig::SCALE_FACTOR);
 
     send_msp_response(MSP_SET_PID, nullptr, 0, protocol_version); // Acknowledge
 }

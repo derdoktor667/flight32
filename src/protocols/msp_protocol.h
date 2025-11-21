@@ -10,6 +10,12 @@
 #include <cstdint>
 
 // --- MSP Protocol Constants ---
+static constexpr uint8_t MSP_SYNC_BYTE = '$';
+static constexpr uint8_t MSP_V1_IDENTIFIER = 'M';
+static constexpr uint8_t MSP_V2_IDENTIFIER = 'X';
+static constexpr uint8_t MSP_DIRECTION_HOST = '<'; // Host to FC
+static constexpr uint8_t MSP_DIRECTION_FC = '>';   // FC to Host
+
 static constexpr uint8_t MSP_PROTOCOL_VERSION = 0;        // Changed to 0 for Betaflight compatibility
 static constexpr uint8_t MSP_API_VERSION_MAJOR = 1;       // From Betaflight example
 static constexpr uint8_t MSP_API_VERSION_MINOR = 43;      // From Betaflight example
@@ -32,6 +38,7 @@ static constexpr uint8_t MSP_ATTITUDE_PAYLOAD_SIZE = 6; // 3x angles (int16_t = 
 static constexpr uint8_t MSP_RC_PAYLOAD_SIZE = 36;      // 18x RC channels (int16_t = 2 bytes each)
 static constexpr uint8_t MSP_MOTOR_PAYLOAD_SIZE = 16;   // 8x motor outputs (int16_t = 2 bytes each)
 static constexpr uint8_t MSP_MAX_MOTORS = 8;            // Max number of motors expected by MSP_MOTOR command
+static constexpr uint16_t MSP_RC_NEUTRAL_CHANNEL_VALUE = 1500;
 static constexpr uint8_t MSP_BOXNAMES_PAYLOAD_SIZE = 0;
 static constexpr uint8_t MSP_MODE_RANGES_PAYLOAD_SIZE = 20;   // 5 mode ranges * 4 bytes each
 static constexpr uint8_t MSP_MOTOR_CONFIG_PAYLOAD_SIZE = 6;   // minthrottle (U16) + maxthrottle (U16) + mincommand (U16) - Python script only expects 6 bytes

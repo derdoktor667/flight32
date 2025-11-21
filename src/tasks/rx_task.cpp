@@ -22,7 +22,7 @@ void RxTask::setup()
         return;
     }
 
-    RcProtocolType protocol_type = (RcProtocolType)_settings_manager->getSettingValue(KEY_RC_PROTOCOL_TYPE).toInt();
+    RcProtocolType protocol_type = (RcProtocolType)_settings_manager->getSettingValue(NVS_KEY_RC_PROTOCOL_TYPE).toInt();
 
     switch (protocol_type)
     {
@@ -51,7 +51,7 @@ void RxTask::setup()
             com_send_log(ComMessageType::LOG_INFO, "RxTask: Initializing IBUS on RX:%d", rx_pin_to_use);
             break;
         case RcProtocolType::PPM:
-            rx_pin_to_use = _settings_manager->getSettingValue(KEY_RX_PIN).toInt();
+            rx_pin_to_use = _settings_manager->getSettingValue(NVS_KEY_RX_PIN).toInt();
             com_send_log(ComMessageType::LOG_INFO, "RxTask: Initializing PPM on pin %d", rx_pin_to_use);
             break;
         default:

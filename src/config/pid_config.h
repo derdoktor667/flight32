@@ -35,17 +35,17 @@ namespace PidConfig
 } // namespace PidConfig
 
 // --- PID Gain Settings ---
-constexpr const char *KEY_PID_ROLL_P = "pid.roll.p";
-constexpr const char *KEY_PID_ROLL_I = "pid.roll.i";
-constexpr const char *KEY_PID_ROLL_D = "pid.roll.d";
-constexpr const char *KEY_PID_PITCH_P = "pid.pitch.p";
-constexpr const char *KEY_PID_PITCH_I = "pid.pitch.i";
-constexpr const char *KEY_PID_PITCH_D = "pid.pitch.d";
-constexpr const char *KEY_PID_YAW_P = "pid.yaw.p";
-constexpr const char *KEY_PID_YAW_I = "pid.yaw.i";
-constexpr const char *KEY_PID_YAW_D = "pid.yaw.d";
+constexpr const char *NVS_KEY_PID_R_P = "pid.r.p";
+constexpr const char *NVS_KEY_PID_R_I = "pid.r.i";
+constexpr const char *NVS_KEY_PID_R_D = "pid.r.d";
+constexpr const char *NVS_KEY_PID_P_P = "pid.p.p";
+constexpr const char *NVS_KEY_PID_P_I = "pid.p.i";
+constexpr const char *NVS_KEY_PID_P_D = "pid.p.d";
+constexpr const char *NVS_KEY_PID_Y_P = "pid.y.p";
+constexpr const char *NVS_KEY_PID_Y_I = "pid.y.i";
+constexpr const char *NVS_KEY_PID_Y_D = "pid.y.d";
 
-constexpr const char *KEY_PID_ANG_R_P = "pid.angR.p";
-constexpr const char *KEY_PID_ANG_R_I = "pid.angR.i";
-constexpr const char *KEY_PID_ANG_P_P = "pid.angP.p";
-constexpr const char *KEY_PID_ANG_P_I = "pid.angP.i";
+constexpr const char *NVS_KEY_PID_AR_P = "pid.ar.p";
+constexpr const char *NVS_KEY_PID_AR_I = "pid.ar.i";
+constexpr const char *NVS_KEY_PID_AP_P = "pid.ap.p";
+constexpr const char *NVS_KEY_PID_AP_I = "pid.ap.i";

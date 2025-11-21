@@ -51,12 +51,12 @@ void PidTask::run()
 {
     uint32_t start_time = micros();
 
-    int constrained_roll = constrain(_rx_task->getChannel(_settings_manager->getSettingValue(KEY_RC_CHANNEL_ROLL).toInt()), RC_CHANNEL_MIN_RAW, RC_CHANNEL_MAX_RAW);
-    int constrained_pitch = constrain(_rx_task->getChannel(_settings_manager->getSettingValue(KEY_RC_CHANNEL_PITCH).toInt()), RC_CHANNEL_MIN_RAW, RC_CHANNEL_MAX_RAW);
-    int constrained_yaw = constrain(_rx_task->getChannel(_settings_manager->getSettingValue(KEY_RC_CHANNEL_YAW).toInt()), RC_CHANNEL_MIN_RAW, RC_CHANNEL_MAX_RAW);
-    int constrained_throttle = constrain(_rx_task->getChannel(_settings_manager->getSettingValue(KEY_RC_CHANNEL_THRO).toInt()), RC_CHANNEL_MIN_RAW, RC_CHANNEL_MAX_RAW);
-    int arm_channel_value = _rx_task->getChannel(_settings_manager->getSettingValue(KEY_RC_CHANNEL_ARM).toInt());
-    int fmode_channel_value = _rx_task->getChannel(_settings_manager->getSettingValue(KEY_RC_CHANNEL_FMODE).toInt());
+    int constrained_roll = constrain(_rx_task->getChannel(_settings_manager->getSettingValue(NVS_KEY_RC_ROLL).toInt()), RC_CHANNEL_MIN_RAW, RC_CHANNEL_MAX_RAW);
+    int constrained_pitch = constrain(_rx_task->getChannel(_settings_manager->getSettingValue(NVS_KEY_RC_PITCH).toInt()), RC_CHANNEL_MIN_RAW, RC_CHANNEL_MAX_RAW);
+    int constrained_yaw = constrain(_rx_task->getChannel(_settings_manager->getSettingValue(NVS_KEY_RC_YAW).toInt()), RC_CHANNEL_MIN_RAW, RC_CHANNEL_MAX_RAW);
+    int constrained_throttle = constrain(_rx_task->getChannel(_settings_manager->getSettingValue(NVS_KEY_RC_THRO).toInt()), RC_CHANNEL_MIN_RAW, RC_CHANNEL_MAX_RAW);
+    int arm_channel_value = _rx_task->getChannel(_settings_manager->getSettingValue(NVS_KEY_RC_ARM).toInt());
+    int fmode_channel_value = _rx_task->getChannel(_settings_manager->getSettingValue(NVS_KEY_RC_FMODE).toInt());
 
     _isArmed = (arm_channel_value > RC_CHANNEL_ARM_THRESHOLD);
 
@@ -141,29 +141,29 @@ void PidTask::setGains(PidAxis axis, PidGains gains)
 void PidTask::_load_gains()
 {
     _pid_roll.setGains(
-        _settings_manager->getSettingValue(KEY_PID_ROLL_P).toFloat(),
-        _settings_manager->getSettingValue(KEY_PID_ROLL_I).toFloat(),
-        _settings_manager->getSettingValue(KEY_PID_ROLL_D).toFloat());
+        _settings_manager->getSettingValue(NVS_KEY_PID_R_P).toFloat(),
+        _settings_manager->getSettingValue(NVS_KEY_PID_R_I).toFloat(),
+        _settings_manager->getSettingValue(NVS_KEY_PID_R_D).toFloat());
 
     _pid_pitch.setGains(
-        _settings_manager->getSettingValue(KEY_PID_PITCH_P).toFloat(),
-        _settings_manager->getSettingValue(KEY_PID_PITCH_I).toFloat(),
-        _settings_manager->getSettingValue(KEY_PID_PITCH_D).toFloat());
+        _settings_manager->getSettingValue(NVS_KEY_PID_P_P).toFloat(),
+        _settings_manager->getSettingValue(NVS_KEY_PID_P_I).toFloat(),
+        _settings_manager->getSettingValue(NVS_KEY_PID_P_D).toFloat());
 
     _pid_yaw.setGains(
-        _settings_manager->getSettingValue(KEY_PID_YAW_P).toFloat(),
-        _settings_manager->getSettingValue(KEY_PID_YAW_I).toFloat(),
-        _settings_manager->getSettingValue(KEY_PID_YAW_D).toFloat());
+        _settings_manager->getSettingValue(NVS_KEY_PID_Y_P).toFloat(),
+        _settings_manager->getSettingValue(NVS_KEY_PID_Y_I).toFloat(),
+        _settings_manager->getSettingValue(NVS_KEY_PID_Y_D).toFloat());
 
-    float angle_roll_p = _settings_manager->getSettingValue(KEY_PID_ANG_R_P).toFloat();
-    float angle_roll_i = _settings_manager->getSettingValue(KEY_PID_ANG_R_I).toFloat();
+    float angle_roll_p = _settings_manager->getSettingValue(NVS_KEY_PID_AR_P).toFloat();
+    float angle_roll_i = _settings_manager->getSettingValue(NVS_KEY_PID_AR_I).toFloat();
     _pid_angle_roll.setGains(
         angle_roll_p,
         angle_roll_i,
         (float)PidConfig::ANGLE_D_GAIN_DISABLED); // Angle PID does not use D gain
 
-    float angle_pitch_p = _settings_manager->getSettingValue(KEY_PID_ANG_P_P).toFloat();
-    float angle_pitch_i = _settings_manager->getSettingValue(KEY_PID_ANG_P_I).toFloat();
+    float angle_pitch_p = _settings_manager->getSettingValue(NVS_KEY_PID_AP_P).toFloat();
+    float angle_pitch_i = _settings_manager->getSettingValue(NVS_KEY_PID_AP_I).toFloat();
     _pid_angle_pitch.setGains(
         angle_pitch_p,
         angle_pitch_i,
@@ -192,32 +192,32 @@ void PidTask::_set_and_save_gains(PidAxis axis, PidGains gains)
     {
     case PidAxis::ROLL:
         _pid_roll.setGains(gains.p, gains.i, gains.d);
-        p_key = KEY_PID_ROLL_P;
-        i_key = KEY_PID_ROLL_I;
-        d_key = KEY_PID_ROLL_D;
+        p_key = NVS_KEY_PID_R_P;
+        i_key = NVS_KEY_PID_R_I;
+        d_key = NVS_KEY_PID_R_D;
         break;
     case PidAxis::PITCH:
         _pid_pitch.setGains(gains.p, gains.i, gains.d);
-        p_key = KEY_PID_PITCH_P;
-        i_key = KEY_PID_PITCH_I;
-        d_key = KEY_PID_PITCH_D;
+        p_key = NVS_KEY_PID_P_P;
+        i_key = NVS_KEY_PID_P_I;
+        d_key = NVS_KEY_PID_P_D;
         break;
     case PidAxis::YAW:
         _pid_yaw.setGains(gains.p, gains.i, gains.d);
-        p_key = KEY_PID_YAW_P;
-        i_key = KEY_PID_YAW_I;
-        d_key = KEY_PID_YAW_D;
+        p_key = NVS_KEY_PID_Y_P;
+        i_key = NVS_KEY_PID_Y_I;
+        d_key = NVS_KEY_PID_Y_D;
         break;
     case PidAxis::ANGLE_ROLL:
         _pid_angle_roll.setGains(gains.p, gains.i, (float)PidConfig::ANGLE_D_GAIN_DISABLED); // Angle PID does not use D gain
-        p_key = KEY_PID_ANG_R_P;
-        i_key = KEY_PID_ANG_R_I;
+        p_key = NVS_KEY_PID_AR_P;
+        i_key = NVS_KEY_PID_AR_I;
         d_key = nullptr; // No D gain for angle PID
         break;
     case PidAxis::ANGLE_PITCH:
         _pid_angle_pitch.setGains(gains.p, gains.i, (float)PidConfig::ANGLE_D_GAIN_DISABLED); // Angle PID does not use D gain
-        p_key = KEY_PID_ANG_P_P;
-        i_key = KEY_PID_ANG_P_I;
+        p_key = NVS_KEY_PID_AP_P;
+        i_key = NVS_KEY_PID_AP_I;
         d_key = nullptr; // No D gain for angle PID
         break;
     default:

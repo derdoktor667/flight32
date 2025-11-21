@@ -61,7 +61,7 @@ MotorTask::MotorTask(const char *name, uint32_t stack_size, UBaseType_t priority
 
 void MotorTask::setup()
 {
-    uint8_t protocol_index = _settings_manager->getSettingValue(KEY_MOTOR_PROTOCOL).toInt();
+    uint8_t protocol_index = _settings_manager->getSettingValue(NVS_KEY_MOTOR_PROTOCOL).toInt();
     dshot_mode_t dshot_protocol = get_dshot_mode_from_index(protocol_index);
 
     for (int i = 0; i < NUM_MOTORS; ++i)
@@ -70,7 +70,7 @@ void MotorTask::setup()
         _dshot_drivers[i]->begin();
     }
 
-    com_send_log(ComMessageType::LOG_INFO, "MotorTask: DShotRMT drivers initialized for %d motors on protocol %s.", NUM_MOTORS, _settings_manager->getSettingValueHumanReadable(KEY_MOTOR_PROTOCOL).c_str());
+    com_send_log(ComMessageType::LOG_INFO, "MotorTask: DShotRMT drivers initialized for %d motors on protocol %s.", NUM_MOTORS, _settings_manager->getSettingValueHumanReadable(NVS_KEY_MOTOR_PROTOCOL).c_str());
 }
 
 void MotorTask::run()

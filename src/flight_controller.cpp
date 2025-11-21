@@ -90,7 +90,7 @@ void FlightController::setup()
     delay(SENSOR_POWER_UP_DELAY_MS);
 
     // Retrieve IMU type from settings.
-    String imu_type_str = _settings_manager.getSettingValue(KEY_IMU_TYPE);
+    String imu_type_str = _settings_manager.getSettingValue(NVS_KEY_IMU_TYPE);
     ImuType imu_type;
     if (imu_type_str.length() == 0)
     {
@@ -120,7 +120,7 @@ void FlightController::setup()
     }
 
     // Get LPF bandwidth from settings and convert to appropriate enum.
-    uint8_t lpf_bandwidth_index = _settings_manager.getSettingValue(KEY_IMU_LPF_BANDWIDTH).toInt();
+    uint8_t lpf_bandwidth_index = _settings_manager.getSettingValue(NVS_KEY_IMU_LPF_BANDWIDTH).toInt();
     ImuLpfBandwidthIndex lpf_bandwidth = static_cast<ImuLpfBandwidthIndex>(lpf_bandwidth_index);
 
     // Initialize the IMU sensor with configured parameters.

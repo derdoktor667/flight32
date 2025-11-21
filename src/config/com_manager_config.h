@@ -21,6 +21,6 @@ constexpr uint16_t MSP_RESPONSE_DELAY_US = 500;
 constexpr uint8_t UNIQUE_ID_BUFFER_SIZE = 32;
 
 // MSP FC Variant, Board Info
-static constexpr const char *MSP_FC_VARIANT_NAME = "FL32";
-static constexpr const char *MSP_BOARD_IDENTIFIER = "FL32";
+static constexpr const char *MSP_FC_VARIANT_NAME = "FLT32";
+static constexpr const char *MSP_BOARD_IDENTIFIER = "FLT32";
 static constexpr const char *MSP_BOARD_NAME = "flight32";
