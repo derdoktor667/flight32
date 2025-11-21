@@ -58,9 +58,9 @@ public:
         return temp_data;
     }
 
-    virtual ImuAxisData getGyroscopeOffset() const = 0;
+    virtual ImuAxisData getGyroscopeOffset() = 0; // Removed const
     virtual void setGyroscopeOffset(const ImuAxisData &offset) = 0;
-    virtual ImuAxisData getAccelerometerOffset() const = 0;
+    virtual ImuAxisData getAccelerometerOffset() = 0; // Removed const
     virtual void setAccelerometerOffset(const ImuAxisData &offset) = 0;
     virtual ImuQuaternionData getQuaternion() const { return {0, 0, 0, 0}; };
     virtual uint16_t getI2CErrorCount() const = 0;

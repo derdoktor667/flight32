@@ -11,6 +11,7 @@
 #include "../com_manager.h"
 #include "../settings_manager.h"
 #include "../utils/math_constants.h"
+#include "../imu/sensors/imu_mpu6050.h" // Include for specific MPU6050 access
 
 ImuTask::ImuTask(const char *name, uint32_t stack_size, UBaseType_t priority, BaseType_t core_id, uint32_t task_delay_ms, ImuSensor &imu_sensor, SettingsManager *settings_manager)
     : TaskBase(name, stack_size, priority, core_id, task_delay_ms), _imu_sensor(imu_sensor), _settings_manager(settings_manager) {}
@@ -36,10 +37,19 @@ void ImuTask::setup()
 
 void ImuTask::run()
 {
-    _imu_sensor.read(); // Read raw data from the sensor
+    _imu_sensor.read(); // This will now update _quaternion and _data in ImuMpu6050
 
-    // Get raw IMU data
-    ImuData raw_imu_data = _imu_sensor.getData();
+    // Get raw IMU data. This assumes ImuMpu6050::read() has updated _data.
+    // However, ImuMpu6050::read() only updates _quaternion from DMP FIFO currently.
+    // So, if needed, _filtered_imu_data should get accel/gyro from a separate non-DMP reading
+    // or from DMP's accel/gyro output if available (and if _data was updated there).
+    
+    // For now, let's assume _imu_sensor's _data member is correctly updated
+    // or we'll need to fetch raw accel/gyro explicitly if required for filtering here.
+    // The previous implementation used _imu_sensor.getData() for raw_imu_data.
+    // We need to ensure that ImuMpu6050::read() populates _data as well.
+
+    ImuData raw_imu_data = _imu_sensor.getData(); // Get data from the sensor (now _data member of ImuMpu6050)
 
     // Copy accelerometer and temperature data directly
     _filtered_imu_data.accelX = raw_imu_data.accelX;

@@ -68,8 +68,9 @@ void FlightController::setSystemState(SystemState new_state)
 // Setup function for the FlightController, initializes hardware and FreeRTOS tasks.
 void FlightController::setup()
 {
+    Serial.begin(SERIAL_BAUD_RATE);
+
     // just to be sure I2C running maximum speed
-    Wire.begin();
     Wire.setClock(MPU6050_I2C_CLOCK_SPEED);
 
     com_manager_init(); // Initialize communication queues early
@@ -104,7 +105,9 @@ void FlightController::setup()
     switch (imu_type)
     {
     case ImuType::MPU6050:
+
         _imu_sensor = std::make_unique<ImuMpu6050>();
+
         com_send_log(ComMessageType::LOG_INFO, "Using MPU6050 IMU.");
         break;
     default:
@@ -121,7 +124,10 @@ void FlightController::setup()
     ImuLpfBandwidthIndex lpf_bandwidth = static_cast<ImuLpfBandwidthIndex>(lpf_bandwidth_index);
 
     // Initialize the IMU sensor with configured parameters.
-    if (!_imu_sensor->begin(MPU6050_I2C_CLOCK_SPEED, IMU_DMP_ENABLED_DEFAULT, ImuGyroRangeIndex::GYRO_RANGE_2000DPS, ImuAccelRangeIndex::ACCEL_RANGE_16G, lpf_bandwidth))
+    // The useDMP parameter is now handled internally by ImuMpu6050::begin()
+    // The I2C clock speed is set globally by Wire.setClock()
+
+    if (!_imu_sensor->begin(0, false, ImuGyroRangeIndex::GYRO_RANGE_2000DPS, ImuAccelRangeIndex::ACCEL_RANGE_16G, lpf_bandwidth))
     {
         // Error message is already printed in the sensor's begin() method.
         setSystemState(SystemState::ERROR);
@@ -136,6 +142,7 @@ void FlightController::setup()
     ImuAxisData accel_offsets = _settings_manager.getAccelOffsets();
 
     setSystemState(SystemState::CALIBRATING);
+
     _imu_sensor->calibrate();
 
     // Save new offsets to settings.
@@ -150,7 +157,7 @@ void FlightController::setup()
     _imu_task = std::make_unique<ImuTask>(IMU_TASK_NAME, IMU_TASK_STACK_SIZE, IMU_TASK_PRIORITY, IMU_TASK_CORE, IMU_TASK_DELAY_MS, *_imu_sensor, &_settings_manager);
     _rx_task = std::make_unique<RxTask>(RX_TASK_NAME, RX_TASK_STACK_SIZE, RX_TASK_PRIORITY, RX_TASK_CORE, RX_TASK_DELAY_MS, &_settings_manager);
     _motor_task = std::make_unique<MotorTask>(MOTOR_TASK_NAME, MOTOR_TASK_STACK_SIZE, MOTOR_TASK_PRIORITY, MOTOR_TASK_CORE, MOTOR_TASK_DELAY_MS, MOTOR_PINS_ARRAY, &_settings_manager);
-    _pid_task = std::make_unique<PidTask>(PID_TASK_NAME, PidConfig::TASK_STACK_SIZE, PidConfig::TASK_PRIORITY, PidConfig::TASK_CORE, PidConfig::TASK_DELAY_MS, _imu_task.get(), _rx_task.get(), _motor_task.get(), &_settings_manager);
+    _pid_task = std::make_unique<PidTask>(PID_TASK_NAME, PidConfig::TASK_STACK_SIZE, PidConfig::TASK_PRIORITY, PidConfig::TASK_CORE, PidConfig::TASK_DELAY_MS, _imu_task.get(), _rx_task.get(), _motor_task.get(), &_settings_manager); // Removed extra _pid_task.get()
 
     // Add tasks to the scheduler.
     _scheduler.addTask(_com_manager_task.get());

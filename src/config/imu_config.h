@@ -18,9 +18,10 @@ constexpr uint8_t IMU_TASK_DELAY_MS = 10;
 constexpr uint8_t MPU6050_I2C_SDA = 21;
 constexpr uint8_t MPU6050_I2C_SCL = 22;
 constexpr uint32_t MPU6050_I2C_CLOCK_SPEED = 400000;
-constexpr uint8_t MPU6050_I2C_ADDRESS = 0x70;     // usually 0x68
+constexpr uint8_t MPU6050_I2C_ADDRESS = 0x68;     // usually 0x68
 constexpr uint8_t MPU6050_FIFO_BUFFER_SIZE = 128; // Size of the MPU6050 FIFO buffer
-static constexpr bool IMU_DMP_ENABLED_DEFAULT = false;   // Default setting for enabling the Digital Motion Processor (DMP)
+constexpr uint8_t MPU6050_INT_PIN = 4;            // GPIO for MPU6050 Interrupt pin
+static constexpr bool IMU_DMP_ENABLED_DEFAULT = true;   // Default setting for enabling the Digital Motion Processor (DMP)
 
 // --- IMU Protocol Configuration ---
 enum class ImuType : uint8_t

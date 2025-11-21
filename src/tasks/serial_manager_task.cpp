@@ -115,89 +115,230 @@ void SerialManagerTask::showPrompt()
 // MSP Mode Functions
 bool SerialManagerTask::_parse_msp_char(uint8_t c)
 {
-    MspState prev_state = _msp_state;
+    // MspState prev_state = _msp_state; // For debugging if needed
+    bool consumed_by_msp = true;
+
+    _last_msp_activity_ms = millis(); // Update activity on any MSP parsing attempt
+
     switch (_msp_state)
     {
     case MspState::IDLE:
+        _msp_message_length_received = 0; // Reset payload counter
+        _msp_command_id = 0;              // Reset command ID
+        _msp_flag_v2 = 0;                 // Reset V2 flag
+        _msp_message_length_expected = 0; // Reset expected length
+        _msp_protocol_version = 0;        // Reset protocol version
+        _msp_crc = 0;                     // Reset CRC
+        _msp_payload_index = 0;           // Reset payload index
+
         if (c == '$')
         {
-            _msp_state = MspState::HEADER_START;
-            _msp_crc = 0; // Initialize CRC for incoming message
-            _last_msp_activity_ms = millis();
+            _msp_state = MspState::PROTO_IDENTIFIER;
         }
         else
         {
-            return false; // Not an MSP character, not consumed
+            consumed_by_msp = false; // Not an MSP start character
         }
         break;
-    case MspState::HEADER_START:
+
+    case MspState::PROTO_IDENTIFIER:
         if (c == 'M')
         {
-            _msp_state = MspState::HEADER_DIR;
-            _last_msp_activity_ms = millis(); // Update activity on 'M'
+            _msp_protocol_version = 1;
+            _msp_state = MspState::DIRECTION_V1;
+            _msp_crc = 0; // V1 CRC initialization
+        }
+        else if (c == 'X')
+        {
+            _msp_protocol_version = 2;
+            _msp_state = MspState::DIRECTION_V2;
+            // V2 CRC is calculated over the entire frame (excluding $X and CRC byte itself)
+            // It starts with the flag byte.
+            _msp_crc = 0; // Reset CRC, will be calculated from flag
         }
         else
         {
-            _msp_state = MspState::IDLE; // False alarm, reset state
+            _msp_state = MspState::IDLE; // Unknown protocol, reset
+            consumed_by_msp = false;
         }
         break;
-    case MspState::HEADER_DIR:
-        if (c == '<') // Expecting '<' for incoming commands
+
+    case MspState::DIRECTION_V1:
+    case MspState::DIRECTION_V2:
+        if (c == '<') // Incoming command
         {
-            _msp_state = MspState::HEADER_SIZE;
             if (_current_mode == ComSerialMode::TERMINAL)
             {
                 _current_mode = ComSerialMode::MSP;
                 com_set_serial_mode(ComSerialMode::MSP);
                 _should_show_prompt = false; // Disable prompt when entering MSP mode
             }
-        }
-        else if (c == '>')
-        {
-            // This is likely an echo of our own MSP response, ignore it and reset.
-            _msp_state = MspState::IDLE;
+
+            if (_msp_protocol_version == 1)
+            {
+                _msp_state = MspState::PAYLOAD_LENGTH_V1;
+            }
+            else // MSP v2
+            {
+                _msp_state = MspState::FLAG_V2;
+            }
         }
         else
         {
-            _msp_state = MspState::IDLE; // Invalid direction byte, reset MSP state
+            _msp_state = MspState::IDLE; // Not an incoming command, reset
+            consumed_by_msp = false;
         }
-        _last_msp_activity_ms = millis(); // Update activity on direction byte
         break;
-    case MspState::HEADER_SIZE:
-        _msp_payload_size = c;
-        _msp_crc ^= c;
-        _msp_payload_index = 0;
-        _msp_state = MspState::HEADER_CMD;
-        _last_msp_activity_ms = millis();
+
+    case MspState::FLAG_V2:
+        _msp_flag_v2 = c;
+        _msp_crc = _crc8_dvb_s2(_msp_crc, _msp_flag_v2); // Add flag to CRC
+        _msp_state = MspState::CODE_V2_LOW;
         break;
-    case MspState::HEADER_CMD:
-        _msp_command_id = c;
-        _msp_crc ^= c;
-        _msp_state = (_msp_payload_size > 0) ? MspState::PAYLOAD : MspState::CRC;
-        _last_msp_activity_ms = millis();
-        break;
-    case MspState::PAYLOAD:
-        _msp_payload_buffer[_msp_payload_index++] = c;
-        _msp_crc ^= c;
-        if (_msp_payload_index >= _msp_payload_size)
+
+    case MspState::PAYLOAD_LENGTH_V1: // MSP v1 payload length (1 byte)
+        _msp_message_length_expected = c;
+        if (_msp_message_length_expected == 255)
+        { // Jumbo frame
+            _msp_state = MspState::CODE_JUMBO_V1;
+        }
+        else
         {
-            _msp_state = MspState::CRC;
+            _msp_crc ^= _msp_message_length_expected; // Add length to V1 CRC
+            _msp_state = MspState::CODE_V1;
         }
-        _last_msp_activity_ms = millis();
         break;
-    case MspState::CRC:
+
+    case MspState::CODE_V1: // MSP v1 command ID (1 byte)
+        _msp_command_id = c;
+        _msp_crc ^= _msp_command_id; // Add command ID to V1 CRC
+        _msp_payload_index = 0;
+
+        if (_msp_message_length_expected > 0)
+        {
+            _msp_state = MspState::PAYLOAD_V1;
+        }
+        else
+        {
+            _msp_state = MspState::CHECKSUM_V1; // No payload, go straight to checksum
+        }
+        break;
+
+    case MspState::CODE_JUMBO_V1: // MSP v1 Jumbo Frame, read first byte of command ID
+        _msp_command_id = c;
+        _msp_crc ^= _msp_command_id; // Add command ID to V1 CRC
+        _msp_state = MspState::PAYLOAD_LENGTH_JUMBO_LOW;
+        break;
+
+    case MspState::PAYLOAD_LENGTH_JUMBO_LOW: // MSP v1 Jumbo frame payload length (low byte)
+        _msp_message_length_expected = c;
+        _msp_crc ^= c; // Add length to V1 CRC
+        _msp_state = MspState::PAYLOAD_LENGTH_JUMBO_HIGH;
+        break;
+
+    case MspState::PAYLOAD_LENGTH_JUMBO_HIGH: // MSP v1 Jumbo frame payload length (high byte)
+        _msp_message_length_expected |= (c << 8);
+        _msp_crc ^= c; // Add length to V1 CRC
+        _msp_payload_index = 0;
+        _msp_state = MspState::PAYLOAD_V1;
+        break;
+
+    case MspState::CODE_V2_LOW: // MSP v2 command ID (low byte)
+        _msp_command_id = c;
+        _msp_crc = _crc8_dvb_s2(_msp_crc, c); // Add to V2 CRC
+        _msp_state = MspState::CODE_V2_HIGH;
+        break;
+
+    case MspState::CODE_V2_HIGH: // MSP v2 command ID (high byte)
+        _msp_command_id |= (c << 8);
+        _msp_crc = _crc8_dvb_s2(_msp_crc, c); // Add to V2 CRC
+        _msp_state = MspState::PAYLOAD_LENGTH_V2_LOW;
+        break;
+
+    case MspState::PAYLOAD_LENGTH_V2_LOW: // MSP v2 payload length (low byte)
+        _msp_message_length_expected = c;
+        _msp_crc = _crc8_dvb_s2(_msp_crc, c); // Add to V2 CRC
+        _msp_state = MspState::PAYLOAD_LENGTH_V2_HIGH;
+        break;
+
+    case MspState::PAYLOAD_LENGTH_V2_HIGH: // MSP v2 payload length (high byte)
+        _msp_message_length_expected |= (c << 8);
+        _msp_crc = _crc8_dvb_s2(_msp_crc, c); // Add to V2 CRC
+        _msp_payload_index = 0;
+
+        if (_msp_message_length_expected > 0)
+        {
+            _msp_state = MspState::PAYLOAD_V2;
+        }
+        else
+        {
+            _msp_state = MspState::CHECKSUM_V2; // No payload, go straight to checksum
+        }
+        break;
+
+    case MspState::PAYLOAD_V1:
+    case MspState::PAYLOAD_V2:
+        if (_msp_payload_index < MSP_MAX_PAYLOAD_SIZE)
+        { // Prevent buffer overflow
+            _msp_payload_buffer[_msp_payload_index++] = c;
+            if (_msp_protocol_version == 1)
+            {
+                _msp_crc ^= c; // Add to V1 CRC
+            }
+            else
+            {
+                _msp_crc = _crc8_dvb_s2(_msp_crc, c); // Add to V2 CRC
+            }
+            
+            if (_msp_payload_index >= _msp_message_length_expected)
+            {
+                if (_msp_protocol_version == 1)
+                {
+                    _msp_state = MspState::CHECKSUM_V1;
+                }
+                else
+                {
+                    _msp_state = MspState::CHECKSUM_V2;
+                }
+            }
+        }
+        else
+        {
+            // Payload too large, reset state to avoid buffer overflow
+            // com_send_log(ComMessageType::LOG_ERROR, "MSP Payload too large!");
+            _msp_state = MspState::IDLE;
+        }
+        break;
+
+    case MspState::CHECKSUM_V1:
         if (_msp_crc == c)
         {
             _process_msp_message();
         }
+        else
+        {
+            // com_send_log(ComMessageType::LOG_ERROR, "MSP V1 CRC error! Exp: %02X, Got: %02X", _msp_crc, c);
+        }
         _msp_state = MspState::IDLE;
-        _last_msp_activity_ms = millis();
         break;
-    default:
+
+    case MspState::CHECKSUM_V2:
+        if (_msp_crc == c)
+        {
+            _process_msp_message();
+        }
+        else
+        {
+            // com_send_log(ComMessageType::LOG_ERROR, "MSP V2 CRC error! Exp: %02X, Got: %02X", _msp_crc, c);
+        }
         _msp_state = MspState::IDLE;
+        break;
+
+    default:
+        _msp_state = MspState::IDLE; // Should not happen
         break;
     }
-    return true; // Character was part of an MSP parsing attempt
+    return consumed_by_msp;
 }
 
 void SerialManagerTask::_process_msp_message()
@@ -310,29 +451,63 @@ void SerialManagerTask::_handle_msp_sensor_status()
     payload[i++] = _imu_task->getImuSensor().isSensorHealthy() ? 1 : 0; // GYRO health (assuming same health for now)
     payload[i++] = 0;                                                   // MAG health (MPU6050 does not have magnetometer)
 
-    _send_msp_response(MSP_SENSOR_STATUS, payload, MSP_SENSOR_STATUS_PAYLOAD_SIZE);
+    _send_msp_response((uint16_t)MSP_SENSOR_STATUS, payload, (uint16_t)MSP_SENSOR_STATUS_PAYLOAD_SIZE);
 }
 
-// CORRECTED: Removed '$M>' and changed to proper '$M' format
-void SerialManagerTask::_send_msp_response(uint8_t cmd, uint8_t *payload, uint8_t size)
+void SerialManagerTask::_send_msp_response(uint16_t cmd, uint8_t *payload, uint16_t size)
 {
-    // Serial.printf("[DEBUG] _send_msp_response called for cmd: 0x%02X, size: %d\n", cmd, size);
-    Serial.write('$');
-    Serial.write('M');
-    Serial.write('>'); // Direction byte for response
+    // Determine protocol version for response based on the incoming request.
+    // Default to V1 if not explicitly set (e.g., in a request initiated by us or if V2 not yet parsed).
+    uint8_t response_protocol_version = _msp_protocol_version ? _msp_protocol_version : 1; 
 
-    uint8_t crc = 0; // Initialize CRC with 0
-    Serial.write(size);
-    crc ^= size;
-    Serial.write(cmd);
-    crc ^= cmd;
-    for (uint8_t i = 0; i < size; i++)
-    {
-        Serial.write(payload[i]);
-        crc ^= payload[i];
+    if (response_protocol_version == 1) { // MSP V1 Response
+        Serial.write('$');
+        Serial.write('M');
+        Serial.write('>'); // Direction byte for response (from FC to GUI)
+
+        uint8_t crc = 0;
+        Serial.write((uint8_t)size); // V1 size is 1 byte
+        crc ^= (uint8_t)size;
+        Serial.write((uint8_t)cmd);  // V1 command is 1 byte
+        crc ^= (uint8_t)cmd;
+
+        for (uint16_t i = 0; i < size; i++)
+        {
+            Serial.write(payload[i]);
+            crc ^= payload[i];
+        }
+        Serial.write(crc);
+    } else { // MSP V2 Response
+        // Flag byte (currently always 0, for future use)
+        uint8_t flag = 0; 
+        
+        // CRC calculation for MSP v2
+        uint8_t crc = 0;
+        crc = _crc8_dvb_s2(crc, flag);
+        crc = _crc8_dvb_s2(crc, (uint8_t)(cmd & 0xFF));
+        crc = _crc8_dvb_s2(crc, (uint8_t)((cmd >> 8) & 0xFF));
+        crc = _crc8_dvb_s2(crc, (uint8_t)(size & 0xFF));
+        crc = _crc8_dvb_s2(crc, (uint8_t)((size >> 8) & 0xFF));
+
+        Serial.write('$');
+        Serial.write('X'); // MSP V2 Protocol identifier
+        Serial.write('>'); // Direction byte for response (from FC to GUI)
+        Serial.write(flag);
+        Serial.write((uint8_t)(cmd & 0xFF));       // Command ID Low Byte
+        Serial.write((uint8_t)((cmd >> 8) & 0xFF)); // Command ID High Byte
+        Serial.write((uint8_t)(size & 0xFF));      // Payload Size Low Byte
+        Serial.write((uint8_t)((size >> 8) & 0xFF)); // Payload Size High Byte
+
+        for (uint16_t i = 0; i < size; i++)
+        {
+            Serial.write(payload[i]);
+            crc = _crc8_dvb_s2(crc, payload[i]); // Add payload byte to CRC
+        }
+        Serial.write(crc);
     }
-    Serial.write(crc);
-    delayMicroseconds(MSP_RESPONSE_DELAY_US); // Small delay to ensure the entire response is sent
+
+    delayMicroseconds(MSP_RESPONSE_DELAY_US);
+    Serial.flush();
 }
 
 // MSP Command Handlers
@@ -342,19 +517,19 @@ void SerialManagerTask::_handle_msp_api_version()
     payload[0] = MSP_PROTOCOL_VERSION;
     payload[1] = MSP_API_VERSION_MAJOR;
     payload[2] = MSP_API_VERSION_MINOR;
-    _send_msp_response(MSP_API_VERSION, payload, MSP_API_VERSION_PAYLOAD_SIZE);
+    _send_msp_response((uint16_t)MSP_API_VERSION, payload, (uint16_t)MSP_API_VERSION_PAYLOAD_SIZE);
 }
 
 void SerialManagerTask::_handle_msp_fc_variant()
 {
     uint8_t variant_name_len = strlen(MSP_FC_VARIANT_NAME);
-    _send_msp_response(MSP_FC_VARIANT, (uint8_t *)MSP_FC_VARIANT_NAME, variant_name_len);
+    _send_msp_response((uint16_t)MSP_FC_VARIANT, (uint8_t *)MSP_FC_VARIANT_NAME, (uint16_t)variant_name_len);
 }
 
 void SerialManagerTask::_handle_msp_fc_version()
 {
     uint8_t payload[3] = {FC_VERSION_MAJOR, FC_VERSION_MINOR, FC_VERSION_PATCH};
-    _send_msp_response(MSP_FC_VERSION, payload, MSP_FC_VERSION_PAYLOAD_SIZE);
+    _send_msp_response((uint16_t)MSP_FC_VERSION, payload, (uint16_t)MSP_FC_VERSION_PAYLOAD_SIZE);
 }
 
 void SerialManagerTask::_handle_msp_board_info()
@@ -377,19 +552,19 @@ void SerialManagerTask::_handle_msp_board_info()
     memcpy(&payload[idx], MSP_BOARD_NAME, board_name_len);
     idx += board_name_len;
 
-    _send_msp_response(MSP_BOARD_INFO, payload, idx);
+    _send_msp_response((uint16_t)MSP_BOARD_INFO, payload, (uint16_t)idx);
 }
 
 void SerialManagerTask::_handle_msp_build_info()
 {
     char build_info_str[MSP_MAX_PAYLOAD_SIZE];
     snprintf(build_info_str, sizeof(build_info_str), "%s %s", __DATE__, __TIME__);
-    _send_msp_response(MSP_BUILD_INFO, (uint8_t *)build_info_str, strlen(build_info_str));
+    _send_msp_response((uint16_t)MSP_BUILD_INFO, (uint8_t *)build_info_str, (uint16_t)strlen(build_info_str));
 }
 
 void SerialManagerTask::_handle_msp_reboot()
 {
-    _send_msp_response(MSP_REBOOT, nullptr, 0); // Acknowledge
+    _send_msp_response((uint16_t)MSP_REBOOT, nullptr, 0); // Acknowledge
     delayMicroseconds(ONE_SECOND_MICROSECONDS);
     ESP.restart();
 }
@@ -397,13 +572,13 @@ void SerialManagerTask::_handle_msp_reboot()
 void SerialManagerTask::_handle_msp_eeprom_write()
 {
     _settings_manager->saveSettings();
-    _send_msp_response(MSP_EEPROM_WRITE, nullptr, 0); // Acknowledge
+    _send_msp_response((uint16_t)MSP_EEPROM_WRITE, nullptr, 0); // Acknowledge
 }
 
 void SerialManagerTask::_handle_msp_reset_settings()
 {
     _settings_manager->factoryReset();
-    _send_msp_response(MSP_RESET_SETTINGS, nullptr, 0); // Acknowledge
+    _send_msp_response((uint16_t)MSP_RESET_SETTINGS, nullptr, 0); // Acknowledge
     delayMicroseconds(ONE_SECOND_MICROSECONDS);
     ESP.restart();
 }
@@ -449,7 +624,7 @@ void SerialManagerTask::_handle_msp_status()
     // configProfileIndex
     payload[i++] = 0;
 
-    _send_msp_response(MSP_STATUS, payload, MSP_STATUS_PAYLOAD_SIZE);
+    _send_msp_response((uint16_t)MSP_STATUS, payload, (uint16_t)MSP_STATUS_PAYLOAD_SIZE);
 }
 
 void SerialManagerTask::_handle_msp_mem_stats()
@@ -461,22 +636,22 @@ void SerialManagerTask::_handle_msp_mem_stats()
     payload[1] = (free_heap >> 8) & 0xFF;
     payload[2] = (free_heap >> 16) & 0xFF;
     payload[3] = (free_heap >> 24) & 0xFF;
-    _send_msp_response(MSP_MEM_STATS, payload, MSP_MEM_STATS_PAYLOAD_SIZE);
+    _send_msp_response((uint16_t)MSP_MEM_STATS, payload, (uint16_t)MSP_MEM_STATS_PAYLOAD_SIZE);
 }
 
 void SerialManagerTask::_handle_msp_get_setting()
 {
-    if (_msp_payload_size == 0)
+    if (_msp_message_length_expected == 0)
     {
-        _send_msp_response(MSP_GET_SETTING, nullptr, 0); // Error: no key provided
+        _send_msp_response((uint16_t)MSP_GET_SETTING, nullptr, 0); // Error: no key provided
         return;
     }
 
     // MSP payload for get setting: [key_length (1 byte)] [key_string (variable length)]
     uint8_t key_len = _msp_payload_buffer[0];
-    if (key_len == 0 || key_len > (_msp_payload_size - 1))
+    if (key_len == 0 || key_len > (_msp_message_length_expected - 1))
     {
-        _send_msp_response(MSP_GET_SETTING, nullptr, 0); // Error: invalid key length
+        _send_msp_response((uint16_t)MSP_GET_SETTING, nullptr, 0); // Error: invalid key length
         return;
     }
 
@@ -490,7 +665,7 @@ void SerialManagerTask::_handle_msp_get_setting()
     if (internal_key == nullptr)
     {
         // com_send_log(ComMessageType::LOG_ERROR, "MSP_GET_SETTING: Unknown setting display key: %s", display_key_str.c_str());
-        _send_msp_response(MSP_GET_SETTING, nullptr, 0); // Error: unknown setting
+        _send_msp_response((uint16_t)MSP_GET_SETTING, nullptr, 0); // Error: unknown setting
         return;
     }
 
@@ -504,7 +679,7 @@ void SerialManagerTask::_handle_msp_get_setting()
 
     if (response_key_len + response_value_len + MSP_SETTING_KEY_VALUE_OVERHEAD_BYTES > MSP_MAX_PAYLOAD_SIZE)
     {
-        _send_msp_response(MSP_GET_SETTING, nullptr, 0); // Response too long
+        _send_msp_response((uint16_t)MSP_GET_SETTING, nullptr, 0); // Response too long
         return;
     }
 
@@ -517,22 +692,22 @@ void SerialManagerTask::_handle_msp_get_setting()
     memcpy(&response_payload[idx], value_str.c_str(), response_value_len);
     idx += response_value_len;
 
-    _send_msp_response(MSP_GET_SETTING, response_payload, idx);
+    _send_msp_response((uint16_t)MSP_GET_SETTING, response_payload, (uint16_t)idx);
 }
 
 void SerialManagerTask::_handle_msp_set_setting()
 {
-    if (_msp_payload_size < MSP_MIN_PAYLOAD_SIZE)
+    if (_msp_message_length_expected < MSP_MIN_PAYLOAD_SIZE)
     {                                                    // Need at least key_len, key, value_len, value
-        _send_msp_response(MSP_SET_SETTING, nullptr, 0); // Error: invalid payload
+        _send_msp_response((uint16_t)MSP_SET_SETTING, nullptr, 0); // Error: invalid payload
         return;
     }
 
     // MSP payload for set setting: [key_length (1 byte)] [key_string (variable)] [value_length (1 byte)] [value_string (variable)]
     uint8_t key_len = _msp_payload_buffer[0];
-    if (key_len == 0 || key_len > (_msp_payload_size - MSP_SETTING_KEY_VALUE_OVERHEAD_BYTES))
+    if (key_len == 0 || key_len > (_msp_message_length_expected - MSP_SETTING_KEY_VALUE_OVERHEAD_BYTES))
     {
-        _send_msp_response(MSP_SET_SETTING, nullptr, 0); // Error: invalid key length
+        _send_msp_response((uint16_t)MSP_SET_SETTING, nullptr, 0); // Error: invalid key length
         return;
     }
 
@@ -543,9 +718,9 @@ void SerialManagerTask::_handle_msp_set_setting()
 
     uint8_t value_len_idx = 1 + key_len;
     uint8_t value_len = _msp_payload_buffer[value_len_idx];
-    if (value_len == 0 || (value_len_idx + 1 + value_len) > _msp_payload_size)
+    if (value_len == 0 || (value_len_idx + 1 + value_len) > _msp_message_length_expected)
     {
-        _send_msp_response(MSP_SET_SETTING, nullptr, 0); // Error: invalid value length
+        _send_msp_response((uint16_t)MSP_SET_SETTING, nullptr, 0); // Error: invalid value length
         return;
     }
 
@@ -558,18 +733,18 @@ void SerialManagerTask::_handle_msp_set_setting()
 
     if (internal_key == nullptr)
     {
-        _send_msp_response(MSP_SET_SETTING, nullptr, 0); // Error: unknown setting
+        _send_msp_response((uint16_t)MSP_SET_SETTING, nullptr, 0); // Error: unknown setting
         return;
     }
 
     if (_settings_manager->setSettingValue(internal_key, value_str))
     {
-        _send_msp_response(MSP_SET_SETTING, nullptr, 0); // Acknowledge success
+        _send_msp_response((uint16_t)MSP_SET_SETTING, nullptr, 0); // Acknowledge success
     }
     else
     {
         // Could send an error code in payload if MSP supports it, for now just empty response
-        _send_msp_response(MSP_SET_SETTING, nullptr, 0); // Acknowledge failure
+        _send_msp_response((uint16_t)MSP_SET_SETTING, nullptr, 0); // Acknowledge failure
     }
 }
 
@@ -585,15 +760,15 @@ void SerialManagerTask::_handle_msp_get_filter_config()
     _write_to_payload<float>(payload, i, _settings_manager->getFloat(NVS_KEY_NOTCH2_HZ));
     _write_to_payload<float>(payload, i, _settings_manager->getFloat(NVS_KEY_NOTCH2_Q));
 
-    _send_msp_response(MSP_GET_FILTER_CONFIG, payload, MSP_FILTER_CONFIG_PAYLOAD_SIZE);
+    _send_msp_response((uint16_t)MSP_GET_FILTER_CONFIG, payload, (uint16_t)MSP_FILTER_CONFIG_PAYLOAD_SIZE);
 }
 
 // MSP_SET_FILTER_CONFIG handler
 void SerialManagerTask::_handle_msp_set_filter_config()
 {
-    if (_msp_payload_size != MSP_FILTER_CONFIG_PAYLOAD_SIZE) // Expect 5 floats * 4 bytes
+    if (_msp_message_length_expected != MSP_FILTER_CONFIG_PAYLOAD_SIZE) // Expect 5 floats * 4 bytes
     {
-        _send_msp_response(MSP_SET_FILTER_CONFIG, nullptr, 0); // Error: invalid payload size
+        _send_msp_response((uint16_t)MSP_SET_FILTER_CONFIG, nullptr, 0); // Error: invalid payload size
         return;
     }
 
@@ -604,7 +779,7 @@ void SerialManagerTask::_handle_msp_set_filter_config()
     _settings_manager->setFloat(NVS_KEY_NOTCH2_HZ, _read_from_payload<float>(_msp_payload_buffer, i));
     _settings_manager->setFloat(NVS_KEY_NOTCH2_Q, _read_from_payload<float>(_msp_payload_buffer, i));
 
-    _send_msp_response(MSP_SET_FILTER_CONFIG, nullptr, 0); // Acknowledge receipt
+    _send_msp_response((uint16_t)MSP_SET_FILTER_CONFIG, nullptr, 0); // Acknowledge receipt
 }
 
 // CORRECTED: Changed PID payload from 9 bytes (uint8_t) to 18 bytes (int16_t) to prevent overflow
@@ -613,7 +788,7 @@ void SerialManagerTask::_handle_msp_pid_get()
     if (!_pid_task)
     {
         // No log here, MSP clients don't read logs. Just send empty response.
-        _send_msp_response(MSP_PID, nullptr, 0);
+        _send_msp_response((uint16_t)MSP_PID, nullptr, 0);
         return;
     }
 
@@ -637,15 +812,15 @@ void SerialManagerTask::_handle_msp_pid_get()
     _write_to_payload<int16_t>(payload, i, (int16_t)(yaw_gains.i * PidConfig::SCALE_FACTOR));
     _write_to_payload<int16_t>(payload, i, (int16_t)(yaw_gains.d * PidConfig::SCALE_FACTOR));
 
-    _send_msp_response(MSP_PID, payload, MSP_PID_PAYLOAD_SIZE); // CORRECTION: Changed from 9 to 18
+    _send_msp_response((uint16_t)MSP_PID, payload, (uint16_t)MSP_PID_PAYLOAD_SIZE); // CORRECTION: Changed from 9 to 18
 }
 
 // CORRECTED: Changed PID payload parsing from 9 bytes to 18 bytes
 void SerialManagerTask::_handle_msp_pid_set()
 {
-    if (!_pid_task || _msp_payload_size != MSP_PID_PAYLOAD_SIZE) // CORRECTION: Changed from 9 to 18
+    if (!_pid_task || _msp_message_length_expected != MSP_PID_PAYLOAD_SIZE) // CORRECTION: Changed from 9 to 18
     {
-        _send_msp_response(MSP_SET_PID, nullptr, 0); // Error or invalid payload size
+        _send_msp_response((uint16_t)MSP_SET_PID, nullptr, 0); // Error or invalid payload size
         return;
     }
 
@@ -668,14 +843,14 @@ void SerialManagerTask::_handle_msp_pid_set()
     yaw_gains.d = (float)_read_from_payload<int16_t>(_msp_payload_buffer, i) / PidConfig::SCALE_FACTOR;
     _pid_task->setGains(PidAxis::YAW, yaw_gains);
 
-    _send_msp_response(MSP_SET_PID, nullptr, 0); // Acknowledge receipt
+    _send_msp_response((uint16_t)MSP_SET_PID, nullptr, 0); // Acknowledge receipt
 }
 
 void SerialManagerTask::_handle_msp_raw_imu()
 {
     if (!_imu_task)
     {
-        _send_msp_response(MSP_RAW_IMU, nullptr, 0);
+        _send_msp_response((uint16_t)MSP_RAW_IMU, nullptr, 0);
         return;
     }
 
@@ -709,14 +884,14 @@ void SerialManagerTask::_handle_msp_raw_imu()
     _write_to_payload<int16_t>(payload, i, magY);
     _write_to_payload<int16_t>(payload, i, magZ);
 
-    _send_msp_response(MSP_RAW_IMU, payload, MSP_RAW_IMU_PAYLOAD_SIZE);
+    _send_msp_response((uint16_t)MSP_RAW_IMU, payload, (uint16_t)MSP_RAW_IMU_PAYLOAD_SIZE);
 }
 
 void SerialManagerTask::_handle_msp_attitude()
 {
     if (!_imu_task)
     {
-        _send_msp_response(MSP_ATTITUDE, nullptr, 0);
+        _send_msp_response((uint16_t)MSP_ATTITUDE, nullptr, 0);
         return;
     }
 
@@ -735,14 +910,14 @@ void SerialManagerTask::_handle_msp_attitude()
     _write_to_payload<int16_t>(payload, i, msp_pitch);
     _write_to_payload<int16_t>(payload, i, msp_yaw);
 
-    _send_msp_response(MSP_ATTITUDE, payload, MSP_ATTITUDE_PAYLOAD_SIZE);
+    _send_msp_response((uint16_t)MSP_ATTITUDE, payload, (uint16_t)MSP_ATTITUDE_PAYLOAD_SIZE);
 }
 
 void SerialManagerTask::_handle_msp_rc()
 {
     if (!_rx_task)
     {
-        _send_msp_response(MSP_RC, nullptr, 0);
+        _send_msp_response((uint16_t)MSP_RC, nullptr, 0);
         return;
     }
 
@@ -755,14 +930,14 @@ void SerialManagerTask::_handle_msp_rc()
         _write_to_payload<int16_t>(payload, i, channel_value);
     }
 
-    _send_msp_response(MSP_RC, payload, PPM_MAX_CHANNELS * 2);
+    _send_msp_response((uint16_t)MSP_RC, payload, (uint16_t)(PPM_MAX_CHANNELS * 2));
 }
 
 void SerialManagerTask::_handle_msp_motor()
 {
     if (!_motor_task)
     {
-        _send_msp_response(MSP_MOTOR, nullptr, 0);
+        _send_msp_response((uint16_t)MSP_MOTOR, nullptr, 0);
         return;
     }
 
@@ -779,14 +954,14 @@ void SerialManagerTask::_handle_msp_motor()
         _write_to_payload<int16_t>(payload, i, motor_output);
     }
 
-    _send_msp_response(MSP_MOTOR, payload, MSP_MAX_MOTORS * 2);
+    _send_msp_response((uint16_t)MSP_MOTOR, payload, (uint16_t)(MSP_MAX_MOTORS * 2));
 }
 
 void SerialManagerTask::_handle_msp_box_get()
 {
     if (!_pid_task)
     {
-        _send_msp_response(MSP_BOX, nullptr, 0);
+        _send_msp_response((uint16_t)MSP_BOX, nullptr, 0);
         return;
     }
 
@@ -815,14 +990,14 @@ void SerialManagerTask::_handle_msp_box_get()
     payload[2] = (active_boxes_bitmask >> 16) & 0xFF;
     payload[3] = (active_boxes_bitmask >> 24) & 0xFF;
 
-    _send_msp_response(MSP_BOX, payload, MSP_BOX_PAYLOAD_SIZE);
+    _send_msp_response((uint16_t)MSP_BOX, payload, (uint16_t)MSP_BOX_PAYLOAD_SIZE);
 }
 
 void SerialManagerTask::_handle_msp_box_set()
 {
-    if (!_pid_task || _msp_payload_size != MSP_BOX_PAYLOAD_SIZE)
+    if (!_pid_task || _msp_message_length_expected != MSP_BOX_PAYLOAD_SIZE)
     {
-        _send_msp_response(MSP_SET_BOX, nullptr, 0);
+        _send_msp_response((uint16_t)MSP_SET_BOX, nullptr, 0);
         return;
     }
 
@@ -838,7 +1013,7 @@ void SerialManagerTask::_handle_msp_box_set()
         _pid_task->setFlightMode(FlightMode::ACRO);
     }
 
-    _send_msp_response(MSP_SET_BOX, nullptr, 0); // Acknowledge
+    _send_msp_response((uint16_t)MSP_SET_BOX, nullptr, 0); // Acknowledge
 }
 
 void SerialManagerTask::_handle_msp_uid()
@@ -861,7 +1036,7 @@ void SerialManagerTask::_handle_msp_uid()
     payload[10] = '0';
     payload[11] = '1';
 
-    _send_msp_response(MSP_UID, payload, MSP_UID_PAYLOAD_SIZE);
+    _send_msp_response((uint16_t)MSP_UID, payload, (uint16_t)MSP_UID_PAYLOAD_SIZE);
 }
 
 void SerialManagerTask::_handle_msp_boxnames()
@@ -881,7 +1056,7 @@ void SerialManagerTask::_handle_msp_boxnames()
     {
         // Handle error or truncate if necessary
         // For now, send empty response if too long
-        _send_msp_response(MSP_BOXNAMES, nullptr, 0);
+        _send_msp_response((uint16_t)MSP_BOXNAMES, nullptr, 0);
         return;
     }
 
@@ -889,7 +1064,7 @@ void SerialManagerTask::_handle_msp_boxnames()
     uint8_t payload[box_names_str.length() + 1]; // +1 for null terminator
     box_names_str.getBytes(payload, box_names_str.length() + 1);
 
-    _send_msp_response(MSP_BOXNAMES, payload, box_names_str.length());
+    _send_msp_response((uint16_t)MSP_BOXNAMES, payload, (uint16_t)box_names_str.length());
 }
 
 void SerialManagerTask::_handle_msp_mode_ranges()
@@ -923,7 +1098,7 @@ void SerialManagerTask::_handle_msp_mode_ranges()
     payload[i++] = MSP_MODE_RANGE_FLIPOVERAFTERCRASH_START_STEP;
     payload[i++] = MSP_MODE_RANGE_FLIPOVERAFTERCRASH_END_STEP;
 
-    _send_msp_response(MSP_MODE_RANGES, payload, MSP_MODE_RANGES_PAYLOAD_SIZE);
+    _send_msp_response((uint16_t)MSP_MODE_RANGES, payload, (uint16_t)MSP_MODE_RANGES_PAYLOAD_SIZE);
 }
 
 void SerialManagerTask::_handle_msp_motor_config()
@@ -940,5 +1115,17 @@ void SerialManagerTask::_handle_msp_motor_config()
     // 3. mincommand (U16) - In Flight32, this is also MOTOR_MIN_THROTTLE_RAW for simplicity
     _write_to_payload<uint16_t>(payload, i, MOTOR_MIN_THROTTLE_RAW);
 
-    _send_msp_response(MSP_MOTOR_CONFIG, payload, MSP_MOTOR_CONFIG_PAYLOAD_SIZE);
+    _send_msp_response((uint16_t)MSP_MOTOR_CONFIG, payload, (uint16_t)MSP_MOTOR_CONFIG_PAYLOAD_SIZE);
+}
+
+uint8_t SerialManagerTask::_crc8_dvb_s2(uint8_t crc, uint8_t ch) {
+    crc ^= ch;
+    for (uint8_t ii = 0; ii < 8; ii++) {
+        if (crc & 0x80) {
+            crc = ((crc << 1) & 0xFF) ^ 0xD5;
+        } else {
+            crc = (crc << 1) & 0xFF;
+        }
+    }
+    return crc;
 }

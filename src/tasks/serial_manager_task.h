@@ -51,20 +51,33 @@ private:
     enum class MspState
     {
         IDLE,
-        HEADER_START,
-        HEADER_M,
-        HEADER_DIR,
-        HEADER_SIZE,
-        HEADER_CMD,
-        PAYLOAD,
-        CRC
+        PROTO_IDENTIFIER,
+        DIRECTION_V1,
+        DIRECTION_V2,
+        FLAG_V2,
+        PAYLOAD_LENGTH_V1,
+        PAYLOAD_LENGTH_JUMBO_LOW,
+        PAYLOAD_LENGTH_JUMBO_HIGH,
+        PAYLOAD_LENGTH_V2_LOW,
+        PAYLOAD_LENGTH_V2_HIGH,
+        CODE_V1,
+        CODE_JUMBO_V1,
+        CODE_V2_LOW,
+        CODE_V2_HIGH,
+        PAYLOAD_V1,
+        PAYLOAD_V2,
+        CHECKSUM_V1,
+        CHECKSUM_V2
     };
     
     MspState _msp_state = MspState::IDLE;
-    uint8_t _msp_payload_size = 0;
-    uint8_t _msp_command_id = 0;
+    uint8_t _msp_protocol_version = 0; // 1 for V1, 2 for V2
+    uint8_t _msp_flag_v2 = 0;          // Flag byte for MSP v2
+    uint16_t _msp_command_id = 0;      // 2 bytes for MSP v2
+    uint16_t _msp_message_length_expected = 0; // 2 bytes for MSP v2 and jumbo frames
+    uint16_t _msp_message_length_received = 0;
     uint8_t _msp_crc = 0;
-    uint8_t _msp_payload_buffer[MSP_MAX_PAYLOAD_SIZE];
+    uint8_t _msp_payload_buffer[MSP_MAX_PAYLOAD_SIZE]; // Consider increasing this for MSP V2 if needed
     uint8_t _msp_payload_index = 0;
 
     // Terminal Mode Functions
@@ -73,7 +86,7 @@ private:
     // MSP Mode Functions
     bool _parse_msp_char(uint8_t c); // Returns true if char was consumed by MSP, false otherwise
     void _process_msp_message();
-    void _send_msp_response(uint8_t cmd, uint8_t *payload, uint8_t size);
+    void _send_msp_response(uint16_t cmd, uint8_t *payload, uint16_t size);
 
     // Generic helper functions for payload serialization/deserialization
     template <typename T>
@@ -91,6 +104,8 @@ private:
         index += sizeof(T);
         return value;
     }
+
+    static uint8_t _crc8_dvb_s2(uint8_t crc, uint8_t ch);
 
     // MSP Command Handlers
     void _handle_msp_api_version();

@@ -26,8 +26,9 @@ Flight32 is a robust, extensible, and user-friendly firmware that turns any ESP3
 *   ✈️ **Configurable Flight Modes**: Seamlessly switch between Acro (rate-based) and Stabilized (angle-based) flight modes using a dedicated RC channel. Stabilized mode utilizes a cascaded PID control loop for precise angle holding.
 *   📊 **Real-time System Insights**: Tune and debug on the fly with a powerful, built-in terminal and a web-based serial monitor. The firmware's MultiWii Serial Protocol (MSP) implementation is fully compatible with the `flight32_msp_tester.py` reference script, ensuring seamless integration with external tools. Monitor CPU load, loop times, memory usage, and more.
 *   🎛️ **Persistent On-the-Fly Tuning**: A full PID controller and complete channel mapping are easily adjustable via the terminal, with all settings saved persistently to non-volatile storage.
-*   📡 **Extensible Receiver & IMU Support**: Built with a generic task structure to easily support new receiver protocols (currently IBUS, PPM) and IMU sensors (currently MPU6050).
-*   **Configurable MPU6050**: Fine-tune your MPU6050 with configurable gyroscope range, accelerometer range, and low-pass filter settings, along with improved temperature accuracy.
+*   📡 **Extensible Receiver & IMU Support**: Built with a generic task structure to easily support new receiver protocols (currently IBUS, PPM) and IMU sensors (currently MPU6050/MPU6500).
+*   **Robust Attitude Estimation**: Utilizes a Mahony filter to provide highly accurate and robust orientation data (quaternions), essential for stable flight.
+*   **Configurable IMU**: Fine-tune your IMU with configurable gyroscope range, accelerometer range, and low-pass filter settings, along with improved temperature accuracy.
 *   ⚙️ **DShot Motor Control**: Precise and efficient digital motor control using the ESP32's RMT peripheral.
 *   **Configurable Gyro Filtering**: A configurable Biquad filter cascade, including a low-pass filter and two notch filters, to eliminate noise for smoother flight.
 
@@ -39,7 +40,7 @@ Flight32 is built on a modern, modular software architecture designed for real-t
 
 *   **System State Machine**: To ensure robust and predictable operation, the firmware is governed by a central state machine (`SystemState`). The controller transitions through well-defined states like `INITIALIZING`, `CALIBRATING`, `READY`, and `FAILSAFE`. This prevents unsafe actions, such as arming the motors before the IMU is ready, and provides a clear, safe path for handling system errors.
 
-*   **Object-Oriented and Data-Driven Design**: The codebase is written in C++ with a strong emphasis on object-oriented principles. Hardware and protocols are abstracted behind common interfaces (e.g., `ImuSensor`, `RxProtocol`), making it simple to add support for new components. Configuration is managed centrally and loaded from non-volatile storage, allowing the system's behavior to be modified without recompiling the firmware.
+*   **Object-Oriented and Data-Driven Design**: The codebase is written in C++ with a strong emphasis on object-oriented principles. Hardware and protocols are abstracted behind common interfaces (e.g., `ImuSensor`, `RxProtocol`), making it simple to add support for new components. Attitude estimation is handled by a Mahony filter. Configuration is managed centrally and loaded from non-volatile storage, allowing the system's behavior to be modified without recompiling the firmware.
 
 ## 🎬 Terminal in Action
 
@@ -71,15 +72,14 @@ The Flight32 firmware is organized into a clean, modular structure to promote re
     ├── com_manager.cpp/h       # Core communication (logging) manager
     ├── flight_controller.cpp/h # Main flight controller class
     ├── settings_manager.cpp/h  # Manages persistent settings in NVS
-    ├── app/                    # Web-based serial monitor
     ├── config/                 # Header-only configuration files for modules
-    ├── imu/                    # IMU sensor interfaces and implementations
+    ├── imu/                    # IMU sensor interfaces and implementations (e.g., MPU6500_WE integration)
     ├── pid/                    # PID controller implementation
-    ├── protocols/              # MSP, IBUS, and other communication protocols
+    ├── protocols/              # MSP (v1/v2), IBUS, and other communication protocols
     ├── scheduler/              # FreeRTOS task scheduler
     ├── tasks/                  # All major system tasks (IMU, RX, Motor, etc.)
     ├── terminal/               # Interactive serial terminal
-    └── utils/                  # Utility functions, system constants, and version info
+    └── utils/                  # Utility functions, system constants, version information, and MahonyAHRS.h/cpp for attitude estimation
 ```
 
 ## 🏁 Quick Start
@@ -217,15 +217,6 @@ This section provides a common pinout reference for ESP32 Devkit boards, focusin
 **Note:** This is a general guide. Always consult the schematic and pinout diagram specific to your ESP32 Devkit board.
 
 ---
-
-## 🗺️ Roadmap
-
-Flight32 is an actively developed project. Here's a glimpse of what's on the horizon:
-
-- [ ] Integration of more advanced sensors (e.g., barometer, magnetometer).
-- [x] Implementation of different flight modes (e.g., Acro, Angle, Horizon).
-- [ ] Support for more receiver protocols (e.g., CRSF, SBUS).
-- [ ] Support for more ESC protocols.
 
 ## 🤝 Contribute
 

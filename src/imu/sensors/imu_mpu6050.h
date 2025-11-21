@@ -9,7 +9,9 @@
 
 #include "../imu_sensor.h"
 #include "../../config/imu_config.h"
-#include <ESP32_MPU6050.h>
+
+#include <MPU6500_WE.h>
+#include "../../utils/MahonyAHRS.h"
 
 class ImuMpu6050 : public ImuSensor
 {
@@ -20,20 +22,25 @@ public:
     void calibrate() override;
     void read() override;
 
-    ImuAxisData getGyroscopeOffset() const override;
+    ImuAxisData getGyroscopeOffset() override; // Removed const to match base class
     void setGyroscopeOffset(const ImuAxisData &offset) override;
-    ImuAxisData getAccelerometerOffset() const override;
+    ImuAxisData getAccelerometerOffset() override; // Removed const to match base class
     void setAccelerometerOffset(const ImuAxisData &offset) override;
     ImuQuaternionData getQuaternion() const override;
 
-    static LpfBandwidth getLpfBandwidthFromIndex(uint8_t index);
+    // Removed static LpfBandwidth getLpfBandwidthFromIndex(uint8_t index);
     uint16_t getI2CErrorCount() const override { return _i2c_error_count; }
     bool isSensorHealthy() const override { return _is_healthy; }
 
+    // Static member and ISR for interrupt handling
+    static volatile bool dmp_data_ready;
+    static void dmp_isr();
+
 private:
-    bool _useDMP;
+    MPU6500_WE _sensor; // Changed type from ESP32_MPU6050 to MPU6050 (from I2Cdevlib)
     ImuQuaternionData _quaternion;
-    ESP32_MPU6050 _sensor;
     static uint16_t _i2c_error_count;
     bool _is_healthy = false;
+
+    MahonyAHRS _mahony_filter; // Mahony filter instance
 };
