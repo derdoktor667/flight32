@@ -2,14 +2,14 @@ name: CI
 
 on:
   push:
-    branches: [ main, dev, develop ]
+    branches: [main, dev, develop]
   pull_request:
-    branches: [ main, dev, develop ]
+    branches: [main, dev, develop]
 
 jobs:
   compile:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -21,7 +21,7 @@ jobs:
           ARDUINO_LIBS_PATH="$HOME/.arduino15/libraries"
           mkdir -p "$ARDUINO_LIBS_PATH"
           git clone --depth 1 --branch dev https://github.com/derdoktor667/DShotRMT.git "$ARDUINO_LIBS_PATH/DShotRMT"
-          git clone --depth 1 --branch dev https://github.com/derdoktor667/ESP32_MPU6050.git "$ARDUINO_LIBS_PATH/ESP32_MPU6050"
+          git clone --depth 1 --branch main https://github.com/wollewald/MPU9250_WE.git "$ARDUINO_LIBS_PATH/MPU9250_WE"
           git clone --depth 1 --branch dev https://github.com/derdoktor667/FlyskyIBUS.git "$ARDUINO_LIBS_PATH/FlyskyIBUS"
 
       - name: Set up Arduino CLI
@@ -31,15 +31,13 @@ jobs:
         run: |
           arduino-cli core install esp32:esp32 --additional-urls https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
 
-
-
       - name: Compile sketch
         run: |
           ARDUINO_LIBS_PATH="$HOME/.arduino15/libraries"
           arduino-cli compile \
             --fqbn esp32:esp32:esp32 \
             --library "$ARDUINO_LIBS_PATH/DShotRMT" \
-            --library "$ARDUINO_LIBS_PATH/ESP32_MPU6050" \
+            --library "$ARDUINO_LIBS_PATH/MPU9250_WE" \
             --library "$ARDUINO_LIBS_PATH/FlyskyIBUS" \
             flight32.ino
 
