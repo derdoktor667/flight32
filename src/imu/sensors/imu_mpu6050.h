@@ -9,7 +9,6 @@
 
 #include "../imu_sensor.h"
 #include "../../config/imu_config.h"
-
 #include <MPU6500_WE.h>
 #include "../../utils/MahonyAHRS.h"
 

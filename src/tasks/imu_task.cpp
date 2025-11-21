@@ -11,7 +11,7 @@
 #include "../com_manager.h"
 #include "../settings_manager.h"
 #include "../utils/math_constants.h"
-#include "../imu/sensors/imu_mpu6050.h" // Include for specific MPU6050 access
+#include "../imu/sensors/imu_mpu6050.h"
 
 ImuTask::ImuTask(const char *name, uint32_t stack_size, UBaseType_t priority, BaseType_t core_id, uint32_t task_delay_ms, ImuSensor &imu_sensor, SettingsManager *settings_manager)
     : TaskBase(name, stack_size, priority, core_id, task_delay_ms), _imu_sensor(imu_sensor), _settings_manager(settings_manager) {}

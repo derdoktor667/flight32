@@ -167,7 +167,7 @@ void FlightController::setup()
     _scheduler.addTask(_pid_task.get());
 
     // Create and add the Serial Manager task.
-    _serial_manager_task = std::make_unique<SerialManagerTask>(SERIAL_MANAGER_TASK_NAME, SERIAL_MANAGER_TASK_STACK_SIZE, SERIAL_MANAGER_TASK_PRIORITY, SERIAL_MANAGER_TASK_CORE, SERIAL_MANAGER_TASK_DELAY_MS, &_scheduler, _imu_task.get(), _rx_task.get(), _motor_task.get(), _pid_task.get(), &_settings_manager);
+    _serial_manager_task = std::make_unique<SerialManagerTask>(SERIAL_MANAGER_TASK_NAME, SERIAL_MANAGER_TASK_STACK_SIZE, SERIAL_MANAGER_TASK_PRIORITY, SERIAL_MANAGER_TASK_CORE, SERIAL_MANAGER_TASK_DELAY_MS, &_scheduler, this, _imu_task.get(), _rx_task.get(), _motor_task.get(), _pid_task.get(), &_settings_manager);
     _scheduler.addTask(_serial_manager_task.get());
 
     // Call setup() for each registered task.

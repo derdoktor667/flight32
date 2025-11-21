@@ -13,7 +13,7 @@ NC='\033[0m'
 ARDUINO_LIBS_PATH="${HOME}/Arduino/libraries"
 LIBRARIES=(
     "DShotRMT:dev:https://github.com/derdoktor667/DShotRMT.git"
-    "ESP32_MPU6050:dev:https://github.com/derdoktor667/ESP32_MPU6050.git"
+    "MPU9250_WE:main:https://github.com/wollewald/MPU9250_WE.git"
     "FlyskyIBUS:dev:https://github.com/derdoktor667/FlyskyIBUS.git"
 )
 

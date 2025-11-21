@@ -56,7 +56,6 @@ bool ImuMpu6050::begin(uint32_t i2cClockSpeed, bool useDMP_unused, ImuGyroRangeI
         return false;
     }
 
-
     // Configure Gyroscope and Accelerometer ranges
     _sensor.setGyrRange(static_cast<MPU9250_gyroRange>(gyroRange));
 

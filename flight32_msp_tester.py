@@ -42,88 +42,178 @@ MSP_COMMANDS = {
     "MSP_FC_VERSION": 3,
     "MSP_BOARD_INFO": 4,
     "MSP_BUILD_INFO": 5,
-    "MSP_NAME": 10,
     "MSP_STATUS": 101,
-    "MSP_RAW_IMU": 102,
-    "MSP_GET_SETTING": 9,
     "MSP_MOTOR": 104,
-    "MSP_RC": 105,
-    "MSP_ATTITUDE": 108, # Changed from 100 back to 108
-    "MSP_PID": 112,
+    "MSP_ATTITUDE": 108,
+    "MSP_PID": 102,
     "MSP_BOXNAMES": 116,
     "MSP_BOX": 117,
     "MSP_MODE_RANGES": 119,
-    "MSP_MOTOR_CONFIG": 131,
+    "MSP_MOTOR_CONFIG": 124,
     "MSP_UID": 160,
-    "MSP_REBOOT": 68,
-    "MSP_SENSOR_STATUS": 209, # Added MSP_SENSOR_STATUS
 }
 
-
 # --- MSP Protocol Functions ---
-def serialize_msp_command(command_code, data=b""):
-    size = len(data)
-    checksum = size ^ command_code
-    for byte in data:
-        checksum ^= byte
+def _crc8_dvb_s2(crc, ch):
+    """Calculates CRC8 for MSP V2."""
+    crc ^= ch
+    for _ in range(8):
+        if crc & 0x80:
+            crc = ((crc << 1) & 0xFF) ^ 0xD5
+        else:
+            crc = (crc << 1) & 0xFF
+    return crc
 
-    packet = b"$M<"
-    packet += struct.pack("<BB", size, command_code) + data
-    packet += struct.pack("<B", checksum)
+def serialize_msp_command(command_code, data=b"", protocol_version=1):
+    if protocol_version == 1:
+        size = len(data)
+        checksum = size ^ command_code
+        for byte in data:
+            checksum ^= byte
+
+        packet = b"$M<"
+        packet += struct.pack("<BB", size, command_code) + data
+        packet += struct.pack("<B", checksum)
+    else:  # MSP V2
+        flag = 0  # Currently always 0 for future use
+        size = len(data)
+        
+        crc = 0
+        crc = _crc8_dvb_s2(crc, flag)
+        crc = _crc8_dvb_s2(crc, command_code & 0xFF)
+        crc = _crc8_dvb_s2(crc, (command_code >> 8) & 0xFF)
+        crc = _crc8_dvb_s2(crc, size & 0xFF)
+        crc = _crc8_dvb_s2(crc, (size >> 8) & 0xFF)
+        for byte in data:
+            crc = _crc8_dvb_s2(crc, byte)
+
+        packet = b"$X>"  # MSP V2 header for response
+        packet += struct.pack("<BHHH", flag, command_code, size, 0) # Placeholder for payload size high byte in struct, will be overwritten by direct bytes
+        packet = packet[:-2] # Remove placeholder size high byte, command high byte
+        packet += struct.pack("<B", flag)
+        packet += struct.pack("<H", command_code) # Command ID (16-bit)
+        packet += struct.pack("<H", size) # Payload Size (16-bit)
+        packet += data
+        packet += struct.pack("<B", crc)
     return packet
 
 
 def deserialize_msp_response(response_bytes):
     if not response_bytes or len(response_bytes) < 3:
-        return None, None, None  # Return error status as well
+        return None, None, None, None  # command_code, data, is_error, protocol_version
 
-    # Check for header
     header = response_bytes[0:3]
     is_error = False
+    protocol_version = 1
+
     if header == b"$M>":
-        pass
-    elif header == b"$M!":
+        protocol_version = 1
+        if len(response_bytes) < 6:
+            print(f"{YELLOW}{ICON_WARNING} Incomplete MSP V1 response header/minimal length.{RESET}")
+            return None, None, None, protocol_version
+
+        size = response_bytes[3]
+        command_code = response_bytes[4]
+
+        if len(response_bytes) < 6 + size:
+            print(f"{YELLOW}{ICON_WARNING} Incomplete MSP V1 response payload.{RESET}")
+            return None, None, None, protocol_version
+
+        data = response_bytes[5 : 5 + size]
+        received_checksum = response_bytes[5 + size]
+
+        calculated_checksum = size ^ command_code
+        for byte in data:
+            calculated_checksum ^= byte
+
+        if calculated_checksum != received_checksum:
+            print(f"{RED}{ICON_FAILURE} Checksum mismatch for V1 command {command_code}. Expected {calculated_checksum}, got {received_checksum}{RESET}")
+            return None, None, None, protocol_version
+
+    elif header == b"$X>":
+        protocol_version = 2
+        # V2 header: $X> (3 bytes), flag (1 byte), command (2 bytes), size (2 bytes)
+        if len(response_bytes) < 9:
+            print(f"{YELLOW}{ICON_WARNING} Incomplete MSP V2 response header/minimal length.{RESET}")
+            return None, None, None, protocol_version
+
+        flag = response_bytes[3]
+        command_code = struct.unpack("<H", response_bytes[4:6])[0]
+        size = struct.unpack("<H", response_bytes[6:8])[0]
+
+        if len(response_bytes) < 9 + size:
+            print(f"{YELLOW}{ICON_WARNING} Incomplete MSP V2 response payload.{RESET}")
+            return None, None, None, protocol_version
+
+        data = response_bytes[8 : 8 + size]
+        received_checksum = response_bytes[8 + size]
+
+        # Calculate V2 CRC
+        calculated_crc = 0
+        calculated_crc = _crc8_dvb_s2(calculated_crc, flag)
+        calculated_crc = _crc8_dvb_s2(calculated_crc, command_code & 0xFF)
+        calculated_crc = _crc8_dvb_s2(calculated_crc, (command_code >> 8) & 0xFF)
+        calculated_crc = _crc8_dvb_s2(calculated_crc, size & 0xFF)
+        calculated_crc = _crc8_dvb_s2(calculated_crc, (size >> 8) & 0xFF)
+        for byte in data:
+            calculated_crc = _crc8_dvb_s2(calculated_crc, byte)
+        
+        if calculated_crc != received_checksum:
+            print(f"{RED}{ICON_FAILURE} Checksum mismatch for V2 command {command_code}. Expected {calculated_crc}, got {received_checksum}{RESET}")
+            return None, None, None, protocol_version
+
+    elif header == b"$M!": # V1 error
+        protocol_version = 1
         is_error = True
+        # Parse minimal error response for V1
+        if len(response_bytes) < 6:
+            print(f"{YELLOW}{ICON_WARNING} Incomplete MSP V1 error response.{RESET}")
+            return None, None, is_error, protocol_version
+        
+        size = response_bytes[3]
+        command_code = response_bytes[4]
+        data = response_bytes[5 : 5 + size] # Should be empty for error, but just in case
+        
+        # Checksum for error is usually on the header as well
+        # For simplicity, we'll just check if it's an error response
+        print(f"{RED}{ICON_FAILURE} Received V1 Error for command {command_code}.{RESET}")
+        return command_code, data, is_error, protocol_version
+
+    elif header == b"$X!": # V2 error
+        protocol_version = 2
+        is_error = True
+        # Parse minimal error response for V2
+        if len(response_bytes) < 9: # $X! + flag + cmd (2) + size (2) + crc (1)
+            print(f"{YELLOW}{ICON_WARNING} Incomplete MSP V2 error response.{RESET}")
+            return None, None, is_error, protocol_version
+        
+        flag = response_bytes[3]
+        command_code = struct.unpack("<H", response_bytes[4:6])[0]
+        size = struct.unpack("<H", response_bytes[6:8])[0] # Should be 0 for error
+        data = response_bytes[8 : 8 + size] # Should be empty for error
+        
+        print(f"{RED}{ICON_FAILURE} Received V2 Error for command {command_code}.{RESET}")
+        return command_code, data, is_error, protocol_version
+
     else:
         print(f"{YELLOW}{ICON_WARNING} Unexpected MSP response header: {header}{RESET}")
-        return None, None, None
+        return None, None, None, None
 
-    if len(response_bytes) < 6:  # minimal length ($M> + size + command + checksum)
-        print(
-            f"{YELLOW}{ICON_WARNING} Incomplete MSP response packet header/minimal length.{RESET}"
-        )
-        return None, None, None
-
-    size = response_bytes[3]
-    command_code = response_bytes[4]
-
-    if len(response_bytes) < 6 + size:
-        print(f"{YELLOW}{ICON_WARNING} Incomplete MSP response packet payload.{RESET}")
-        return None, None, None
-
-    data = response_bytes[5 : 5 + size]
-    received_checksum = response_bytes[5 + size]
-
-    calculated_checksum = size ^ command_code
-    for byte in data:
-        calculated_checksum ^= byte
-
-    if calculated_checksum != received_checksum:
-        print(
-            f"{RED}{ICON_FAILURE} Checksum mismatch for command {command_code}. Expected {calculated_checksum}, got {received_checksum}{RESET}"
-        )
-        return None, None, None  # Return None on checksum mismatch
-
-    return command_code, data, is_error
+    return command_code, data, is_error, protocol_version
 
 
-def send_and_receive(ser, command_name, command_code, data=b"", test_counts=None):
+def send_and_receive(ser, command_name, command_code, data=b"", test_counts=None, protocol_version=1):
     """Sends an MSP command and reads the response, updating test_counts."""
-    print(
-        f"\n{BLUE}{BOLD}{ICON_COMMAND} Testing {command_name} (Code: {command_code}){RESET}"
-    )
-    command_packet = serialize_msp_command(command_code, data)
+    print(f"\n{BLUE}{BOLD}{ICON_COMMAND} Testing {command_name} (Code: {command_code}, Protocol: V{protocol_version}){RESET}")
+    command_packet = serialize_msp_command(command_code, data, protocol_version)
     ser.write(command_packet)
+    if command_name == "MSP_RC":
+        time.sleep(0.01) # Give some time for unwanted bytes to arrive
+        ser.reset_input_buffer() # Clear them
+        time.sleep(0.01) # Another small delay
+        ser.reset_input_buffer() # Clear again, just in case
+    else:
+        ser.reset_input_buffer() # Clear input buffer before reading response
 
     response_buffer = b""
     start_time = time.time()
@@ -131,16 +221,20 @@ def send_and_receive(ser, command_name, command_code, data=b"", test_counts=None
         if ser.in_waiting > 0:
             byte = ser.read(1)
             response_buffer += byte
-            if len(response_buffer) >= 5 and response_buffer.startswith(
-                b"$M"
-            ):  # Check for header ($M) + size + command
-                # Read the third byte to determine if it's a regular response (>) or error (!)
+            # Check for V1 header ($M) or V2 header ($X)
+            if len(response_buffer) >= 3 and (response_buffer.startswith(b"$M") or response_buffer.startswith(b"$X")):
                 header_third_byte = response_buffer[2]
                 if header_third_byte == ord(">") or header_third_byte == ord("!"):
-                    size = response_buffer[3]
-                    # If we've received enough bytes for header (3) + size (1) + command (1) + data (size) + checksum (1)
-                    if len(response_buffer) >= 6 + size:
-                        break
+                    if response_buffer.startswith(b"$M"): # V1
+                        if len(response_buffer) >= 4: # Size byte present
+                            size = response_buffer[3]
+                            if len(response_buffer) >= 6 + size: # Header (3) + size (1) + command (1) + data (size) + checksum (1)
+                                break
+                    elif response_buffer.startswith(b"$X"): # V2
+                        if len(response_buffer) >= 8: # Flag (1) + Command (2) + Size (2) bytes present
+                            size = struct.unpack("<H", response_buffer[6:8])[0]
+                            if len(response_buffer) >= 9 + size: # Header (3) + flag (1) + command (2) + size (2) + data (size) + checksum (1)
+                                break
         time.sleep(0.001)  # Small delay to prevent busy-waiting
 
     if not response_buffer:
@@ -149,46 +243,34 @@ def send_and_receive(ser, command_name, command_code, data=b"", test_counts=None
             test_counts[1] += 1  # Increment failed count
         return
 
-    command_code_rx, response_data, is_error = deserialize_msp_response(response_buffer)
+    command_code_rx, response_data, is_error, received_protocol_version = deserialize_msp_response(response_buffer)
 
     if command_code_rx is not None:
-        print(f"{GREEN}{ICON_SUCCESS} Received response for {command_name}:{RESET}")
+        print(f"{GREEN}{ICON_SUCCESS} Received response for {command_name} (V{received_protocol_version}):{RESET}")
         if test_counts is not None:
             test_counts[0] += 1  # Increment successful count
-        print(
-            f"  {CYAN}Raw Data (hex):{RESET} {response_data.hex() if response_data is not None else 'None'}"
-        )
+        print(f"  {CYAN}Raw Data (hex):{RESET} {response_data.hex() if response_data is not None else 'None'}")
+        
         # Add basic interpretation for some known commands
         if command_code == MSP_COMMANDS["MSP_API_VERSION"]:
             if response_data is not None and len(response_data) >= 3:
                 print(f"  {BOLD}MSP Protocol Version:{RESET} {response_data[0]}")
-                print(
-                    f"  {BOLD}Capability:{RESET} {response_data[1]} {response_data[2]}"
-                )
+                print(f"  {BOLD}Capability:{RESET} {response_data[1]} {response_data[2]}")
             else:
-                print(
-                    f"  {YELLOW}{ICON_WARNING} Decoded (unparsed API version):{RESET} {response_data}"
-                )
+                print(f"  {YELLOW}{ICON_WARNING} Decoded (unparsed API version):{RESET} {response_data}")
         elif command_code == MSP_COMMANDS["MSP_FC_VARIANT"]:
             if response_data:
-                print(
-                    f"  {BOLD}FC Variant:{RESET} {response_data.decode('ascii', errors='ignore')}"
-                )
+                print(f"  {BOLD}FC Variant:{RESET} {response_data.decode('ascii', errors='ignore')}")
         elif command_code == MSP_COMMANDS["MSP_FC_VERSION"]:
             if response_data is not None and len(response_data) == 3:
-                print(
-                    f"  {BOLD}FC Version:{RESET} {response_data[0]}.{response_data[1]}.{response_data[2]}"
-                )
+                print(f"  {BOLD}FC Version:{RESET} {response_data[0]}.{response_data[1]}.{response_data[2]}")
         elif command_code == MSP_COMMANDS["MSP_BOARD_INFO"]:
             if response_data is not None and len(response_data) >= 7:
                 board_identifier = response_data[0:4].decode("ascii", errors="ignore")
                 hardware_revision = struct.unpack("<H", response_data[4:6])[0]
                 board_name_len = response_data[6]
-                # Ensure we don't slice beyond the available data
                 if len(response_data) >= 7 + board_name_len:
-                    board_name = response_data[7 : 7 + board_name_len].decode(
-                        "ascii", errors="ignore"
-                    )
+                    board_name = response_data[7 : 7 + board_name_len].decode("ascii", errors="ignore")
                 else:
                     board_name = response_data[7:].decode("ascii", errors="ignore")
 
@@ -213,65 +295,43 @@ def send_and_receive(ser, command_name, command_code, data=b"", test_counts=None
                 offset += 2
                 i2c_errors = struct.unpack("<H", response_data[offset : offset + 2])[0]
                 offset += 2
-                sensors_present_flags = struct.unpack(
-                    "<H", response_data[offset : offset + 2]
-                )[0]
+                sensors_present_flags = struct.unpack("<H", response_data[offset : offset + 2])[0]
                 offset += 2  # sensors present bitmask
-                flight_mode_flags = struct.unpack(
-                    "<I", response_data[offset : offset + 4]
-                )[0]
+                flight_mode_flags = struct.unpack("<I", response_data[offset : offset + 4])[0]
                 offset += 4  # uint32
                 config_profile_index = response_data[offset]
                 offset += 1
 
                 print(f"  {BOLD}Cycle Time:{RESET} {cycle_time} us")
                 print(f"  {BOLD}I2C Errors:{RESET} {i2c_errors}")
-                print(
-                    f"  {BOLD}Sensors Present Flags:{RESET} {bin(sensors_present_flags)}"
-                )
+                print(f"  {BOLD}Sensors Present Flags:{RESET} {bin(sensors_present_flags)}")
                 print(f"  {BOLD}Flight Mode Flags:{RESET} {flight_mode_flags} (raw)")
                 print(f"  {BOLD}Config Profile Index:{RESET} {config_profile_index}")
-        elif command_code == MSP_COMMANDS["MSP_SENSOR_STATUS"]: # New block for MSP_SENSOR_STATUS
-            if response_data is not None and len(response_data) == 3:
-                acc_health, gyro_health, mag_health = struct.unpack("<BBB", response_data)
-                print(f"  {BOLD}ACC Health:{RESET} {acc_health}")
-                print(f"  {BOLD}GYRO Health:{RESET} {gyro_health}")
-                print(f"  {BOLD}MAG Health:{RESET} {mag_health}")
-            else:
-                print(
-                    f"  {YELLOW}{ICON_WARNING} Decoded (unparsed sensor status):{RESET} {response_data}"
-                )
         elif command_code == MSP_COMMANDS["MSP_ATTITUDE"]:
             if response_data is not None and len(response_data) == 6:
-                roll, pitch, yaw = struct.unpack(
-                    "<hhh", response_data
-                )  # int16, int16, int16
+                roll, pitch, yaw = struct.unpack("<hhh", response_data)  # int16, int16, int16
                 # Assuming same scaling factor as web app (10.0)
                 print(f"  {BOLD}Roll:{RESET} {roll/10.0:.2f} deg")
                 print(f"  {BOLD}Pitch:{RESET} {pitch/10.0:.2f} deg")
                 print(f"  {BOLD}Yaw:{RESET} {yaw/10.0:.2f} deg")
             else:
-                print(
-                    f"  {YELLOW}{ICON_WARNING} Decoded (unparsed attitude):{RESET} {response_data}"
-                )
+                print(f"  {YELLOW}{ICON_WARNING} Decoded (unparsed attitude):{RESET} {response_data}")
         elif command_code == MSP_COMMANDS["MSP_BOXNAMES"]:
             if response_data:
-                box_names = (
-                    response_data.decode("ascii", errors="ignore").strip(";").split(";")
-                )
+                box_names = response_data.decode("ascii", errors="ignore").strip(";").split(";")
                 print(f"  {BOLD}Box Names:{RESET} {', '.join(box_names)}")
         elif command_code == MSP_COMMANDS["MSP_BOX"]:
             if response_data:
-                print(
-                    f"  {BOLD}Decoded (unparsed BOX data):{RESET} {response_data.decode('ascii', errors='ignore')}"
-                )
+                # This should be a uint32 bitmask, unpack as such
+                box_flags = struct.unpack("<I", response_data[0:4])[0]
+                print(f"  {BOLD}Box Flags:{RESET} {bin(box_flags)}")
+            else:
+                print(f"  {YELLOW}{ICON_WARNING} Decoded (unparsed BOX data):{RESET} {response_data}")
         elif command_code == MSP_COMMANDS["MSP_MODE_RANGES"]:
-            if response_data is not None and len(response_data) % 4 == 0:
+            if response_data is not None and len(response_data) % 4 == 0: # 4 bytes per range
                 mode_ranges = []
-                for i in range(0, len(response_data), 6):
-                    mode_id, aux_channel, start_percent, end_percent = struct.unpack(
-                        "<BBBB", response_data[i : i + 4]
-                    )
+                for i in range(0, len(response_data), 4): # Increment by 4
+                    mode_id, aux_channel, start_percent, end_percent = struct.unpack("<BBBB", response_data[i : i + 4])
 
                     start_pwm = 1000 + (start_percent * 10)
                     end_pwm = 1000 + (end_percent * 10)
@@ -279,101 +339,39 @@ def send_and_receive(ser, command_name, command_code, data=b"", test_counts=None
                     start_pwm = max(1000, min(2000, start_pwm))
                     end_pwm = max(1000, min(2000, end_pwm))
 
-                    mode_ranges.append(
-                        f"ID:{mode_id} Aux:{aux_channel} Start:{start_pwm} End:{end_pwm}"
-                    )
+                    mode_ranges.append(f"ID:{mode_id} Aux:{aux_channel} Start:{start_pwm} End:{end_pwm}")
                 print(f"  {BOLD}Mode Ranges:{RESET}")
                 for r in mode_ranges:
                     print(f"    - {r}")
             else:
-                print(
-                    f"  {YELLOW}{ICON_WARNING} Decoded (unparsed mode ranges):{RESET} {response_data}"
-                )
-        elif command_code == MSP_COMMANDS["MSP_RC"]:
-            if response_data is not None and len(response_data) % 2 == 0:
-                channels = struct.unpack(
-                    "<" + "H" * (len(response_data) // 2), response_data
-                )
-                print(f"  {BOLD}RC Channels:{RESET} {', '.join(map(str, channels))}")
-            else:
-                print(
-                    f"  {YELLOW}{ICON_WARNING} Decoded (unparsed RC channels):{RESET} {response_data}"
-                )
+                print(f"  {YELLOW}{ICON_WARNING} Decoded (unparsed mode ranges):{RESET} {response_data}")
         elif command_code == MSP_COMMANDS["MSP_MOTOR"]:
             if response_data is not None and len(response_data) % 2 == 0:
-                motors = struct.unpack(
-                    "<" + "H" * (len(response_data) // 2), response_data
-                )
-                print(
-                    f"  {BOLD}Motor Values (PWM/Dshot):{RESET} {', '.join(map(str, motors))}"
-                )
+                motors = struct.unpack("<" + "H" * (len(response_data) // 2), response_data)
+                print(f"  {BOLD}Motor Values (PWM/Dshot):{RESET} {', '.join(map(str, motors))}")
             else:
-                print(
-                    f"  {YELLOW}{ICON_WARNING} Decoded (unparsed motor data):{RESET} {response_data}"
-                )
+                print(f"  {YELLOW}{ICON_WARNING} Decoded (unparsed motor data):{RESET} {response_data}")
         elif command_code == MSP_COMMANDS["MSP_PID"]:
-            if (
-                response_data is not None and len(response_data) >= 18
-            ):  # 9 PID values, each 2 bytes (int16)
+            if response_data is not None and len(response_data) >= 18: # 9 PID values, each 2 bytes (int16)
                 # Assuming format from msp.js: 9 int16 values (P,I,D for Roll, Pitch, Yaw)
                 pid_gains = struct.unpack("<HHHHHHHHH", response_data[0:18])
                 # Apply PID_SCALE_FACTOR as per msp.js (100.0)
-                print(
-                    f"  {BOLD}PID Gains (Roll):{RESET} P:{pid_gains[0]/100.0:.3f} I:{pid_gains[1]/100.0:.3f} D:{pid_gains[2]/100.0:.3f}"
-                )
-                print(
-                    f"  {BOLD}PID Gains (Pitch):{RESET} P:{pid_gains[3]/100.0:.3f} I:{pid_gains[4]/100.0:.3f} D:{pid_gains[5]/100.0:.3f}"
-                )
-                print(
-                    f"  {BOLD}PID Gains (Yaw):{RESET} P:{pid_gains[6]/100.0:.3f} I:{pid_gains[7]/100.0:.3f} D:{pid_gains[8]/100.0:.3f}"
-                )
+                print(f"  {BOLD}PID Gains (Roll):{RESET} P:{pid_gains[0]/100.0:.3f} I:{pid_gains[1]/100.0:.3f} D:{pid_gains[2]/100.0:.3f}")
+                print(f"  {BOLD}PID Gains (Pitch):{RESET} P:{pid_gains[3]/100.0:.3f} I:{pid_gains[4]/100.0:.3f} D:{pid_gains[5]/100.0:.3f}")
+                print(f"  {BOLD}PID Gains (Yaw):{RESET} P:{pid_gains[6]/100.0:.3f} I:{pid_gains[7]/100.0:.3f} D:{pid_gains[8]/100.0:.3f}")
             else:
-                print(
-                    f"  {YELLOW}{ICON_WARNING} Decoded (unparsed PID data):{RESET} {response_data}"
-                )
-        elif command_code == MSP_COMMANDS["MSP_RAW_IMU"]:
-            if response_data is not None and len(response_data) == 18:
-                # Parse 3x accel + 3x gyro + 3x mag (each 2 bytes, signed int16)
-                (
-                    accel_x,
-                    accel_y,
-                    accel_z,
-                    gyro_x,
-                    gyro_y,
-                    gyro_z,
-                    mag_x,
-                    mag_y,
-                    mag_z,
-                ) = struct.unpack("<hhhhhhhhh", response_data)
-                print(
-                    f"  {BOLD}Accelerometer:{RESET} X:{accel_x:6d} Y:{accel_y:6d} Z:{accel_z:6d}"
-                )
-                print(
-                    f"  {BOLD}Gyroscope:{RESET}     X:{gyro_x:6d} Y:{gyro_y:6d} Z:{gyro_z:6d}"
-                )
-                print(
-                    f"  {BOLD}Magnetometer:{RESET}   X:{mag_x:6d} Y:{mag_y:6d} Z:{mag_z:6d}"
-                )
-            else:
-                print(
-                    f"  {YELLOW}{ICON_WARNING} Decoded (unparsed raw IMU):{RESET} {response_data}"
-                )
+                print(f"  {YELLOW}{ICON_WARNING} Decoded (unparsed PID data):{RESET} {response_data}")
         elif command_code == MSP_COMMANDS["MSP_MOTOR_CONFIG"]:
-            if response_data is not None and len(response_data) >= 7:
+            if response_data is not None and len(response_data) == 6: # Only 3 uint16 values (min_throttle, max_throttle, min_command)
                 min_throttle = struct.unpack("<H", response_data[0:2])[0]
                 max_throttle = struct.unpack("<H", response_data[2:4])[0]
                 min_command = struct.unpack("<H", response_data[4:6])[0]
-                motor_poles = response_data[6]
 
                 print(f"  {BOLD}Min Throttle:{RESET} {min_throttle}")
                 print(f"  {BOLD}Max Throttle:{RESET} {max_throttle}")
                 print(f"  {BOLD}Min Command:{RESET} {min_command}")
-                print(f"  {BOLD}Motor Poles:{RESET} {motor_poles}")
-
             else:
-                print(
-                    f"  {YELLOW}{ICON_WARNING} Decoded (unparsed motor config):{RESET} {response_data}"
-                )
+                print(f"  {YELLOW}{ICON_WARNING} Decoded (unparsed motor config):{RESET} {response_data}")
 
     else:
         print(f"{RED}{ICON_FAILURE} Failed to get valid MSP response.{RESET}")
@@ -383,9 +381,7 @@ def send_and_receive(ser, command_name, command_code, data=b"", test_counts=None
 
 # --- Main Script ---
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description="Test MSP communication with the flight32 Flight Controller."
-    )
+    parser = argparse.ArgumentParser(description="Test MSP communication with the flight32 Flight Controller.")
     parser.add_argument(
         "--port",
         type=str,
@@ -402,17 +398,13 @@ if __name__ == "__main__":
     SERIAL_PORT_TO_USE = args.port
     COMMAND_TO_TEST = args.command
 
-    print(
-        f"{ICON_INFO} Attempting to connect to {BOLD}{SERIAL_PORT_TO_USE}{RESET} at {BOLD}{BAUD_RATE}{RESET} baud..."
-    )
+    print(f"{ICON_INFO} Attempting to connect to {BOLD}{SERIAL_PORT_TO_USE}{RESET} at {BOLD}{BAUD_RATE}{RESET} baud...")
     test_results = [0, 0]  # [successful_tests, failed_tests]
     try:
         ser = serial.Serial(SERIAL_PORT_TO_USE, BAUD_RATE, timeout=TIMEOUT)
         ser.reset_input_buffer()  # Clear any leftover data in the buffer
         print(f"{GREEN}{ICON_SUCCESS} Serial port opened successfully.{RESET}")
-        time.sleep(
-            1
-        )  # Add a delay to allow the FC to boot and send any initial debug messages
+        time.sleep(1)  # Add a delay to allow the FC to boot and send any initial debug messages
         time.sleep(2)  # Give the FC some time to initialize after connection
 
         commands_to_run = {}
@@ -420,9 +412,7 @@ if __name__ == "__main__":
             if COMMAND_TO_TEST in MSP_COMMANDS:
                 commands_to_run[COMMAND_TO_TEST] = MSP_COMMANDS[COMMAND_TO_TEST]
             else:
-                print(
-                    f"{RED}{ICON_FAILURE} Error: Command '{COMMAND_TO_TEST}' not found in the list of available MSP commands.{RESET}"
-                )
+                print(f"{RED}{ICON_FAILURE} Error: Command '{COMMAND_TO_TEST}' not found in the list of available MSP commands.{RESET}")
                 test_results[1] = 1  # Mark as a failed test overall for invalid command
                 raise SystemExit  # Exit if command is not found
         else:
@@ -435,28 +425,18 @@ if __name__ == "__main__":
                 key_bytes = setting_key.encode("ascii")
                 # Payload: [key_length (1 byte)] [key_string (variable length)]
                 payload = bytes([len(key_bytes)]) + key_bytes
-                send_and_receive(
-                    ser,
-                    command_name,
-                    command_code,
-                    data=payload,
-                    test_counts=test_results,
-                )
+                send_and_receive(ser, command_name, command_code, data=payload, test_counts=test_results)
+                time.sleep(0.5)  # Added delay
                 # Test MSP_SET_SETTING as well
                 time.sleep(0.1)  # Small delay
-                
+
             else:
-                send_and_receive(
-                    ser, command_name, command_code, test_counts=test_results
-                )
+                send_and_receive(ser, command_name, command_code, test_counts=test_results)
+                time.sleep(0.5)  # Added delay
 
     except serial.SerialException as e:
-        print(
-            f"{RED}{ICON_FAILURE} Error: Could not open serial port {BOLD}{SERIAL_PORT_TO_USE}{RESET}: {e}{RESET}"
-        )
-        print(
-            f"{YELLOW}{ICON_WARNING} Please ensure the flight controller is connected and not in use by another application.{RESET}"
-        )
+        print(f"{RED}{ICON_FAILURE} Error: Could not open serial port {BOLD}{SERIAL_PORT_TO_USE}{RESET}: {e}{RESET}")
+        print(f"{YELLOW}{ICON_WARNING} Please ensure the flight controller is connected and not in use by another application.{RESET}")
     except KeyboardInterrupt:
         print(f"\n{YELLOW}{ICON_WARNING} Script interrupted by user.{RESET}")
     finally:

@@ -24,18 +24,3 @@ void loop()
 {
     // ...what kind of sorcery is this?
 }
-
-
-// #include <Arduino.h>
-// #include "src/flight_controller.h" // Explicitly pointing to src/
-
-// FlightController flight_controller;
-
-// void setup() {
-//   flight_controller.setup();
-// }
-
-// void loop() {
-//   // Main loop is handled by the FreeRTOS scheduler
-//   vTaskDelete(NULL); // Delete the loop task, as it's not needed
-// }

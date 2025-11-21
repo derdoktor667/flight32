@@ -27,3 +27,7 @@ constexpr const char *KEY_MPU_GYRO_OFF_Z = "mpu.g_off.z";
 constexpr const char *KEY_MPU_ACCEL_OFF_X = "mpu.a_off.x";
 constexpr const char *KEY_MPU_ACCEL_OFF_Y = "mpu.a_off.y";
 constexpr const char *KEY_MPU_ACCEL_OFF_Z = "mpu.a_off.z";
+
+constexpr const char *KEY_MOTOR_MIN_THROTTLE = "motor.min_thr";
+constexpr const char *KEY_MOTOR_MAX_THROTTLE = "motor.max_thr";
+constexpr const char *KEY_MOTOR_MIN_COMMAND = "motor.min_cmd";
