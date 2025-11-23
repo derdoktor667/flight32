@@ -1,6 +1,7 @@
 #pragma once
 
-enum class FlightMode {
+enum class FlightMode
+{
   ACRO,
   ANGLE,
   STABILIZED,

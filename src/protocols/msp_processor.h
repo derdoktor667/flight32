@@ -43,6 +43,7 @@ private:
     void process_build_info_command(uint8_t protocol_version);
     void process_reboot_command(uint8_t protocol_version);
     void process_mem_stats_command(uint8_t protocol_version);
+    void process_ident_command(uint8_t protocol_version);
     void process_get_setting_command(const uint8_t* payload, uint8_t payload_size, uint8_t protocol_version);
     void process_set_setting_command(const uint8_t* payload, uint8_t payload_size, uint8_t protocol_version);
     void process_pid_command(uint8_t protocol_version);
@@ -63,4 +64,23 @@ private:
     void process_get_filter_config_command(uint8_t protocol_version);
     void process_set_filter_config_command(const uint8_t* payload, uint8_t payload_size, uint8_t protocol_version);
     void process_set_box_command(const uint8_t* payload, uint8_t payload_size, uint8_t protocol_version);
+
+    // Added to handle currently unimplemented commands
+    void process_name_command(uint8_t protocol_version);
+    void process_feature_config_command(uint8_t protocol_version);
+    void process_arming_config_command(uint8_t protocol_version);
+    void process_rx_config_command(uint8_t protocol_version);
+    void process_rx_map_command(uint8_t protocol_version);
+    void process_failsafe_config_command(uint8_t protocol_version);
+    void process_rc_tuning_command(uint8_t protocol_version);
+    void process_advanced_config_command(uint8_t protocol_version);
+    void process_filter_config_command(uint8_t protocol_version);
+    void process_status_ex_command(uint8_t protocol_version);
+    void process_altitude_command(uint8_t protocol_version);
+    void process_analog_command(uint8_t protocol_version);
+    void process_battery_state_command(uint8_t protocol_version);
+    void process_osd_config_command(uint8_t protocol_version);
+    void process_vtx_config_command(uint8_t protocol_version);
+    void process_pidnames_command(uint8_t protocol_version);
+    void process_boxids_command(uint8_t protocol_version);
 };

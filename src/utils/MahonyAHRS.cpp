@@ -6,18 +6,18 @@
 //---------------------------------------------------------------------------------------------------
 // Definitions
 
-#define twoKpDef (2.0f * 0.5f)  // 2 * proportional gain
-#define twoKiDef (2.0f * 0.0f)  // 2 * integral gain
+#define twoKpDef (2.0f * 0.5f) // 2 * proportional gain
+#define twoKiDef (2.0f * 0.0f) // 2 * integral gain
 #define PI 3.14159265359f
 
 //---------------------------------------------------------------------------------------------------
 // Variable definitions
 
 // These are the global variables used in the MahonyAHRS filter
-float twoKp = twoKpDef;                                    // 2 * proportional gain (Kp)
-float twoKi = twoKiDef;                                    // 2 * integral gain (Ki)
-float q4 = 1.0f, q5 = 0.0f, q6 = 0.0f, q7 = 0.0f;          // quaternion of sensor frame relative to auxiliary frame
-float integralFBx = 0.0f, integralFBy = 0.0f, integralFBz = 0.0f;  // integral error terms scaled by Ki
+float twoKp = twoKpDef;                                           // 2 * proportional gain (Kp)
+float twoKi = twoKiDef;                                           // 2 * integral gain (Ki)
+float q4 = 1.0f, q5 = 0.0f, q6 = 0.0f, q7 = 0.0f;                 // quaternion of sensor frame relative to auxiliary frame
+float integralFBx = 0.0f, integralFBy = 0.0f, integralFBz = 0.0f; // integral error terms scaled by Ki
 
 //---------------------------------------------------------------------------------------------------
 // Function declarations
@@ -25,12 +25,13 @@ float integralFBx = 0.0f, integralFBy = 0.0f, integralFBz = 0.0f;  // integral e
 // Fast inverse square-root
 // See: http://en.wikipedia.org/wiki/Fast_inverse_square_root
 
-float MahonyAHRS::inv_Sqrt(float x) {
+float MahonyAHRS::inv_Sqrt(float x)
+{
     float halfx = 0.5f * x;
     float y = x;
-    long i = *(long*)&y;
+    long i = *(long *)&y;
     i = 0x5f3759df - (i >> 1);
-    y = *(float*)&i;
+    y = *(float *)&i;
     y = y * (1.5f - (halfx * y * y));
     return y;
 }
@@ -38,15 +39,22 @@ float MahonyAHRS::inv_Sqrt(float x) {
 //---------------------------------------------------------------------------------------------------
 // AHRS algorithm update
 
-MahonyAHRS::MahonyAHRS(float Freq) {
+MahonyAHRS::MahonyAHRS(float Freq)
+{
     sampleFreq = Freq;
     twoKp = twoKpDef;
     twoKi = twoKiDef;
-    q4 = 1.0f; q5 = 0.0f; q6 = 0.0f; q7 = 0.0f;
-    integralFBx = 0.0f; integralFBy = 0.0f; integralFBz = 0.0f;
+    q4 = 1.0f;
+    q5 = 0.0f;
+    q6 = 0.0f;
+    q7 = 0.0f;
+    integralFBx = 0.0f;
+    integralFBy = 0.0f;
+    integralFBz = 0.0f;
 }
 
-void MahonyAHRS::update(float gx, float gy, float gz, float ax, float ay, float az, float mx, float my, float mz) {
+void MahonyAHRS::update(float gx, float gy, float gz, float ax, float ay, float az, float mx, float my, float mz)
+{
     float recipNorm;
     float q4q4, q4q5, q4q6, q4q7, q5q5, q5q6, q5q7, q6q6, q6q7, q7q7;
     float hx, hy, bx, bz;
@@ -55,13 +63,15 @@ void MahonyAHRS::update(float gx, float gy, float gz, float ax, float ay, float 
     float qa, qb, qc;
 
     // Use IMU algorithm if magnetometer measurement invalid (avoids NaN in magnetometer normalisation)
-    if ((mx == 0.0f) && (my == 0.0f) && (mz == 0.0f)) {
+    if ((mx == 0.0f) && (my == 0.0f) && (mz == 0.0f))
+    {
         updateIMU(gx, gy, gz, ax, ay, az);
         return;
     }
 
     // Compute feedback only if accelerometer measurement valid (avoids NaN in accelerometer normalisation)
-    if (!((ax == 0.0f) && (ay == 0.0f) && (az == 0.0f))) {
+    if (!((ax == 0.0f) && (ay == 0.0f) && (az == 0.0f)))
+    {
         // Normalise accelerometer measurement
         recipNorm = inv_Sqrt(ax * ax + ay * ay + az * az);
         ax *= recipNorm;
@@ -106,15 +116,18 @@ void MahonyAHRS::update(float gx, float gy, float gz, float ax, float ay, float 
         halfez = (ax * halfvy - ay * halfvx) + (mx * halfwy - my * halfwx);
 
         // Compute and apply integral feedback if enabled
-        if (twoKi > 0.0f) {
-            integralFBx += twoKi * halfex * (1.0f / sampleFreq);    // integral error scaled by Ki
+        if (twoKi > 0.0f)
+        {
+            integralFBx += twoKi * halfex * (1.0f / sampleFreq); // integral error scaled by Ki
             integralFBy += twoKi * halfey * (1.0f / sampleFreq);
             integralFBz += twoKi * halfez * (1.0f / sampleFreq);
-            gx += integralFBx;    // apply integral feedback
+            gx += integralFBx; // apply integral feedback
             gy += integralFBy;
             gz += integralFBz;
-        } else {
-            integralFBx = 0.0f;    // prevent integral windup
+        }
+        else
+        {
+            integralFBx = 0.0f; // prevent integral windup
             integralFBy = 0.0f;
             integralFBz = 0.0f;
         }
@@ -126,7 +139,7 @@ void MahonyAHRS::update(float gx, float gy, float gz, float ax, float ay, float 
     }
 
     // Integrate rate of change of quaternion
-    gx *= (0.5f * (1.0f / sampleFreq));   // pre-multiply common factors
+    gx *= (0.5f * (1.0f / sampleFreq)); // pre-multiply common factors
     gy *= (0.5f * (1.0f / sampleFreq));
     gz *= (0.5f * (1.0f / sampleFreq));
     qa = q4;
@@ -147,14 +160,16 @@ void MahonyAHRS::update(float gx, float gy, float gz, float ax, float ay, float 
 
 // IMU algorithm update
 
-void MahonyAHRS::updateIMU(float gx, float gy, float gz, float ax, float ay, float az) {
+void MahonyAHRS::updateIMU(float gx, float gy, float gz, float ax, float ay, float az)
+{
     float recipNorm;
     float halfvx, halfvy, halfvz;
     float halfex, halfey, halfez;
     float qa, qb, qc;
 
     // Compute feedback only if accelerometer measurement valid (avoids NaN in accelerometer normalisation)
-    if (!((ax == 0.0f) && (ay == 0.0f) && (az == 0.0f))) {
+    if (!((ax == 0.0f) && (ay == 0.0f) && (az == 0.0f)))
+    {
         // Normalise accelerometer measurement
         recipNorm = inv_Sqrt(ax * ax + ay * ay + az * az);
         ax *= recipNorm;
@@ -172,15 +187,18 @@ void MahonyAHRS::updateIMU(float gx, float gy, float gz, float ax, float ay, flo
         halfez = (ax * halfvy - ay * halfvx);
 
         // Compute and apply integral feedback if enabled
-        if (twoKi > 0.0f) {
-            integralFBx += twoKi * halfex * (1.0f / sampleFreq);    // integral error scaled by Ki
+        if (twoKi > 0.0f)
+        {
+            integralFBx += twoKi * halfex * (1.0f / sampleFreq); // integral error scaled by Ki
             integralFBy += twoKi * halfey * (1.0f / sampleFreq);
             integralFBz += twoKi * halfez * (1.0f / sampleFreq);
-            gx += integralFBx;    // apply integral feedback
+            gx += integralFBx; // apply integral feedback
             gy += integralFBy;
             gz += integralFBz;
-        } else {
-            integralFBx = 0.0f;    // prevent integral windup
+        }
+        else
+        {
+            integralFBx = 0.0f; // prevent integral windup
             integralFBy = 0.0f;
             integralFBz = 0.0f;
         }
@@ -192,7 +210,7 @@ void MahonyAHRS::updateIMU(float gx, float gy, float gz, float ax, float ay, flo
     }
 
     // Integrate rate of change of quaternion
-    gx *= (0.5f * (1.0f / sampleFreq));   // pre-multiply common factors
+    gx *= (0.5f * (1.0f / sampleFreq)); // pre-multiply common factors
     gy *= (0.5f * (1.0f / sampleFreq));
     gz *= (0.5f * (1.0f / sampleFreq));
     qa = q4;

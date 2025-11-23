@@ -67,9 +67,9 @@ const SettingsManager::SettingMetadata SettingsManager::_settings_metadata[] = {
     {NVS_KEY_RC_AUX3, "rc.aux3", "RC Auxiliary Channel 3 Index", SettingsManager::UINT8, nullptr, 0, DEFAULT_RC_CHANNEL_AUX3, 0.0f, nullptr},
     {NVS_KEY_RC_AUX4, "rc.aux4", "RC Auxiliary Channel 4 Index", SettingsManager::UINT8, nullptr, 0, DEFAULT_RC_CHANNEL_AUX4, 0.0f, nullptr},
     {NVS_KEY_MOTOR_PROTOCOL, "motor.proto", "DShot Motor Protocol", SettingsManager::UINT8, DSHOT_PROTOCOL_STRINGS, NUM_DSHOT_PROTOCOLS, DEFAULT_MOTOR_PROTOCOL, 0.0f, nullptr},
-    {NVS_KEY_MOTOR_MIN_THROTTLE, "motor.min_thr", "Minimum motor throttle value", SettingsManager::FLOAT, nullptr, 0, 0, 1406.0f, nullptr},
-    {NVS_KEY_MOTOR_MAX_THROTTLE, "motor.max_thr", "Maximum motor throttle value", SettingsManager::FLOAT, nullptr, 0, 0, 1514.0f, nullptr},
-    {NVS_KEY_MOTOR_MIN_COMMAND, "motor.min_cmd", "Minimum motor command value", SettingsManager::FLOAT, nullptr, 0, 0, 1460.0f, nullptr},
+    {NVS_KEY_MOTOR_MIN_THROTTLE, "motor.min_thr", "Minimum motor throttle value", SettingsManager::FLOAT, nullptr, 0, 0, 1000.0f, nullptr},
+    {NVS_KEY_MOTOR_MAX_THROTTLE, "motor.max_thr", "Maximum motor throttle value", SettingsManager::FLOAT, nullptr, 0, 0, 2000.0f, nullptr},
+    {NVS_KEY_MOTOR_MIN_COMMAND, "motor.min_cmd", "Minimum motor command value", SettingsManager::FLOAT, nullptr, 0, 0, 1000.0f, nullptr},
     {NVS_KEY_PID_R_P, "pid.r.p", "PID Roll Proportional Gain", SettingsManager::FLOAT, nullptr, 0, 0, PidConfig::DEFAULT_RATE_P, nullptr},
     {NVS_KEY_PID_R_I, "pid.r.i", "PID Roll Integral Gain", SettingsManager::FLOAT, nullptr, 0, 0, PidConfig::DEFAULT_RATE_I, nullptr},
     {NVS_KEY_PID_R_D, "pid.r.d", "PID Roll Derivative Gain", SettingsManager::FLOAT, nullptr, 0, 0, PidConfig::DEFAULT_RATE_D, nullptr},
@@ -83,6 +83,9 @@ const SettingsManager::SettingMetadata SettingsManager::_settings_metadata[] = {
     {NVS_KEY_PID_AR_I, "pid.ar.i", "PID Angle Roll Integral Gain", SettingsManager::FLOAT, nullptr, 0, 0, PidConfig::DEFAULT_ANGLE_I, nullptr},
     {NVS_KEY_PID_AP_P, "pid.ap.p", "PID Angle Pitch Proportional Gain", SettingsManager::FLOAT, nullptr, 0, 0, PidConfig::DEFAULT_ANGLE_P, nullptr},
     {NVS_KEY_PID_AP_I, "pid.ap.i", "PID Angle Pitch Integral Gain", SettingsManager::FLOAT, nullptr, 0, 0, PidConfig::DEFAULT_ANGLE_I, nullptr},
+    // Arming Settings
+    {NVS_KEY_ARM_AUTODISARM_DELAY, "arm.auto_disarm", "Automatic disarm delay (10x seconds)", SettingsManager::UINT8, nullptr, 0, 50, 0.0f, nullptr},
+    {NVS_KEY_ARM_KILLSWITCH_STATE, "arm.kill_switch", "Disarm Killswitch state (bitmask)", SettingsManager::UINT8, nullptr, 0, 25, 0.0f, nullptr},
     // Filter Settings
     {NVS_KEY_GYRO_LPF_HZ, "filter.lpf_hz", "Gyro Low-Pass Filter Cutoff Frequency", SettingsManager::FLOAT, nullptr, 0, 0, DEFAULT_GYRO_LPF_HZ, nullptr},
     {NVS_KEY_NOTCH1_HZ, "filter.notch1_hz", "First Notch Filter Center Frequency", SettingsManager::FLOAT, nullptr, 0, 0, DEFAULT_NOTCH1_HZ, nullptr},

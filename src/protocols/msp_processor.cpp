@@ -32,6 +32,7 @@
 #include "../settings_manager.h"   // For SettingsManager
 #include "../utils/system_state.h" // For SystemState enum and FlightMode (if defined there)
 #include "../utils/flight_modes.h"
+#include "../config/rx_config.h"
 
 MspProcessor::MspProcessor(FlightController *flightController, PidTask *pidTask, ImuTask *imuTask, RxTask *rxTask, MotorTask *motorTask, SettingsManager *settingsManager)
     : _flightController(flightController),
@@ -233,6 +234,39 @@ void MspProcessor::process_mem_stats_command(uint8_t protocol_version)
     send_msp_response(MSP_MEM_STATS, payload, sizeof(payload), protocol_version);
 }
 
+void MspProcessor::process_ident_command(uint8_t protocol_version)
+{
+    uint8_t payload[MSP_IDENT_PAYLOAD_SIZE];
+    uint8_t current_byte_idx = 0;
+
+    // Protocol Version
+    payload[current_byte_idx++] = MSP_PROTOCOL_VERSION;
+
+    // Flight Controller Type (0 for Flight32, or specific value for Betaflight)
+    payload[current_byte_idx++] = MSP_FC_TYPE_FLIGHT32; // Using custom ID for now
+
+    // Flight Controller Version (Major, Minor, Patch)
+    payload[current_byte_idx++] = FC_VERSION_MAJOR;
+    payload[current_byte_idx++] = FC_VERSION_MINOR;
+    payload[current_byte_idx++] = FC_VERSION_PATCH;
+
+    // Board Type (0 for Flight32, or specific value for Betaflight)
+    payload[current_byte_idx++] = MSP_BOARD_TYPE_FLIGHT32; // Using custom ID for now
+
+    // Capabilities (bitmask)
+    uint8_t capabilities = 0;
+    // Assuming ACC and GYRO are always present with MPU6050
+    capabilities |= MSP_CAPABILITY_ACC_BIT;
+    capabilities |= MSP_CAPABILITY_GYRO_BIT; // Indicate Gyro presence
+    // Note: Gyro is not typically a separate capability flag in MSP_IDENT, but rather IMU presence.
+    // We indicate ACC as a general IMU presence.
+    // If we had a magnetometer, we'd add MSP_CAPABILITY_MAG_BIT, etc.
+
+    payload[current_byte_idx++] = capabilities;
+
+    send_msp_response(MSP_IDENT, payload, sizeof(payload), protocol_version);
+}
+
 void MspProcessor::process_get_setting_command(const uint8_t *payload, uint8_t payload_size, uint8_t protocol_version)
 {
     if (payload_size < 1)
@@ -369,8 +403,8 @@ void MspProcessor::process_status_command(uint8_t protocol_version)
     payload[3] = (i2cErrors >> 8) & 0xFF;
 
     // Sensors present (bitmask): 1 = ACC, 2 = BARO, 4 = MAG, 8 = SONAR, 16 = GPS, 32 = OPTIC_FLOW
-    // Assuming only ACC (MPU6050/6500 provides acc and gyro) is present for now.
-    payload[4] = MSP_STATUS_ACCEL_SENSOR_FLAG; // ACCELEROMETER
+    // MPU6050/6500 provides acc and gyro.
+    payload[4] = MSP_STATUS_ACCEL_SENSOR_FLAG | MSP_STATUS_GYRO_SENSOR_FLAG; // ACCELEROMETER | GYROSCOPE
 
     uint32_t flight_mode_flags = 0;
     if (_pidTask->getFlightMode() == FlightMode::ANGLE || _pidTask->getFlightMode() == FlightMode::STABILIZED)
@@ -761,6 +795,260 @@ void MspProcessor::process_set_box_command(const uint8_t *payload, uint8_t paylo
     send_msp_response(MSP_SET_BOX, nullptr, 0, protocol_version);
 }
 
+// --- Added Stubs for Unimplemented Commands ---
+
+void MspProcessor::process_name_command(uint8_t protocol_version)
+{
+    // Send a default name for now
+    const char* name = "Flight32";
+    send_msp_response(MSP_NAME, (const uint8_t*)name, strlen(name), protocol_version);
+}
+
+void MspProcessor::process_feature_config_command(uint8_t protocol_version)
+{
+    // Define features as a bitmask, similar to Betaflight's approach.
+    // Example: (1 << FEATURE_RX_SERIAL) | (1 << FEATURE_MOTOR_STOP)
+    uint32_t features = 0;
+
+    // Based on Flight32 core functionalities
+    // FEATURE_RX_SERIAL for serial RX
+    // FEATURE_MOTOR_STOP for motor arming/disarming
+    // FEATURE_ACC for accelerometer presence
+    // FEATURE_GYRO for gyroscope presence
+    // FEATURE_PID_CONTROLLER for PID loop active
+    // Define these in msp_protocol.h if needed, or use direct bitmasks.
+    // For now, let's hardcode some common ones that are typically enabled.
+    features |= (1 << 0); // Placeholder for a generic 'Flight Controller' feature
+    features |= (1 << 1); // Placeholder for 'Accelerometer' feature
+    features |= (1 << 2); // Placeholder for 'Gyroscope' feature
+    features |= (1 << 3); // Placeholder for 'PID Controller' feature
+    // You would map actual features to specific bits here.
+
+    uint8_t payload[4]; // 32-bit feature mask
+    payload[0] = features & 0xFF;
+    payload[1] = (features >> 8) & 0xFF;
+    payload[2] = (features >> 16) & 0xFF;
+    payload[3] = (features >> 24) & 0xFF;
+
+    send_msp_response(MSP_FEATURE_CONFIG, payload, sizeof(payload), protocol_version);
+}
+
+void MspProcessor::process_arming_config_command(uint8_t protocol_version)
+{
+    // Payload: auto_disarm_delay (uint16_t), disarm_kill_switch (uint8_t)
+    uint8_t payload[3];
+
+    // auto_disarm_delay: NVS_KEY_ARM_AUTODISARM_DELAY is stored as UINT8, interpret as uint16_t
+    uint16_t auto_disarm_delay = _settingsManager->getSettingValue(NVS_KEY_ARM_AUTODISARM_DELAY).toInt();
+    payload[0] = auto_disarm_delay & 0xFF;
+    payload[1] = (auto_disarm_delay >> 8) & 0xFF;
+
+    // disarm_kill_switch: NVS_KEY_ARM_KILLSWITCH_STATE is stored as UINT8
+    uint8_t disarm_kill_switch = _settingsManager->getSettingValue(NVS_KEY_ARM_KILLSWITCH_STATE).toInt();
+    payload[2] = disarm_kill_switch;
+
+    send_msp_response(MSP_ARMING_CONFIG, payload, sizeof(payload), protocol_version);
+}
+
+void MspProcessor::process_rx_config_command(uint8_t protocol_version)
+{
+    // This is a complex one, will try to fill some fields.
+    // Based on Betaflight's MSP_RX_CONFIG (code 44) structure:
+    // rx_type (uint8)
+    // stick_min (uint16)
+    // stick_max (uint16)
+    // stick_center (uint16)
+    // rx_min_usec (uint16)
+    // rx_max_usec (uint16)
+    // rx_channel_count (uint8)
+    // aux_channels (num_aux * uint8) - not implemented here
+    // failsafe_delay (uint8)
+    // failsafe_off_delay (uint8)
+    // And more...
+
+    uint8_t payload[MSP_RX_CONFIG_PAYLOAD_SIZE];
+    uint8_t current_byte_idx = 0;
+
+    // rx_type (uint8)
+    payload[current_byte_idx++] = (uint8_t)_settingsManager->getSettingValue(NVS_KEY_RC_PROTOCOL_TYPE).toInt();
+
+    // stick_min, stick_max, stick_center (uint16) - Use constants from RxConfig
+    uint16_t stick_min = RC_CHANNEL_MIN_RAW;
+    uint16_t stick_max = RC_CHANNEL_MAX_RAW;
+    uint16_t stick_center = RC_CHANNEL_CENTER;
+
+    payload[current_byte_idx++] = stick_min & 0xFF;
+    payload[current_byte_idx++] = (stick_min >> 8) & 0xFF;
+    payload[current_byte_idx++] = stick_max & 0xFF;
+    payload[current_byte_idx++] = (stick_max >> 8) & 0xFF;
+    payload[current_byte_idx++] = stick_center & 0xFF;
+    payload[current_byte_idx++] = (stick_center >> 8) & 0xFF;
+
+    // rx_min_usec, rx_max_usec (uint16)
+    payload[current_byte_idx++] = RC_CHANNEL_MIN_RAW & 0xFF;
+    payload[current_byte_idx++] = (RC_CHANNEL_MIN_RAW >> 8) & 0xFF;
+    payload[current_byte_idx++] = RC_CHANNEL_MAX_RAW & 0xFF;
+    payload[current_byte_idx++] = (RC_CHANNEL_MAX_RAW >> 8) & 0xFF;
+
+    // rx_channel_count (uint8)
+    payload[current_byte_idx++] = PPM_MAX_CHANNELS;
+
+    // aux_channels (variable length based on rx_channel_count, not easy to map directly here)
+    // We'll leave the rest as zeros for now, filling up to MSP_RX_CONFIG_PAYLOAD_SIZE if it's defined.
+    // If MSP_RX_CONFIG_PAYLOAD_SIZE is not defined, calculate remaining bytes and fill.
+    for (int i = current_byte_idx; i < 20; i++) // Assuming 20 bytes is enough for a reasonable default
+    {
+        payload[i] = 0;
+    }
+
+    send_msp_response(MSP_RX_CONFIG, payload, 20, protocol_version); // Send 20 bytes for now
+}
+
+void MspProcessor::process_rx_map_command(uint8_t protocol_version)
+{
+    // AETR1234
+    // Get RC channel mappings from settings.
+    uint8_t roll_idx = _settingsManager->getSettingValue(NVS_KEY_RC_ROLL).toInt();
+    uint8_t pitch_idx = _settingsManager->getSettingValue(NVS_KEY_RC_PITCH).toInt();
+    uint8_t thro_idx = _settingsManager->getSettingValue(NVS_KEY_RC_THRO).toInt();
+    uint8_t yaw_idx = _settingsManager->getSettingValue(NVS_KEY_RC_YAW).toInt();
+    uint8_t aux1_idx = _settingsManager->getSettingValue(NVS_KEY_RC_AUX1).toInt();
+    uint8_t aux2_idx = _settingsManager->getSettingValue(NVS_KEY_RC_AUX2).toInt();
+    uint8_t aux3_idx = _settingsManager->getSettingValue(NVS_KEY_RC_AUX3).toInt();
+    uint8_t aux4_idx = _settingsManager->getSettingValue(NVS_KEY_RC_AUX4).toInt();
+    
+    // MSP_RX_MAP expects 8 bytes, typically representing the order of channels (0-based)
+    uint8_t payload[8];
+    payload[0] = roll_idx;
+    payload[1] = pitch_idx;
+    payload[2] = thro_idx;
+    payload[3] = yaw_idx;
+    payload[4] = aux1_idx;
+    payload[5] = aux2_idx;
+    payload[6] = aux3_idx;
+    payload[7] = aux4_idx;
+
+    send_msp_response(MSP_RX_MAP, payload, sizeof(payload), protocol_version);
+}
+
+void MspProcessor::process_failsafe_config_command(uint8_t protocol_version)
+{
+    // No explicit NVS keys for failsafe config in _settings_metadata.
+    // Sending zeros for now.
+    uint8_t payload[10] = {0};
+    send_msp_response(MSP_FAILSAFE_CONFIG, payload, sizeof(payload), protocol_version);
+}
+
+void MspProcessor::process_rc_tuning_command(uint8_t protocol_version)
+{
+    // rc_rate (uint8), rc_expo (uint8), roll_rate (uint8), pitch_rate (uint8), yaw_rate (uint8),
+    // throttle_mid (uint8), throttle_expo (uint8) - total 7 bytes
+
+    uint8_t payload[7];
+
+    // These values are typically scaled by 100 or 10. For now, use default PID values directly or zeros.
+    // RC Rate (P-gain for Roll)
+    payload[0] = static_cast<uint8_t>(_settingsManager->getFloat(NVS_KEY_PID_R_P) * 100.0f); // Example scaling
+    // RC Expo (P-gain for Pitch)
+    payload[1] = static_cast<uint8_t>(_settingsManager->getFloat(NVS_KEY_PID_P_P) * 100.0f); // Example scaling
+    // Roll Rate
+    payload[2] = static_cast<uint8_t>(_settingsManager->getFloat(NVS_KEY_PID_R_D) * 10.0f);  // Example scaling
+    // Pitch Rate
+    payload[3] = static_cast<uint8_t>(_settingsManager->getFloat(NVS_KEY_PID_P_D) * 10.0f);  // Example scaling
+    // Yaw Rate
+    payload[4] = static_cast<uint8_t>(_settingsManager->getFloat(NVS_KEY_PID_Y_D) * 10.0f);  // Example scaling
+    // Throttle Mid and Expo are not directly available, send zeros
+    payload[5] = 0; // Throttle Mid
+    payload[6] = 0; // Throttle Expo
+
+    send_msp_response(MSP_RC_TUNING, payload, sizeof(payload), protocol_version);
+}
+
+void MspProcessor::process_advanced_config_command(uint8_t protocol_version)
+{
+    // No direct NVS keys for advanced config.
+    // Sending zeros for now. (e.g. gyro_sync_denom, dterm_filter_type, debug_mode)
+    uint8_t payload[3] = {0};
+    send_msp_response(MSP_ADVANCED_CONFIG, payload, sizeof(payload), protocol_version);
+}
+
+void MspProcessor::process_filter_config_command(uint8_t protocol_version)
+{
+    // This is different from GET/SET, it's the old combined command.
+    // For now, let's just send back the same data as GET.
+    process_get_filter_config_command(protocol_version);
+}
+
+void MspProcessor::process_status_ex_command(uint8_t protocol_version)
+{
+    // For now, just send the basic status response
+    process_status_command(protocol_version);
+}
+
+void MspProcessor::process_altitude_command(uint8_t protocol_version)
+{
+    uint8_t payload[6] = {0}; // int32_t alt, int16_t vario
+    send_msp_response(MSP_ALTITUDE, payload, sizeof(payload), protocol_version);
+}
+
+void MspProcessor::process_analog_command(uint8_t protocol_version)
+{
+    uint8_t payload[7] = {0}; // vbat, intPowerMeterSum, rssi, amperage
+    send_msp_response(MSP_ANALOG, payload, sizeof(payload), protocol_version);
+}
+
+void MspProcessor::process_battery_state_command(uint8_t protocol_version)
+{
+    uint8_t payload[3] = {0}; // cellCount, batteryState, flags
+    send_msp_response(MSP_BATTERY_STATE, payload, sizeof(payload), protocol_version);
+}
+
+void MspProcessor::process_osd_config_command(uint8_t protocol_version)
+{
+    uint8_t payload[20] = {0};
+    send_msp_response(MSP_OSD_CONFIG, payload, sizeof(payload), protocol_version);
+}
+
+void MspProcessor::process_vtx_config_command(uint8_t protocol_version)
+{
+    uint8_t payload[20] = {0};
+    send_msp_response(MSP_VTX_CONFIG, payload, sizeof(payload), protocol_version);
+}
+
+void MspProcessor::process_pidnames_command(uint8_t protocol_version)
+{
+    // Similar to BOXNAMES, but for PIDs.
+    String pidnames_str = "ROLL;PITCH;YAW;ALT;POS;POSR;NAVR;LEVEL;MAG;VEL;";
+    uint16_t payload_size = pidnames_str.length();
+    uint8_t payload[payload_size];
+    memcpy(payload, pidnames_str.c_str(), payload_size);
+    send_msp_response(MSP_PIDNAMES, payload, payload_size, protocol_version);
+}
+
+void MspProcessor::process_boxids_command(uint8_t protocol_version)
+{
+    uint8_t box_ids[] = {
+        BF_PERMANENT_ID_ARM,
+        BF_PERMANENT_ID_ANGLE,
+        BF_PERMANENT_ID_HORIZON,
+        BF_PERMANENT_ID_HEADFREE,
+        BF_PERMANENT_ID_HEADADJ,
+        BF_PERMANENT_ID_FAILSAFE,
+        BF_PERMANENT_ID_BEEPER,
+        BF_PERMANENT_ID_OSDDISABLESW,
+        BF_PERMANENT_ID_TELEMETRY,
+        BF_PERMANENT_ID_BLACKBOX,
+        BF_PERMANENT_ID_FPVANGLEMIX,
+        BF_PERMANENT_ID_BLACKBOXERASE,
+        BF_PERMANENT_ID_FLIPOVERAFTERCRASH,
+        BF_PERMANENT_ID_PREARM,
+        BF_PERMANENT_ID_PARALYZE,
+        BF_PERMANENT_ID_LAUNCHCONTROL
+    };
+    send_msp_response(MSP_BOXIDS, box_ids, sizeof(box_ids), protocol_version);
+}
+
+
 void MspProcessor::process_msp_command(uint8_t command, const uint8_t *payload, uint8_t payload_size, uint8_t protocol_version)
 {
     switch (command)
@@ -780,11 +1068,62 @@ void MspProcessor::process_msp_command(uint8_t command, const uint8_t *payload, 
     case MSP_BUILD_INFO:
         process_build_info_command(protocol_version);
         break;
+    case MSP_NAME:
+        process_name_command(protocol_version);
+        break;
+    case MSP_FEATURE_CONFIG:
+        process_feature_config_command(protocol_version);
+        break;
+    case MSP_ARMING_CONFIG:
+        process_arming_config_command(protocol_version);
+        break;
+    case MSP_RX_CONFIG:
+        process_rx_config_command(protocol_version);
+        break;
+    case MSP_RX_MAP:
+        process_rx_map_command(protocol_version);
+        break;
+    case MSP_FAILSAFE_CONFIG:
+        process_failsafe_config_command(protocol_version);
+        break;
+    case MSP_RC_TUNING:
+        process_rc_tuning_command(protocol_version);
+        break;
+    case MSP_ADVANCED_CONFIG:
+        process_advanced_config_command(protocol_version);
+        break;
+    case MSP_FILTER_CONFIG:
+        process_filter_config_command(protocol_version);
+        break;
+    case MSP_STATUS_EX:
+        process_status_ex_command(protocol_version);
+        break;
+    case MSP_ALTITUDE:
+        process_altitude_command(protocol_version);
+        break;
+    case MSP_ANALOG:
+        process_analog_command(protocol_version);
+        break;
+    case MSP_BATTERY_STATE:
+        process_battery_state_command(protocol_version);
+        break;
+    case MSP_OSD_CONFIG:
+        process_osd_config_command(protocol_version);
+        break;
+    case MSP_VTX_CONFIG:
+        process_vtx_config_command(protocol_version);
+        break;
+    case MSP_PIDNAMES:
+        process_pidnames_command(protocol_version);
+        break;
     case MSP_REBOOT:
         process_reboot_command(protocol_version);
         break;
     case MSP_MEM_STATS:
         process_mem_stats_command(protocol_version);
+        break;
+    case MSP_IDENT:
+        process_ident_command(protocol_version);
         break;
     case MSP_GET_SETTING:
         process_get_setting_command(payload, payload_size, protocol_version);
@@ -815,6 +1154,9 @@ void MspProcessor::process_msp_command(uint8_t command, const uint8_t *payload, 
         break;
     case MSP_BOXNAMES:
         process_boxnames_command(protocol_version);
+        break;
+    case MSP_BOXIDS:
+        process_boxids_command(protocol_version);
         break;
     case MSP_MODE_RANGES:
         process_mode_ranges_command(protocol_version);

@@ -31,3 +31,7 @@ constexpr const char *KEY_MPU_ACCEL_OFF_Z = "mpu.a_off.z";
 constexpr const char *NVS_KEY_MOTOR_MIN_THROTTLE = "motor.min_thr";
 constexpr const char *NVS_KEY_MOTOR_MAX_THROTTLE = "motor.max_thr";
 constexpr const char *NVS_KEY_MOTOR_MIN_COMMAND = "motor.min_cmd";
+
+// --- Arming Settings ---
+constexpr const char *NVS_KEY_ARM_AUTODISARM_DELAY = "arm.auto_disarm";
+constexpr const char *NVS_KEY_ARM_KILLSWITCH_STATE = "arm.kill_switch";
