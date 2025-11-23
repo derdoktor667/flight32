@@ -54,3 +54,11 @@ constexpr float MAX_NORMALIZED_THROTTLE = 1.0f;
 
 // Throttle percentage constants (0.0 to 100.0)
 constexpr float MAX_THROTTLE_PERCENTAGE = CPU_PERCENTAGE_FACTOR;
+
+// --- BLHeli_S 1-Wire Passthrough Constants ---
+constexpr uint16_t sil_t_reset_us = 650;  // Reset time
+constexpr uint16_t sil_t_delay_us = 10;   // Delay after reset
+constexpr uint16_t sil_half_bit_delay_us = 14; // Half bit delay (critical timing)
+constexpr uint16_t sil_t_start_us = 5;    // Start bit delay
+constexpr uint16_t sil_t_stop_us = 10;    // Stop bit delay
+constexpr uint16_t sil_t_byte_us = 200;   // Byte transmission delay

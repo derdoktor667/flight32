@@ -12,6 +12,7 @@
 #include "../scheduler/scheduler.h"
 #include "../settings_manager.h"
 #include "../config/terminal_config.h"
+#include "../config/serial_config.h" // Explicitly include for PASSTHROUGH_BUFFER_SIZE
 #include "../com_manager.h"
 #include "imu_task.h"
 #include "rx_task.h"
@@ -36,6 +37,9 @@ public:
     void run() override;
     void showPrompt();
 
+    void enterPassthroughMode();
+    void exitPassthroughMode();
+
 private:
     Scheduler *_scheduler;
     FlightController* _flightController;
@@ -46,6 +50,30 @@ private:
     SettingsManager *_settings_manager;
     std::unique_ptr<Terminal> _terminal; // Use std::unique_ptr for automatic memory management
     std::unique_ptr<MspProcessor> _msp_processor;
+
+    bool _inPassthroughMode = false;
+
+    // Passthrough Parser State
+    enum class PassthroughParserState
+    {
+        IDLE,
+        COMMAND,
+        ADDR_H,
+        ADDR_L,
+        PARAM_LEN,
+        PARAMS,
+        CRC_H,
+        CRC_L
+    };
+    
+    PassthroughParserState _passthrough_state = PassthroughParserState::IDLE;
+    uint8_t _passthrough_cmd = 0;
+    uint16_t _passthrough_addr = 0;
+    uint8_t _passthrough_param_len = 0;
+    uint8_t _passthrough_params[PASSTHROUGH_BUFFER_SIZE];
+    uint8_t _passthrough_param_index = 0;
+    uint16_t _passthrough_crc_expected = 0;
+    uint16_t _passthrough_crc_calculated = 0;
 
     // Serial Protocol State
     ComSerialMode _current_mode = ComSerialMode::TERMINAL; // Current serial communication mode
@@ -93,4 +121,10 @@ private:
     bool _parse_msp_char(uint8_t c); // Returns true if char was consumed by MSP, false otherwise
     void _process_msp_message();
     static uint8_t _crc8_dvb_s2(uint8_t crc, uint8_t ch);
+
+    // Passthrough Mode Functions
+    void _parse_passthrough_char(uint8_t c);
+    void _process_passthrough_message();
+    void _send_passthrough_response(uint8_t cmd, uint16_t addr, const uint8_t *param, uint8_t param_len, uint8_t ack);
+    uint16_t _crc_xmodem_update(uint16_t crc, uint8_t data);
 };

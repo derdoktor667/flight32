@@ -179,25 +179,25 @@ void MspProcessor::process_fc_version_command(uint8_t protocol_version)
 
 void MspProcessor::process_board_info_command(uint8_t protocol_version)
 {
-    uint8_t payload[12]; // FLT3 (4 bytes) + HW_REV (2 bytes) + BOARD_TYPE (1 byte) + TARGET_CAP (4 bytes) + Board Name (null terminator)
+    uint8_t payload[MSP_BOARD_INFO_PAYLOAD_SIZE]; // FLT3 (4 bytes) + HW_REV (2 bytes) + BOARD_TYPE (1 byte) + TARGET_CAP (4 bytes) + Board Name (null terminator)
     // Board Identifier (4 characters)
     memcpy(payload, MSP_FC_VARIANT_NAME, 4);
 
     // Hardware Revision (2 bytes, placeholder 0)
-    payload[4] = 0;
-    payload[5] = 0;
+    payload[BOARD_INFO_HW_REV_BYTE_INDEX] = 0;
+    payload[BOARD_INFO_HW_REV_BYTE_INDEX + 1] = 0;
 
     // Board Type (1 byte, placeholder 0)
-    payload[6] = 0;
+    payload[BOARD_INFO_BOARD_TYPE_BYTE_INDEX] = 0;
 
     // Target Capabilities (4 bytes, placeholder 0)
-    payload[7] = 0;
-    payload[8] = 0;
-    payload[9] = 0;
-    payload[10] = 0;
+    payload[BOARD_INFO_TARGET_CAP_START_INDEX] = 0;
+    payload[BOARD_INFO_TARGET_CAP_START_INDEX + 1] = 0;
+    payload[BOARD_INFO_TARGET_CAP_START_INDEX + 2] = 0;
+    payload[BOARD_INFO_TARGET_CAP_START_INDEX + 3] = 0;
 
     // Board Name (null-terminated empty string - 1 byte for null terminator)
-    payload[11] = '\0';
+    payload[BOARD_INFO_BOARD_NAME_NULL_TERMINATOR_INDEX] = '\0';
 
     send_msp_response(MSP_BOARD_INFO, payload, sizeof(payload), protocol_version);
 }
@@ -206,7 +206,7 @@ void MspProcessor::process_build_info_command(uint8_t protocol_version)
 {
     // Format: "MMM DD YYYY HH:MM:SSFLT3"
     // Example: "Nov 21 2025 12:00:00FLT3"
-    char build_info[27]; // 26 characters + null terminator
+    char build_info[MSP_BUILD_INFO_BUFFER_SIZE]; // 26 characters + null terminator
     snprintf(build_info, sizeof(build_info), "%s %s%s", __DATE__, __TIME__, MSP_FC_VARIANT_NAME);
     uint8_t payload_size = strlen(build_info);
     uint8_t payload[payload_size];
@@ -370,7 +370,7 @@ void MspProcessor::process_status_command(uint8_t protocol_version)
 
     // Sensors present (bitmask): 1 = ACC, 2 = BARO, 4 = MAG, 8 = SONAR, 16 = GPS, 32 = OPTIC_FLOW
     // Assuming only ACC (MPU6050/6500 provides acc and gyro) is present for now.
-    payload[4] = 1; // ACCELEROMETER
+    payload[4] = MSP_STATUS_ACCEL_SENSOR_FLAG; // ACCELEROMETER
 
     uint32_t flight_mode_flags = 0;
     if (_pidTask->getFlightMode() == FlightMode::ANGLE || _pidTask->getFlightMode() == FlightMode::STABILIZED)
@@ -385,7 +385,7 @@ void MspProcessor::process_status_command(uint8_t protocol_version)
     payload[8] = (flight_mode_flags >> 24) & 0xFF;
 
     payload[9] = 0;  // Current profile (always 0 for now)
-    payload[10] = 0; // Braking action (0=none, 1=active)
+    payload[10] = MSP_BRAKING_ACTION_NONE; // Braking action (0=none, 1=active)
 
     send_msp_response(MSP_STATUS, payload, sizeof(payload), protocol_version);
 }
@@ -419,12 +419,10 @@ void MspProcessor::process_raw_imu_command(uint8_t protocol_version)
     payload[11] = (gyroZ >> 8) & 0xFF;
 
     // Mag (Magnetometer) - Not implemented yet, send zeros
-    payload[12] = 0;
-    payload[13] = 0;
-    payload[14] = 0;
-    payload[15] = 0;
-    payload[16] = 0;
-    payload[17] = 0;
+    for (uint8_t i = 0; i < MSP_RAW_IMU_MAG_BYTES; i++)
+    {
+        payload[12 + i] = 0;
+    }
 
     send_msp_response(MSP_RAW_IMU, payload, sizeof(payload), protocol_version);
 }
@@ -457,7 +455,7 @@ void MspProcessor::process_rc_command(uint8_t protocol_version)
         payload[i * 2 + 1] = (rc_value >> 8) & 0xFF;
     }
     // Fill remaining channels with 1500 (neutral) if NUM_RC_CHANNELS < 18
-    for (uint8_t i = PPM_MAX_CHANNELS; i < 18; i++)
+    for (uint8_t i = PPM_MAX_CHANNELS; i < MSP_RC_CHANNEL_COUNT; i++)
     {
         payload[i * 2] = MSP_RC_NEUTRAL_CHANNEL_VALUE & 0xFF;     // 1500 & 0xFF
         payload[i * 2 + 1] = (MSP_RC_NEUTRAL_CHANNEL_VALUE >> 8) & 0xFF; // 1500 >> 8 & 0xFF

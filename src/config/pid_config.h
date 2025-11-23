@@ -12,6 +12,7 @@
 namespace PidConfig
 {
     // --- PID Task Configuration ---
+    constexpr const char *TASK_NAME = "PidTask";
     constexpr uint32_t TASK_STACK_SIZE = 4096;
     constexpr uint8_t TASK_PRIORITY = 4;
     constexpr int8_t TASK_CORE = 1;

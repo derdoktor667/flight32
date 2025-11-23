@@ -31,9 +31,12 @@ public:
     void setup();
 
     SystemState getSystemState() const;
+    void enterEscPassthrough();
+    void exitEscPassthrough();
 
 private:
     void setSystemState(SystemState new_state);
+    void handleFatalError(const char *message);
 
     SystemState _system_state;
     SettingsManager _settings_manager;

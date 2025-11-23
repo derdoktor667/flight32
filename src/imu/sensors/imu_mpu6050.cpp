@@ -14,16 +14,9 @@
 #include <Wire.h>
 
 // Static members initialization
-volatile bool ImuMpu6050::dmp_data_ready = false;
 uint16_t ImuMpu6050::_i2c_error_count = 0;
 
-// Interrupt service routine
-void IRAM_ATTR ImuMpu6050::dmp_isr()
-{
-    ImuMpu6050::dmp_data_ready = true;
-}
-
-ImuMpu6050::ImuMpu6050() : _sensor(&Wire, MPU6050_I2C_ADDRESS), _mahony_filter(100.0f) // Initialize Mahony filter with 100Hz sample rate
+ImuMpu6050::ImuMpu6050() : _sensor(&Wire, MPU6050_I2C_ADDRESS), _mahony_filter(MAHONY_SAMPLE_RATE_HZ) // Initialize Mahony filter with sample rate
 {
     _data_mutex = xSemaphoreCreateMutex();
     if (_data_mutex == nullptr)
@@ -40,11 +33,10 @@ ImuMpu6050::~ImuMpu6050()
     }
 }
 
-bool ImuMpu6050::begin(uint32_t i2cClockSpeed, bool useDMP_unused, ImuGyroRangeIndex gyroRange, ImuAccelRangeIndex accelRange, ImuLpfBandwidthIndex lpf)
+bool ImuMpu6050::begin(bool useDMP_unused, ImuGyroRangeIndex gyroRange, ImuAccelRangeIndex accelRange, ImuLpfBandwidthIndex lpf)
 {
 
     Wire.begin(MPU6050_I2C_SDA, MPU6050_I2C_SCL);
-    Wire.setClock(i2cClockSpeed);
 
     // Initialize the MPU6500
     if (!_sensor.init())
@@ -65,12 +57,7 @@ bool ImuMpu6050::begin(uint32_t i2cClockSpeed, bool useDMP_unused, ImuGyroRangeI
     _sensor.setAccDLPF(static_cast<MPU9250_dlpf>(lpf));
 
     // DMP initialization is not directly supported by MPU6500_WE/MPU9250_WE for quaternion output.
-    // Raw sensor data will be used.
-
-    // Configure MPU6500 interrupt pin
-    pinMode(MPU6050_INT_PIN, INPUT_PULLUP);
-
-    attachInterrupt(digitalPinToInterrupt(MPU6050_INT_PIN), ImuMpu6050::dmp_isr, FALLING);
+    // Raw sensor data will be used. No interrupt needed as Mahony filter is updated on task frequency.
 
     _is_healthy = true;
 
@@ -96,12 +83,12 @@ void ImuMpu6050::read()
 
     if (xSemaphoreTake(_data_mutex, portMAX_DELAY) == pdTRUE)
     {
-        _data.accelX = static_cast<int16_t>(accelData.x * 1000); // Convert G to mg
-        _data.accelY = static_cast<int16_t>(accelData.y * 1000);
-        _data.accelZ = static_cast<int16_t>(accelData.z * 1000);
-        _data.gyroX = static_cast<int16_t>(gyroData.x * 1000); // Convert deg/s to mdeg/s
-        _data.gyroY = static_cast<int16_t>(gyroData.y * 1000);
-        _data.gyroZ = static_cast<int16_t>(gyroData.z * 1000);
+        _data.accelX = static_cast<int16_t>(accelData.x * ACCEL_G_TO_MG_FACTOR); // Convert G to mg
+        _data.accelY = static_cast<int16_t>(accelData.y * ACCEL_G_TO_MG_FACTOR);
+        _data.accelZ = static_cast<int16_t>(accelData.z * ACCEL_G_TO_MG_FACTOR);
+        _data.gyroX = static_cast<int16_t>(gyroData.x * GYRO_DEGS_TO_MDEGS_FACTOR); // Convert deg/s to mdeg/s
+        _data.gyroY = static_cast<int16_t>(gyroData.y * GYRO_DEGS_TO_MDEGS_FACTOR);
+        _data.gyroZ = static_cast<int16_t>(gyroData.z * GYRO_DEGS_TO_MDEGS_FACTOR);
 
         // Retrieve quaternions from Mahony filter
         _quaternion.w = _mahony_filter.q4;

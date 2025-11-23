@@ -6,6 +6,7 @@
  */
 
 #include "task_base.h"
+#include "freertos/task.h" // Include for vTaskSuspend and vTaskResume
 
 void TaskBase::taskRunner()
 {
@@ -27,5 +28,21 @@ void TaskBase::taskRunner()
         _avg_loop_time_us = _total_loop_time_us / _loop_count;
 
         vTaskDelay(pdMS_TO_TICKS(_task_delay_ms));
+    }
+}
+
+void TaskBase::suspend()
+{
+    if (_handle != nullptr)
+    {
+        vTaskSuspend(_handle);
+    }
+}
+
+void TaskBase::resume()
+{
+    if (_handle != nullptr)
+    {
+        vTaskResume(_handle);
     }
 }

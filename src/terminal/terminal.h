@@ -57,10 +57,13 @@ struct ChannelMapping
     const char *key;
 };
 
+// Forward declaration
+class FlightController;
+
 class Terminal
 {
 public:
-    Terminal(Scheduler *scheduler, ImuTask *imu_task, RxTask *rx_task, MotorTask *motor_task, PidTask *pid_task, SettingsManager *settings_manager);
+    Terminal(Scheduler *scheduler, FlightController* flightController, ImuTask *imu_task, RxTask *rx_task, MotorTask *motor_task, PidTask *pid_task, SettingsManager *settings_manager);
 
     void handleInput(char incoming_char);
     void showPrompt();
@@ -69,6 +72,7 @@ public:
 
 private:
     Scheduler *_scheduler;
+    FlightController* _flightController;
     ImuTask *_imu_task;
     RxTask *_rx_task;
     MotorTask *_motor_task;
@@ -111,6 +115,7 @@ public:
     void _handle_motor_throttle(String &args);
     void _handle_motor_test(String &args);
     void _handle_motor_stop(String &args);
+    void _handle_esc_passthrough(String &args);
     void _handle_pid_get(String &args);
     void _handle_pid_set(String &args);
     void _handle_pid_reset_defaults(String &args);

@@ -38,7 +38,7 @@ public:
     virtual ~ImuSensor() = default;
 
     // Initializes the sensor. Returns true if successful.
-    virtual bool begin(uint32_t i2cClockSpeed = MPU6050_I2C_CLOCK_SPEED, bool useDMP = false, ImuGyroRangeIndex gyroRange = ImuGyroRangeIndex::GYRO_RANGE_250DPS, ImuAccelRangeIndex accelRange = ImuAccelRangeIndex::ACCEL_RANGE_2G, ImuLpfBandwidthIndex lpf = ImuLpfBandwidthIndex::LPF_256HZ_N_0MS) = 0;
+    virtual bool begin(bool useDMP = false, ImuGyroRangeIndex gyroRange = ImuGyroRangeIndex::GYRO_RANGE_250DPS, ImuAccelRangeIndex accelRange = ImuAccelRangeIndex::ACCEL_RANGE_2G, ImuLpfBandwidthIndex lpf = ImuLpfBandwidthIndex::LPF_256HZ_N_0MS) = 0;
 
     // Calibrates the sensor.
     virtual void calibrate() = 0;

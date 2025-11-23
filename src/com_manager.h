@@ -34,8 +34,9 @@ typedef struct
 // Define serial communication modes
 enum class ComSerialMode
 {
-    TERMINAL,
-    MSP
+    TERMINAL, // Default mode: handles CLI commands.
+    MSP,      // MultiWii Serial Protocol mode: handles configurator communication.
+    PASSTHROUGH // ESC Passthrough mode: raw serial data to/from ESCs.
 };
 
 extern QueueHandle_t com_queue;
@@ -53,3 +54,5 @@ const char *com_format_bytes(uint32_t bytes);
 
 // Function to set the current serial mode
 void com_set_serial_mode(ComSerialMode mode);
+
+extern bool _is_passthrough_active; // Global flag to indicate passthrough mode

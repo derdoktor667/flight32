@@ -47,6 +47,16 @@ const char *systemStateToString(SystemState state)
     }
 }
 
+void FlightController::handleFatalError(const char *message)
+{
+    com_send_log(ComMessageType::LOG_ERROR, message);
+    setSystemState(SystemState::ERROR);
+    while (true)
+    {
+        vTaskDelay(portMAX_DELAY); // Halt
+    }
+}
+
 FlightController::FlightController() : _system_state(SystemState::INITIALIZING)
 {
     // Constructor body can be empty if all initialization is done in the member initializer list.
@@ -62,6 +72,68 @@ void FlightController::setSystemState(SystemState new_state)
     if (_system_state != new_state)
     {
         _system_state = new_state;
+    }
+}
+
+void FlightController::enterEscPassthrough()
+{
+    if (_system_state == SystemState::ARMED || _system_state == SystemState::IN_FLIGHT)
+    {
+        com_send_log(ComMessageType::LOG_ERROR, "Cannot enter ESC Passthrough mode while armed or in flight.");
+        return;
+    }
+
+    com_send_log(ComMessageType::LOG_INFO, "FlightController: Entering ESC Passthrough mode.");
+    setSystemState(SystemState::ESC_PASSTHROUGH);
+
+    // Suspend relevant tasks
+    if (_pid_task)
+    {
+        _pid_task->suspend();
+    }
+    if (_rx_task)
+    {
+        _rx_task->suspend();
+    }
+
+    // Inform MotorTask to enter passthrough mode
+    if (_motor_task)
+    {
+        _motor_task->enterPassthroughMode(); // Need to implement this method in MotorTask
+    }
+
+    // Inform SerialManagerTask to switch to passthrough mode
+    if (_serial_manager_task)
+    {
+        _serial_manager_task->enterPassthroughMode(); // Need to implement this method in SerialManagerTask
+    }
+}
+
+void FlightController::exitEscPassthrough()
+{
+    com_send_log(ComMessageType::LOG_INFO, "FlightController: Exiting ESC Passthrough mode.");
+    setSystemState(SystemState::READY);
+
+    // Resume relevant tasks
+    if (_pid_task)
+    {
+        _pid_task->resume();
+    }
+    if (_rx_task)
+    {
+        _rx_task->resume();
+    }
+
+    // Inform MotorTask to exit passthrough mode
+    if (_motor_task)
+    {
+        _motor_task->exitPassthroughMode();
+    }
+
+    // Inform SerialManagerTask to exit passthrough mode
+    if (_serial_manager_task)
+    {
+        _serial_manager_task->exitPassthroughMode();
     }
 }
 
@@ -111,12 +183,7 @@ void FlightController::setup()
         com_send_log(ComMessageType::LOG_INFO, "Using MPU6050 IMU.");
         break;
     default:
-        com_send_log(ComMessageType::LOG_ERROR, "No valid IMU type configured. Halting execution.");
-        setSystemState(SystemState::ERROR);
-        while (true)
-        {
-            vTaskDelay(portMAX_DELAY);
-        } // Halt
+        handleFatalError("No valid IMU type configured. Halting execution.");
     }
 
     // Get LPF bandwidth from settings and convert to appropriate enum.
@@ -127,15 +194,10 @@ void FlightController::setup()
     // The useDMP parameter is now handled internally by ImuMpu6050::begin()
     // The I2C clock speed is set globally by Wire.setClock()
 
-    if (!_imu_sensor->begin(0, false, ImuGyroRangeIndex::GYRO_RANGE_2000DPS, ImuAccelRangeIndex::ACCEL_RANGE_16G, lpf_bandwidth))
+    if (!_imu_sensor->begin(false, ImuGyroRangeIndex::GYRO_RANGE_2000DPS, ImuAccelRangeIndex::ACCEL_RANGE_16G, lpf_bandwidth))
     {
         // Error message is already printed in the sensor's begin() method.
-        setSystemState(SystemState::ERROR);
-        com_send_log(ComMessageType::LOG_ERROR, "IMU initialization failed. Halting execution.");
-        while (true)
-        {
-            vTaskDelay(portMAX_DELAY);
-        } // Halt
+        handleFatalError("IMU initialization failed. Halting execution.");
     }
 
     ImuAxisData gyro_offsets = _settings_manager.getGyroOffsets();
@@ -157,7 +219,7 @@ void FlightController::setup()
     _imu_task = std::make_unique<ImuTask>(IMU_TASK_NAME, IMU_TASK_STACK_SIZE, IMU_TASK_PRIORITY, IMU_TASK_CORE, IMU_TASK_DELAY_MS, *_imu_sensor, &_settings_manager);
     _rx_task = std::make_unique<RxTask>(RX_TASK_NAME, RX_TASK_STACK_SIZE, RX_TASK_PRIORITY, RX_TASK_CORE, RX_TASK_DELAY_MS, &_settings_manager);
     _motor_task = std::make_unique<MotorTask>(MOTOR_TASK_NAME, MOTOR_TASK_STACK_SIZE, MOTOR_TASK_PRIORITY, MOTOR_TASK_CORE, MOTOR_TASK_DELAY_MS, MOTOR_PINS_ARRAY, &_settings_manager);
-    _pid_task = std::make_unique<PidTask>(PID_TASK_NAME, PidConfig::TASK_STACK_SIZE, PidConfig::TASK_PRIORITY, PidConfig::TASK_CORE, PidConfig::TASK_DELAY_MS, _imu_task.get(), _rx_task.get(), _motor_task.get(), &_settings_manager); // Removed extra _pid_task.get()
+    _pid_task = std::make_unique<PidTask>(PidConfig::TASK_NAME, PidConfig::TASK_STACK_SIZE, PidConfig::TASK_PRIORITY, PidConfig::TASK_CORE, PidConfig::TASK_DELAY_MS, _imu_task.get(), _rx_task.get(), _motor_task.get(), &_settings_manager); // Removed extra _pid_task.get()
 
     // Add tasks to the scheduler.
     _scheduler.addTask(_com_manager_task.get());

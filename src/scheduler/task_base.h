@@ -28,6 +28,9 @@ public:
 
     void taskRunner();
 
+    void suspend();
+    void resume();
+
     void setHandle(TaskHandle_t handle) { _handle = handle; }
 
 private:

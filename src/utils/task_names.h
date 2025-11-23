@@ -14,7 +14,6 @@ constexpr const char *COM_TASK_NAME = "Com Manager";
 constexpr const char *IMU_TASK_NAME = "IMU / Sensor";
 constexpr const char *RX_TASK_NAME = "RX / Receiver";
 constexpr const char *MOTOR_TASK_NAME = "Motor Controller";
-constexpr const char *PID_TASK_NAME = "PID Controller";
 constexpr const char *SERIAL_MANAGER_TASK_NAME = "Serial Manager";
 constexpr const char *IDLE_TASK_NAME_0 = "IDLE0";
 constexpr const char *IDLE_TASK_NAME_1 = "IDLE1";

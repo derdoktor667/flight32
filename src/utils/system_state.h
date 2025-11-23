@@ -17,6 +17,7 @@ enum class SystemState : uint8_t
     READY,        // All systems are initialized and ready to be armed.
     ARMED,        // The motors are armed and ready for throttle input.
     IN_FLIGHT,    // The drone is in the air.
+    ESC_PASSTHROUGH, // ESC passthrough mode is active.
     FAILSAFE,     // A critical error has occurred, and the system has entered a safe mode.
     ERROR         // A non-recoverable error has occurred, execution is halted.
 };

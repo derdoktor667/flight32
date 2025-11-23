@@ -47,6 +47,23 @@ static constexpr uint8_t MSP_BOX_PAYLOAD_SIZE = 4;            // 4-byte bitmask 
 static constexpr uint8_t MSP_UID_PAYLOAD_SIZE = 12;           // 3x uint32_t for unique ID
 static constexpr uint8_t MSP_STATUS_PAYLOAD_SIZE = 11;        // cycletime, i2c_errors, sensors, flightmode, profile
 
+// Additional MSP Payload and Buffer Sizes
+static constexpr uint8_t MSP_BOARD_INFO_PAYLOAD_SIZE = 12; // FLT3 (4 bytes) + HW_REV (2 bytes) + BOARD_TYPE (1 byte) + TARGET_CAP (4 bytes) + Board Name (null terminator)
+static constexpr uint8_t MSP_BUILD_INFO_BUFFER_SIZE = 27;  // 26 characters + null terminator for build info string
+static constexpr uint8_t MSP_RC_CHANNEL_COUNT = 18;        // Total number of RC channels supported by MSP
+static constexpr uint8_t MSP_RAW_IMU_MAG_BYTES = 6;        // Number of bytes for magnetometer data (3x int16_t)
+
+// MSP Status Flags
+static constexpr uint8_t MSP_STATUS_ACCEL_SENSOR_FLAG = 1; // Bitmask for Accelerometer present
+static constexpr uint8_t MSP_BRAKING_ACTION_NONE = 0; // Value for no braking action in MSP_STATUS payload
+
+
+// MSP Board Info Payload Indices
+static constexpr uint8_t BOARD_INFO_HW_REV_BYTE_INDEX = 4;
+static constexpr uint8_t BOARD_INFO_BOARD_TYPE_BYTE_INDEX = 6;
+static constexpr uint8_t BOARD_INFO_TARGET_CAP_START_INDEX = 7;
+static constexpr uint8_t BOARD_INFO_BOARD_NAME_NULL_TERMINATOR_INDEX = 11;
+
 // --- Betaflight Permanent IDs for Modes ---
 static constexpr uint8_t BF_PERMANENT_ID_ANGLE = 1;
 static constexpr uint8_t BF_PERMANENT_ID_ARM = 0;                 // From Betaflight msp_box.c

@@ -7,6 +7,7 @@
 
 #include "../config/motor_config.h"
 #include "terminal.h"
+#include "../flight_controller.h"
 #include "../utils/version_info.h"
 #include "../config/terminal_config.h"
 #include "../config/settings_config.h"
@@ -126,6 +127,7 @@ const Command Terminal::_commands[] = {
     {"set motor.throttle", &Terminal::_handle_motor_throttle, "Sets the throttle for a specific motor (e.g., 'set motor.throttle FL 1000').", CommandCategory::MOTOR},
     {"motor test", &Terminal::_handle_motor_test, "Tests individual motors (e.g., 'motor test FL 20 5000' for motor FL at 20% for 5s).", CommandCategory::MOTOR},
     {"motor stop", &Terminal::_handle_motor_stop, "Stops all motors from testing.", CommandCategory::MOTOR},
+    {"esc_passthrough", &Terminal::_handle_esc_passthrough, "Enters ESC passthrough mode.", CommandCategory::MOTOR},
 
     {"get pid", &Terminal::_handle_pid_get, "Gets the current PID gains.", CommandCategory::PID},
     {"set pid", &Terminal::_handle_pid_set, "Sets a PID gain (e.g., 'set pid roll p 0.1').", CommandCategory::PID},
@@ -163,8 +165,9 @@ const CategoryInfo Terminal::_category_info[] = {
 };
 constexpr int Terminal::_num_categories = sizeof(Terminal::_category_info) / sizeof(CategoryInfo);
 
-Terminal::Terminal(Scheduler *scheduler, ImuTask *imu_task, RxTask *rx_task, MotorTask *motor_task, PidTask *pid_task, SettingsManager *settings_manager)
+Terminal::Terminal(Scheduler *scheduler, FlightController* flightController, ImuTask *imu_task, RxTask *rx_task, MotorTask *motor_task, PidTask *pid_task, SettingsManager *settings_manager)
     : _scheduler(scheduler),
+      _flightController(flightController),
       _imu_task(imu_task),
       _rx_task(rx_task),
       _motor_task(motor_task),
@@ -1325,4 +1328,16 @@ void Terminal::_handle_pid_reset_defaults(String &args)
     {
         com_send_log(ComMessageType::LOG_WARN, "Reset PID gains to default values. To confirm, type 'reset pid confirm'");
     }
+}
+
+void Terminal::_handle_esc_passthrough(String &args)
+{
+    if (!_flightController)
+    {
+        com_send_log(ComMessageType::LOG_ERROR, "Flight Controller not available.");
+        return;
+    }
+
+    com_send_log(ComMessageType::LOG_INFO, "Entering ESC Passthrough mode. Type 'quit' to exit.");
+    _flightController->enterEscPassthrough();
 }

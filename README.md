@@ -31,6 +31,7 @@ Flight32 is a robust, extensible, and user-friendly firmware that turns any ESP3
 *   **Configurable IMU**: Fine-tune your IMU with configurable gyroscope range, accelerometer range, and low-pass filter settings, along with improved temperature accuracy.
 *   ⚙️ **DShot Motor Control**: Precise and efficient digital motor control using the ESP32's RMT peripheral.
 *   **Configurable Gyro Filtering**: A configurable Biquad filter cascade, including a low-pass filter and two notch filters, to eliminate noise for smoother flight.
+*   **ESC Passthrough Mode**: Directly configure and flash BLHeli_S Electronic Speed Controllers (ESCs) via the flight controller's serial port, eliminating the need for dedicated programming hardware.
 
 ## 🏗️ Architecture Overview
 
@@ -41,6 +42,30 @@ Flight32 is built on a modern, modular software architecture designed for real-t
 *   **System State Machine**: To ensure robust and predictable operation, the firmware is governed by a central state machine (`SystemState`). The controller transitions through well-defined states like `INITIALIZING`, `CALIBRATING`, `READY`, and `FAILSAFE`. This prevents unsafe actions, such as arming the motors before the IMU is ready, and provides a clear, safe path for handling system errors.
 
 *   **Object-Oriented and Data-Driven Design**: The codebase is written in C++ with a strong emphasis on object-oriented principles. Hardware and protocols are abstracted behind common interfaces (e.g., `ImuSensor`, `RxProtocol`), making it simple to add support for new components. Attitude estimation is handled by a Mahony filter. Configuration is managed centrally and loaded from non-volatile storage, allowing the system's behavior to be modified without recompiling the firmware.
+
+## 🛠️ ESC Passthrough Mode
+
+Flight32 features an experimental ESC Passthrough mode, allowing direct communication with BLHeli_S Electronic Speed Controllers (ESCs) for configuration and firmware updates. This eliminates the need to physically disconnect ESCs from the flight controller or use specialized programming tools.
+
+**Supported ESCs**: BLHeli_S ESCs (using a Betaflight-compatible 4-way serial protocol and 1-Wire communication).
+
+**How to use:**
+
+1.  **Connect your Flight32-powered ESP32** to your computer via USB.
+2.  **Ensure ESCs are powered** (e.g., connect a LiPo battery to your drone with propellers removed for safety).
+3.  **Open your preferred BLHeli_S configurator software** (e.g., BLHeliSuite, ESC-Configurator).
+4.  **Enter Passthrough mode on Flight32**: In the Flight32 serial terminal (e.g., using Arduino Serial Monitor or a dedicated terminal program), type:
+    ```
+    esc_passthrough
+    ```
+    You will see a confirmation message: `FlightController: Entering ESC Passthrough mode.`
+5.  **Connect in Configurator**: In your BLHeli_S configurator software, select the serial port corresponding to your Flight32 and initiate the connection. The configurator should now be able to detect and communicate with your ESCs.
+6.  **Perform ESC operations**: You can now read/write settings, flash firmware, or perform other supported operations using your configurator.
+7.  **Exit Passthrough mode**: To exit passthrough mode and return to normal Flight32 operation, type `quit` in the configurator's serial interface or physically disconnect/reconnect the Flight32. Flight32 will automatically re-initialize its tasks and resume normal operation.
+
+**Current Limitations & Future Work:**
+*   **Basic Protocol Implementation**: The current passthrough implementation focuses on establishing the low-level communication (1-Wire bit-banging) and handshake with BLHeli_S ESCs using a Betaflight-compatible 4-way serial protocol.
+*   **BLHeli_S Bootloader Command Translation**: The `passthroughRead`, `passthroughWrite`, and `passthroughErase` functions in `MotorTask` contain placeholder logic. Fully functional read/write/erase operations require precise translation of the specific command sequences from the BLHeli_S bootloader assembly (e.g., `BLHeliBootLoad.inc`). This is the next phase of development.
 
 ## 🎬 Terminal in Action
 

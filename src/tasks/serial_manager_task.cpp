@@ -6,6 +6,8 @@
  */
 
 #include "serial_manager_task.h"
+#include "../flight_controller.h" // Add this include
+#include "../protocols/serial_4way_protocol.h"
 #include "../utils/version_info.h"
 #include <cmath>
 #include "../utils/math_constants.h"
@@ -20,6 +22,7 @@
 #include "../config/rx_config.h"
 #include <cstring>
 #include <cstdio>
+#include "../protocols/msp_protocol.h" // Added for MSP_ATTITUDE and MSP_MAX_BYTE_VALUE
 
 
 
@@ -33,7 +36,7 @@ SerialManagerTask::SerialManagerTask(const char *name, uint32_t stackSize, UBase
       _pid_task(pid_task),
       _settings_manager(settings_manager)
 {
-    _terminal = std::make_unique<Terminal>(_scheduler, _imu_task, _rx_task, _motor_task, _pid_task, _settings_manager);
+    _terminal = std::make_unique<Terminal>(_scheduler, _flightController, _imu_task, _rx_task, _motor_task, _pid_task, _settings_manager);
     _msp_processor = std::make_unique<MspProcessor>(_flightController, _pid_task, _imu_task, _rx_task, _motor_task, _settings_manager);
 }
 
@@ -44,6 +47,16 @@ void SerialManagerTask::setup()
 
 void SerialManagerTask::run()
 {
+    if (_inPassthroughMode)
+    {
+        while (Serial.available() > 0)
+        {
+            uint8_t c = Serial.read();
+            _parse_passthrough_char(c);
+        }
+        return; // Exit early as we are in passthrough mode
+    }
+
     while (Serial.available() > 0)
     {
         uint8_t c = Serial.read();
@@ -85,6 +98,26 @@ void SerialManagerTask::showPrompt()
     {
         _terminal->showPrompt();
     }
+}
+
+void SerialManagerTask::enterPassthroughMode()
+{
+    _inPassthroughMode = true;
+    _current_mode = ComSerialMode::PASSTHROUGH;
+    com_set_serial_mode(ComSerialMode::PASSTHROUGH);
+    _should_show_prompt = false; // Disable prompt in passthrough mode
+    com_send_log(ComMessageType::LOG_INFO, "SerialManagerTask: Entered passthrough mode.");
+}
+
+void SerialManagerTask::exitPassthroughMode()
+{
+    _inPassthroughMode = false;
+    _current_mode = ComSerialMode::TERMINAL;
+    com_set_serial_mode(ComSerialMode::TERMINAL);
+    _should_show_prompt = true; // Re-enable prompt
+    _msp_state = MspState::IDLE; // Reset MSP parser state
+    _terminal->clearInputBuffer(); // Clear any partial input from the terminal buffer
+    com_send_log(ComMessageType::LOG_INFO, "SerialManagerTask: Exited passthrough mode.");
 }
 
 // MSP Mode Functions
@@ -173,7 +206,7 @@ bool SerialManagerTask::_parse_msp_char(uint8_t c)
 
     case MspState::PAYLOAD_LENGTH_V1: // MSP v1 payload length (1 byte)
         _msp_message_length_expected = c;
-        if (_msp_message_length_expected == 255)
+        if (_msp_message_length_expected == MSP_MAX_BYTE_VALUE)
         { // Jumbo frame
             _msp_state = MspState::CODE_JUMBO_V1;
         }
@@ -324,6 +357,174 @@ void SerialManagerTask::_process_msp_message()
     }
 }
 
+void SerialManagerTask::_parse_passthrough_char(uint8_t c)
+{
+    switch (_passthrough_state)
+    {
+    case PassthroughParserState::IDLE:
+        if (c == cmd_Local_Escape)
+        {
+            _passthrough_crc_calculated = 0;
+            _passthrough_crc_calculated = _crc_xmodem_update(_passthrough_crc_calculated, c);
+            _passthrough_state = PassthroughParserState::COMMAND;
+        }
+        break;
+    case PassthroughParserState::COMMAND:
+        _passthrough_cmd = c;
+        _passthrough_crc_calculated = _crc_xmodem_update(_passthrough_crc_calculated, c);
+        _passthrough_state = PassthroughParserState::ADDR_H;
+        break;
+    case PassthroughParserState::ADDR_H:
+        _passthrough_addr = (uint16_t)c << 8;
+        _passthrough_crc_calculated = _crc_xmodem_update(_passthrough_crc_calculated, c);
+        _passthrough_state = PassthroughParserState::ADDR_L;
+        break;
+    case PassthroughParserState::ADDR_L:
+        _passthrough_addr |= c;
+        _passthrough_crc_calculated = _crc_xmodem_update(_passthrough_crc_calculated, c);
+        _passthrough_state = PassthroughParserState::PARAM_LEN;
+        break;
+    case PassthroughParserState::PARAM_LEN:
+        _passthrough_param_len = c;
+        _passthrough_crc_calculated = _crc_xmodem_update(_passthrough_crc_calculated, c);
+        _passthrough_param_index = 0;
+        if (_passthrough_param_len > 0)
+        {
+            _passthrough_state = PassthroughParserState::PARAMS;
+        }
+        else
+        {
+            _passthrough_state = PassthroughParserState::CRC_H;
+        }
+        break;
+    case PassthroughParserState::PARAMS:
+        if (_passthrough_param_index < sizeof(_passthrough_params))
+        {
+            _passthrough_params[_passthrough_param_index++] = c;
+            _passthrough_crc_calculated = _crc_xmodem_update(_passthrough_crc_calculated, c);
+        }
+        if (_passthrough_param_index >= _passthrough_param_len)
+        {
+            _passthrough_state = PassthroughParserState::CRC_H;
+        }
+        break;
+    case PassthroughParserState::CRC_H:
+        _passthrough_crc_expected = (uint16_t)c << 8;
+        _passthrough_state = PassthroughParserState::CRC_L;
+        break;
+    case PassthroughParserState::CRC_L:
+        _passthrough_crc_expected |= c;
+        if (_passthrough_crc_expected == _passthrough_crc_calculated)
+        {
+            _process_passthrough_message();
+        }
+        _passthrough_state = PassthroughParserState::IDLE;
+        break;
+    }
+}
+
+void SerialManagerTask::_process_passthrough_message()
+{
+    uint8_t ack = ACK_OK;
+    uint8_t o_param_len = 0;
+    uint8_t o_param[PASSTHROUGH_BUFFER_SIZE];
+
+    switch (_passthrough_cmd)
+    {
+    case cmd_InterfaceTestAlive:
+        // For now, always return OK
+        break;
+    case cmd_ProtocolGetVersion:
+        o_param[0] = MSP_ATTITUDE; // Use MSP_ATTITUDE constant
+        o_param_len = 1;
+        break;
+    case cmd_InterfaceGetName:
+    {
+        const char *name = "FL32";
+        o_param_len = strlen(name);
+        memcpy(o_param, name, o_param_len);
+        break;
+    }
+    case cmd_InterfaceGetVersion:
+        o_param[0] = 0; // SERIAL_4WAY_VERSION_HI
+        o_param[1] = 1; // SERIAL_4WAY_VERSION_LO
+        o_param_len = 2;
+        break;
+    case cmd_InterfaceExit:
+        if (_flightController)
+        {
+            // The exit from passthrough mode is handled by the flight controller
+            // which will resume the tasks.
+            _flightController->exitEscPassthrough();
+        }
+        break;
+    case cmd_DeviceRead:
+        if (_motor_task)
+        {
+            ack = _motor_task->passthroughRead(_passthrough_params[0], _passthrough_addr, o_param, _passthrough_param_len);
+        }
+        else
+        {
+            ack = ACK_D_GENERAL_ERROR;
+        }
+        break;
+    case cmd_DeviceWrite:
+        if (_motor_task)
+        {
+            ack = _motor_task->passthroughWrite(_passthrough_params[0], _passthrough_addr, _passthrough_params + 1, _passthrough_param_len - 1);
+        }
+        else
+        {
+            ack = ACK_D_GENERAL_ERROR;
+        }
+        break;
+    case cmd_DeviceEraseAll:
+        if (_motor_task)
+        {
+            ack = _motor_task->passthroughErase(_passthrough_params[0], _passthrough_addr);
+        }
+        else
+        {
+            ack = ACK_D_GENERAL_ERROR;
+        }
+        break;
+    default:
+        ack = ACK_I_INVALID_CMD;
+        break;
+    }
+
+    _send_passthrough_response(_passthrough_cmd, _passthrough_addr, o_param, o_param_len, ack);
+}
+
+void SerialManagerTask::_send_passthrough_response(uint8_t cmd, uint16_t addr, const uint8_t *param, uint8_t param_len, uint8_t ack)
+{
+    uint16_t crc = 0;
+    Serial.write(cmd_Remote_Escape);
+    crc = _crc_xmodem_update(crc, cmd_Remote_Escape);
+    Serial.write(cmd);
+    crc = _crc_xmodem_update(crc, cmd);
+    Serial.write((uint8_t)(addr >> 8));
+    crc = _crc_xmodem_update(crc, (uint8_t)(addr >> 8));
+    Serial.write((uint8_t)addr);
+    crc = _crc_xmodem_update(crc, (uint8_t)addr);
+    Serial.write(param_len);
+    crc = _crc_xmodem_update(crc, param_len);
+
+    for (int i = 0; i < param_len; i++)
+    {
+        Serial.write(param[i]);
+        crc = _crc_xmodem_update(crc, param[i]);
+    }
+
+    Serial.write(ack);
+    crc = _crc_xmodem_update(crc, ack);
+
+    Serial.write((uint8_t)(crc >> 8));
+    Serial.write((uint8_t)crc);
+}
+
+
+
 
 
 uint8_t SerialManagerTask::_crc8_dvb_s2(uint8_t crc, uint8_t ch) {
@@ -334,6 +535,20 @@ uint8_t SerialManagerTask::_crc8_dvb_s2(uint8_t crc, uint8_t ch) {
         } else {
             crc = (crc << 1) & 0xFF;
         }
+    }
+    return crc;
+}
+
+uint16_t SerialManagerTask::_crc_xmodem_update(uint16_t crc, uint8_t data)
+{
+    int i;
+    crc = crc ^ ((uint16_t)data << 8);
+    for (i = 0; i < 8; i++)
+    {
+        if (crc & 0x8000)
+            crc = (crc << 1) ^ 0x1021;
+        else
+            crc <<= 1;
     }
     return crc;
 }

@@ -68,10 +68,27 @@ extern const char *const IMU_LPF_BANDWIDTH_STRINGS[];
 extern const uint8_t NUM_IMU_LPF_BANDWIDTHS;
 
 // --- Sensor ---
+
 constexpr uint16_t SENSOR_POWER_UP_DELAY_MS = 100;
 
 
+
+// Mahony Filter
+
+constexpr float MAHONY_SAMPLE_RATE_HZ = 100.0f; // Mahony filter sample rate in Hz
+
+
+
+// Scaling factors for raw IMU data
+
+constexpr float ACCEL_G_TO_MG_FACTOR = 1000.0f; // Convert G to milli-G (mg)
+
+constexpr float GYRO_DEGS_TO_MDEGS_FACTOR = 1000.0f; // Convert deg/s to milli-deg/s (mdeg/s)
+
+
+
 // --- IMU General Constants ---
+
 constexpr uint8_t NUM_AXES = 3;
 constexpr float MSP_ACCEL_SCALING_FACTOR = 512.0f; // 1G = 512 (approx)
 constexpr float MSP_GYRO_SCALING_FACTOR = 4.0f;    // 1 deg/s = 4 (approx)

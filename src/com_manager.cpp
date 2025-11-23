@@ -20,6 +20,8 @@ QueueHandle_t com_flush_signal_queue;
 static ComSerialMode _current_com_mode = ComSerialMode::TERMINAL; // Default mode is TERMINAL.
 // Static flag to ensure log messages don't print on the same line as a prompt.
 static bool _line_needs_clearing = false;
+// Global flag to indicate passthrough mode
+bool _is_passthrough_active = false;
 
 // Initializes the communication manager's FreeRTOS queues.
 void com_manager_init()
@@ -41,7 +43,7 @@ void com_task(void *pvParameters)
     while (1)
     {
         // Wait indefinitely for a message to be received from the queue.
-        if (xQueueReceive(com_queue, &msg, portMAX_DELAY) == pdPASS)
+        if (xQueueReceive(com_queue, &msg, pdPASS) == pdPASS)
         {
             // Process messages only if in TERMINAL mode.
             if (_current_com_mode == ComSerialMode::TERMINAL)
@@ -105,8 +107,8 @@ void com_task(void *pvParameters)
 // Sends a formatted log message to the communication queue.
 void com_send_log(ComMessageType type, const char *format, ...)
 {
-    // Only send log messages to the queue if in TERMINAL mode.
-    if (_current_com_mode == ComSerialMode::TERMINAL)
+    // Only send log messages to the queue if not in passthrough mode.
+    if (!_is_passthrough_active)
     {
         com_message_t msg;
         msg.type = type;
