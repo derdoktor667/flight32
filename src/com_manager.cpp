@@ -9,7 +9,8 @@
 #include "config/serial_config.h"
 #include "com_manager.h"
 #include "config/com_manager_config.h"
-#include "config/terminal_config.h"
+#include "utils/system_constants.h"
+
 
 // FreeRTOS queue for communication messages.
 QueueHandle_t com_queue;

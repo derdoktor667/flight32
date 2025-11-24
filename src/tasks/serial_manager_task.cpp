@@ -8,20 +8,20 @@
 #include "serial_manager_task.h"
 #include "../flight_controller.h" // Add this include
 #include "../protocols/serial_4way_protocol.h"
-#include "../utils/version_info.h"
-#include <cmath>
-#include "../utils/math_constants.h"
+
+
+
 #include "imu_task.h"
-#include "../config/terminal_config.h"
-#include "../config/serial_config.h"
-#include "../config/filter_config.h"
-#include "../config/com_manager_config.h"
-#include "../config/imu_config.h"
-#include "../config/motor_config.h"
-#include "../config/settings_config.h"
-#include "../config/rx_config.h"
+
+
+
+
+
+
+
+
 #include <cstring>
-#include <cstdio>
+
 #include "../protocols/msp_protocol.h" // Added for MSP_ATTITUDE and MSP_MAX_BYTE_VALUE
 
 

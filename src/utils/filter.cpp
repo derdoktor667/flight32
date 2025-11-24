@@ -8,7 +8,8 @@
 #include "filter.h"
 #include <cmath>
 #include "../config/filter_config.h"
-#include "../utils/math_constants.h"
+#include "../utils/system_constants.h"
+
 
 // Resets the filter's internal state to zero.
 void BiquadFilter::reset()

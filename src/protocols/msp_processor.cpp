@@ -9,8 +9,8 @@
 #include "../settings_manager.h"
 #include "../flight_controller.h"
 #include "../utils/system_state.h"
-#include "../utils/version_info.h"
-#include "../utils/filter.h"
+
+
 #include "../imu/imu_sensor.h"
 #include "../pid/pid_controller.h"
 #include <esp_system.h>
@@ -19,20 +19,11 @@
 #include "../config/motor_config.h"
 #include "../config/filter_config.h"
 #include "../config/serial_config.h"
-#include "../utils/math_constants.h"
+
 #include <cmath>
 #include <cstring>
 
-// Add includes for the tasks/classes whose pointers are being passed
-#include "../flight_controller.h"  // For FlightController
-#include "../tasks/pid_task.h"     // For PidTask
-#include "../tasks/imu_task.h"     // For ImuTask
-#include "../tasks/rx_task.h"      // For RxTask
-#include "../tasks/motor_task.h"   // For MotorTask
-#include "../settings_manager.h"   // For SettingsManager
-#include "../utils/system_state.h" // For SystemState enum and FlightMode (if defined there)
-#include "../utils/flight_modes.h"
-#include "../config/rx_config.h"
+
 
 MspProcessor::MspProcessor(FlightController *flightController, PidTask *pidTask, ImuTask *imuTask, RxTask *rxTask, MotorTask *motorTask, SettingsManager *settingsManager)
     : _flightController(flightController),

@@ -8,7 +8,7 @@
 #pragma once
 
 #include <cstdint>
-#include <cmath>
+
 
 // --- IMU Task Configuration ---
 constexpr uint32_t IMU_TASK_STACK_SIZE = 4096;

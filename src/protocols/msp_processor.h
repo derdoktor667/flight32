@@ -8,7 +8,7 @@
 
 #include "msp_protocol.h"
 #include <cstdint>
-#include <memory> // For std::unique_ptr if used for other members
+
 
 // Forward declarations to avoid circular dependencies
 class FlightController;

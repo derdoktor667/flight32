@@ -8,17 +8,15 @@
 #include "../config/motor_config.h"
 #include "terminal.h"
 #include "../flight_controller.h"
-#include "../utils/version_info.h"
+
 #include "../config/terminal_config.h"
 #include "../config/settings_config.h"
 #include "../config/imu_config.h"
 #include "../config/rx_config.h"
-#include "../config/motor_config.h"
-#include "../config/motor_config.h"
 #include "../config/pid_config.h"
 #include "../config/filter_config.h"
-#include "../utils/task_names.h"
-#include "../utils/math_constants.h"
+
+#include "../utils/system_constants.h"
 
 const ChannelMapping Terminal::_channel_map[] = {
     {"roll", NVS_KEY_RC_ROLL},

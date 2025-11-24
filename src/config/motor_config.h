@@ -9,7 +9,8 @@
 
 #include <cstdint>
 #include <DShotRMT.h>
-#include "../utils/math_constants.h"
+#include "../utils/system_constants.h"
+
 
 // --- Motor Task Configuration ---
 constexpr uint32_t MOTOR_TASK_STACK_SIZE = 4096;

@@ -7,17 +7,17 @@
 
 #pragma once
 
-#include <memory>
+
 
 #include <Arduino.h>
 #include "../settings_manager.h"
 #include "../config/terminal_config.h"
 #include "../com_manager.h"
-#include "../scheduler/scheduler.h"
-#include "../tasks/imu_task.h"
-#include "../tasks/rx_task.h"
-#include "../tasks/motor_task.h"
-#include "../tasks/pid_task.h"
+class Scheduler;
+class ImuTask;
+class RxTask;
+class MotorTask;
+class PidTask;
 
 // Terminal Command Categories
 enum class CommandCategory

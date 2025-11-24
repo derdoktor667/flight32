@@ -21,3 +21,11 @@ enum class SystemState : uint8_t
     FAILSAFE,     // A critical error has occurred, and the system has entered a safe mode.
     ERROR         // A non-recoverable error has occurred, execution is halted.
 };
+
+enum class FlightMode
+{
+  ACRO,
+  ANGLE,
+  STABILIZED,
+  // Add other flight modes here in the future
+};

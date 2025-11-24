@@ -11,18 +11,18 @@
 #include "../scheduler/task_base.h"
 #include "../scheduler/scheduler.h"
 #include "../settings_manager.h"
-#include "../config/terminal_config.h"
+
 #include "../config/serial_config.h" // Explicitly include for PASSTHROUGH_BUFFER_SIZE
 #include "../com_manager.h"
-#include "imu_task.h"
-#include "rx_task.h"
-#include "motor_task.h"
-#include "pid_task.h"
+class ImuTask;
+class RxTask;
+class MotorTask;
+class PidTask;
 #include "../terminal/terminal.h"
 #include <memory>
 
 #include "../protocols/msp_protocol.h"
-#include <cstring> // Required for memcpy
+
 #include "../protocols/msp_processor.h"
 
 // Forward declaration
@@ -78,7 +78,7 @@ private:
     // Serial Protocol State
     ComSerialMode _current_mode = ComSerialMode::TERMINAL; // Current serial communication mode
     unsigned long _last_msp_activity_ms = 0;
-    static constexpr unsigned long MSP_TIMEOUT_MS = 2000; // Switch back to terminal after 2 seconds of no MSP activity
+
     bool _should_show_prompt = true; // New flag to control prompt display
 
     // MSP Mode Variables

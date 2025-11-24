@@ -7,11 +7,11 @@
 
 #include "pid_task.h"
 #include "../imu/imu_sensor.h"
-#include "../protocols/rx_protocol.h"
+
 #include "../config/rx_config.h"
 #include "../settings_manager.h"
 #include "../config/pid_config.h"
-#include "../config/terminal_config.h"
+
 #include "../com_manager.h"
 #include "motor_task.h"
 #include "imu_task.h"
@@ -19,7 +19,7 @@
 
 #include <Arduino.h>
 #include <cstdint>
-#include "../utils/math_constants.h"
+#include "../utils/system_constants.h"
 
 PidTask::PidTask(const char *name, uint32_t stack_size, UBaseType_t priority, BaseType_t core_id, uint32_t task_delay_ms,
                  ImuTask *imu_task,

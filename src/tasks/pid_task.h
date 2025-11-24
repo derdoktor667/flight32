@@ -9,10 +9,10 @@
 
 #include "../scheduler/task_base.h"
 #include "../pid/pid_controller.h"
-#include "imu_task.h"
-#include "motor_task.h"
+class ImuTask;
+class MotorTask;
 #include "../config/pid_config.h"
-#include "../utils/flight_modes.h"
+#include "../utils/system_state.h"
 
 class RxTask;          // Forward declaration
 class SettingsManager; // Forward declaration

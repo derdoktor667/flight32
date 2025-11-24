@@ -10,8 +10,9 @@
 #include "config/rx_config.h"
 #include "config/motor_config.h"
 #include "config/pid_config.h"
-#include "config/terminal_config.h"
+
 #include "config/filter_config.h" // New include for filter settings
+#include "config/scheduler_config.h"
 #include "settings_manager.h"
 #include "com_manager.h"
 #include "terminal/terminal.h"

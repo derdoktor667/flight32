@@ -16,7 +16,6 @@
 #include "motor_task.h"
 #include "../com_manager.h"
 #include "../settings_manager.h"
-#include "../config/motor_config.h"
 #include <DShotRMT.h>
 #include <driver/gpio.h> // Required for gpio_num_t
 

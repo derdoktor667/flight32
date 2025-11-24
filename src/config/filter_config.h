@@ -1,6 +1,6 @@
 #pragma once
 
-#include <cstdint>
+
 
 // NVS Keys for Filter Settings (max 15 characters)
 inline const char *NVS_KEY_GYRO_LPF_HZ = "gyro_lpf_hz";

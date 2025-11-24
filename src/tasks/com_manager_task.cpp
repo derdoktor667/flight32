@@ -7,7 +7,7 @@
 
 #include "com_manager_task.h"
 #include "../com_manager.h" // For com_task (global function)
-#include "../config/com_manager_config.h"
+
 
 ComManagerTask::ComManagerTask(const char *name, uint32_t stack_size, UBaseType_t priority, BaseType_t core_id, uint32_t task_delay_ms)
     : TaskBase(name, stack_size, priority, core_id, task_delay_ms)

@@ -12,14 +12,14 @@
 #include "com_manager.h"
 #include "config/serial_config.h"
 #include "config/pid_config.h"
-#include "utils/version_info.h"
+
 #include "settings_manager.h"
-#include "utils/task_names.h"
+
 #include "tasks/imu_task.h"
 #include "imu/sensors/imu_mpu6050.h"
 #include "tasks/motor_task.h"
 #include "tasks/rx_task.h"
-#include "config/rx_config.h"
+
 #include "tasks/com_manager_task.h" // Include the new ComManagerTask header
 #include <Wire.h>
 
